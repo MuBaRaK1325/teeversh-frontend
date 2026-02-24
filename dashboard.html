@@ -7,23 +7,6 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div id="pinModal" class="modal hidden">
-<div class="modal-content">
-
-<h3>Enter Transaction PIN</h3>
-
-<div class="pin-inputs">
-<input maxlength="1" type="password">
-<input maxlength="1" type="password">
-<input maxlength="1" type="password">
-<input maxlength="1" type="password">
-</div>
-
-<button onclick="submitPin()" class="primary-btn">Verify</button>
-
-</div>
-</div>
-
 
 <!-- SPLASH LOADER -->
 <div id="splashLoader" class="splash-loader hidden">
@@ -73,41 +56,26 @@
 
   <!-- QUICK ACTIONS -->
   <div class="quick-actions">
-    <button onclick="location.href='data.html'">📶 Buy Data</button>
+    <button onclick="location.href='data.html'">💳 Buy Data</button>
     <button onclick="location.href='airtime.html'">📞 Buy Airtime</button>
   </div>
-
-  <!-- DATA PLANS -->
-  <div id="plansGrid" class="plans-grid"></div>
-
-  <!-- CONFIRM ORDER -->
-  <button id="confirmOrderBtn" class="primary-btn hidden" onclick="confirmOrder()">Confirm</button>
 
   <!-- TRANSACTIONS LIST -->
   <div id="transactionsList" class="transactions-list"></div>
 </div>
 
-<!-- PIN MODAL -->
+<!-- PIN MODAL (for Set PIN from More panel only) -->
 <div id="pinModal" class="modal hidden">
   <div class="modal-content">
-    <h3>Enter PIN</h3>
+    <h3 id="pinTitle">Set Transaction PIN</h3>
     <div class="pin-inputs">
-      <input type="password" maxlength="1">
-      <input type="password" maxlength="1">
-      <input type="password" maxlength="1">
-      <input type="password" maxlength="1">
+      <input maxlength="1" type="password">
+      <input maxlength="1" type="password">
+      <input maxlength="1" type="password">
+      <input maxlength="1" type="password">
     </div>
-    <button id="pinActionBtn" class="primary-btn" onclick="submitPin()">Pay</button>
+    <button id="pinActionBtn" class="primary-btn" onclick="submitPin()">Verify</button>
     <button onclick="closePinModal()" class="secondary-btn">Cancel</button>
-  </div>
-</div>
-
-<!-- RECEIPT MODAL -->
-<div id="receiptModal" class="modal hidden">
-  <div class="modal-content">
-    <h3>Receipt</h3>
-    <div id="receiptBody"></div>
-    <button onclick="receiptModal.classList.add('hidden')" class="primary-btn">Close</button>
   </div>
 </div>
 
@@ -119,134 +87,5 @@
 </div>
 
 <script src="app.js"></script>
-
-<script>
-/* ================= MORE PANEL ================= */
-function toggleMore() { morePanel.classList.toggle("hidden"); }
-function closeMore() { morePanel.classList.add("hidden"); }
-
-/* ================= MORE PANEL ACTIONS ================= */
-function enableBiometric(){ alert("Biometric coming soon"); }
-function forgotPin(){ alert("Forgot PIN"); }
-function forgotPassword(){ alert("Forgot Password"); }
-function contactWhatsApp(){ window.open("https://wa.me/2348117988561"); }
-function callSupport(){ location.href="tel:+2348117988561"; }
-function logout(){ localStorage.clear(); location.href="login.html"; }
-function copyAccount(){
-  const acc="1234567890";
-  navigator.clipboard.writeText(acc);
-  alert("Copied: "+acc);
-}
-
-
-/* ================= PIN UX ================= */
-const pinInputs = document.querySelectorAll(".pin-inputs input");
-<script>
-let pinMode = "set";
-
-function $(id){
-  return document.getElementById(id);
-}
-
-/* ===== PIN MODAL CONTROL ===== */
-
-function openSetPinFromMore(){
-  pinMode = "set";
-  $("pinTitle").textContent = "Set Transaction PIN";
-  $("pinActionBtn").textContent = "Verify";
-  $("pinModal").classList.remove("hidden");
-}
-
-function openPinModal(mode){
-  pinMode = mode;
-  $("pinTitle").textContent = mode === "set" ? "Set Transaction PIN" : "Enter PIN";
-  $("pinActionBtn").textContent = "Verify";
-  $("pinModal").classList.remove("hidden");
-}
-
-function closePinModal(){
-  $("pinModal").classList.add("hidden");
-}
-
-/* ===== PIN INPUT UX ===== */
-
-const pinInputs = document.querySelectorAll(".pin-inputs input");
-
-pinInputs.forEach((input, idx) => {
-  input.addEventListener("input", e => {
-    if (e.target.value.length === 1 && idx < pinInputs.length - 1) {
-      pinInputs[idx + 1].focus();
-    }
-  });
-
-  input.addEventListener("keydown", e => {
-    if (e.key === "Backspace" && !input.value && idx > 0) {
-      pinInputs[idx - 1].focus();
-    }
-  });
-});
-
-/* SHOW / HIDE PIN */
-
-function togglePinVisibility() {
-  pinInputs.forEach(i => {
-    i.type = i.type === "password" ? "text" : "password";
-  });
-}
-</script>
-// Auto-focus next & backspace
-pinInputs.forEach((input, idx) => {
-  input.addEventListener("input", e => {
-    if (e.target.value.length===1 && idx<pinInputs.length-1) pinInputs[idx+1].focus();
-  });
-  input.addEventListener("keydown", e => {
-    if(e.key==="Backspace" && !input.value && idx>0) pinInputs[idx-1].focus();
-  });
-});
-
-// Show/Hide toggle
-function togglePinVisibility() {
-  pinInputs.forEach(i => i.type=i.type==="password"?"text":"password");
-}
-
-const pinToggleBtn = document.createElement("button");
-pinToggleBtn.type="button";
-pinToggleBtn.textContent="Show";
-pinToggleBtn.className="show-password-btn";
-pinToggleBtn.style.marginTop="0.5rem";
-pinToggleBtn.onclick=()=>{
-  togglePinVisibility();
-  pinToggleBtn.textContent = pinInputs[0].type==="password"?"Show":"Hide";
-};
-document.querySelector("#pinModal .modal-content").appendChild(pinToggleBtn);
-
-// Clear inputs
-function clearPinInputs(){ pinInputs.forEach(i=>i.value=""); }
-
-/* ================= INIT ================= */
-document.addEventListener("DOMContentLoaded", async ()=>{
-  welcomeSound.play();
-
-  const name = localStorage.getItem("name") || "User";
-  greeting.textContent=`Hello, ${name} 👋`;
-
-  const token = localStorage.getItem("token");
-  if(!token) return;
-
-  /* Fetch wallet */
-  try {
-    const res = await fetch(`${backendUrl}/api/wallet`, {
-      headers:{Authorization:`Bearer ${token}`}
-    });
-    const data = await res.json();
-    walletBalance.textContent=`₦${data.balance||0}`;
-  } catch {}
-
-  /* Render plans */
-  renderPlans();
-  checkPinStatus();
-});
-</script>
-
 </body>
 </html>

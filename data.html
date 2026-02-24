@@ -5,31 +5,6 @@
   <title>Purchase Data</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="style.css" />
-  <style>
-    body { background: #000; color: #fff; font-family: system-ui, sans-serif; }
-    .top-bar { display: flex; align-items: center; padding: 14px; }
-    .top-bar h2 { flex: 1; text-align: center; font-size: 18px; }
-    .networks { display: flex; justify-content: center; gap: 18px; margin: 20px 0; }
-    .network-logo img { width: 64px; height: 64px; border-radius: 50%; }
-    .phone-box { margin: 0 16px 20px; background: #111; border-radius: 14px; padding: 14px; }
-    .phone-box input { width: 100%; background: transparent; border: none; color: #fff; font-size: 16px; outline: none; }
-    .tabs { display: flex; justify-content: center; gap: 30px; margin-bottom: 14px; font-size: 14px; }
-    .tabs span.active { color: #b48cff; border-bottom: 2px solid #b48cff; padding-bottom: 6px; }
-    .plans-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; padding: 0 16px; }
-    .plan-card { background: #111; border-radius: 16px; padding: 14px; cursor: pointer; transition: all 0.25s ease; }
-    .plan-card h4 { font-size: 15px; margin: 6px 0; }
-    .plan-card small { color: #aaa; }
-    .plan-card.selected { box-shadow: 0 0 12px 2px rgba(0,0,0,0.4); }
-    .price { margin-top: 8px; font-size: 16px; font-weight: bold; }
-    .confirm-btn { margin: 20px 16px; background: #6a3cff; color: #fff; border: none; width: calc(100% - 32px); padding: 14px; border-radius: 14px; font-size: 16px; }
-    .hidden { display: none; }
-
-    /* Modal styling */
-    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; }
-    .modal-content { background: #111; padding: 20px; border-radius: 14px; width: 90%; max-width: 320px; text-align: center; }
-    .pin-inputs { display: flex; justify-content: center; gap: 10px; margin: 14px 0; }
-    .pin-inputs input { width: 40px; height: 40px; font-size: 18px; text-align: center; border-radius: 6px; border: 1px solid #555; background: #222; color: #fff; }
-  </style>
 </head>
 <body>
 
@@ -51,32 +26,33 @@
   <span>GIFTING</span>
 </div>
 
-<div id="plansGrid" class="plans-grid">
-  <!-- Plans will be rendered dynamically -->
-</div>
+<!-- PLANS GRID -->
+<div id="plansGrid" class="plans-grid"></div>
 
 <button id="confirmOrderBtn" class="confirm-btn hidden" onclick="confirmOrder()">Confirm Order</button>
-<button id="setPinBtn" class="confirm-btn" onclick="openSetPin()">Set PIN</button>
+<button id="setPinBtn" class="confirm-btn" onclick="openSetPinFromMore()">Set PIN</button>
 
-<!-- Set PIN Modal -->
-<div id="setPinModal" class="hidden modal">
+<!-- PIN MODAL (used for purchase or set PIN) -->
+<div id="pinModal" class="hidden modal">
   <div class="modal-content">
-    <h3>Set PIN</h3>
+    <h3 id="pinTitle">Enter PIN</h3>
     <div class="pin-inputs">
-      <input maxlength="1"><input maxlength="1"><input maxlength="1"><input maxlength="1">
+      <input maxlength="1" type="password">
+      <input maxlength="1" type="password">
+      <input maxlength="1" type="password">
+      <input maxlength="1" type="password">
     </div>
-    <button onclick="submitSetPin()">Save</button>
+    <button id="pinActionBtn" class="primary-btn" onclick="submitPin()">Pay</button>
+    <button onclick="closePinModal()" class="secondary-btn">Cancel</button>
   </div>
 </div>
 
-<!-- Enter PIN Modal -->
-<div id="pinModal" class="hidden modal">
+<!-- RECEIPT MODAL -->
+<div id="receiptModal" class="modal hidden">
   <div class="modal-content">
-    <h3>Enter PIN</h3>
-    <div class="pin-inputs">
-      <input maxlength="1"><input maxlength="1"><input maxlength="1"><input maxlength="1">
-    </div>
-    <button onclick="submitPin()">Pay</button>
+    <h3>Receipt</h3>
+    <div id="receiptBody"></div>
+    <button onclick="receiptModal.classList.add('hidden')" class="primary-btn">Close</button>
   </div>
 </div>
 

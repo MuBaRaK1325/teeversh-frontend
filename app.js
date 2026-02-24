@@ -1,313 +1,178 @@
-/* ================= CONFIG ================= */
 const backendUrl = "https://mayconnect-backend-1.onrender.com";
-const $ = id => document.getElementById(id);
-const getToken = () => localStorage.getItem("token");
-const adminEmail = "[abubakarmubarak3456@gmail.com](mailto:abubakarmubarak3456@gmail.com)";
 
-/* ================= AUTH GUARD ================= */
-(function authGuard() {
-const path = location.pathname.toLowerCase();
-const publicPages = ["login.html", "signup.html"];
-const token = getToken();
+const walletBalance = document.getElementById("walletBalance");
+const greeting = document.getElementById("greeting");
+const plansGrid = document.getElementById("plansGrid");
 
-if (!token && !publicPages.some(p => path.includes(p))) {
-location.href = "login.html";
-}
-})();
-
-/* ================= GLOBAL STATE ================= */
 let selectedPlan = null;
-let hasPin = false;
-let isAdmin = false;
 
-/* ================= NETWORK STATUS ================= */
-const net = $("networkStatus");
+/* ================= INIT ================= */
 
-function showNetwork(type) {
-if (!net) return;
+document.addEventListener("DOMContentLoaded", async () => {
 
-net.className = `network-status ${type}`;
-net.textContent =
-type === "slow"
-? "Slow network detected"
-: "You are offline";
+  const token = localStorage.getItem("token");
 
-net.classList.remove("hidden");
+  const name = localStorage.getItem("name");
 
-setTimeout(() => {
-net.classList.add("hidden");
-}, 3000);
-}
+  if (greeting) {
+    greeting.textContent = `Hello, ${name}`;
+  }
 
-window.addEventListener("offline", () => showNetwork("offline"));
+  if (walletBalance && token) {
 
-/* ================= LOADER ================= */
-const loader = $("splashLoader");
-const loaderState = $("loaderState");
+    const res = await fetch(`${backendUrl}/api/wallet`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
 
-function showLoader() {
-loader?.classList.remove("hidden");
-loaderState.innerHTML = `<div class="splash-ring"></div>`;
-}
+    const data = await res.json();
 
-function showSuccess() {
-loaderState.innerHTML = `<div class="success-check">✓</div>`;
-}
+    walletBalance.textContent = `₦${data.balance}`;
+  }
 
-function hideLoader() {
-loader?.classList.add("hidden");
-}
+  if (plansGrid) {
+    loadPlans();
+  }
 
-/* ================= SOUND ================= */
-const welcomeSound = $("welcomeSound");
-const successSound = $("successSound");
-
-function playSuccessSound() {
-successSound?.play().catch(() => {});
-}
-
-/* ================= WALLET ================= */
-async function updateWalletBalance() {
-if (!getToken()) return;
-
-try {
-const res = await fetch(`${backendUrl}/api/wallet`, {
-headers: {
-Authorization: `Bearer ${getToken()}`
-}
 });
 
-```
-const data = await res.json();
+/* ================= LOAD PLANS ================= */
 
-if ($("walletBalance")) {
-  $("walletBalance").textContent = `₦${data.balance || 0}`;
-}
-```
-
-} catch (err) {
-console.log("Wallet error", err);
-}
-}
-
-/* ================= LOAD DATA PLANS FROM SERVER ================= */
 async function loadPlans() {
-const container = $("plansGrid");
-if (!container) return;
 
-try {
-const res = await fetch(`${backendUrl}/api/plans`);
-const plans = await res.json();
+  const res = await fetch(`${backendUrl}/api/plans`);
 
-```
-container.innerHTML = "";
+  const plans = await res.json();
 
-plans.forEach(plan => {
-  const div = document.createElement("div");
-  div.className = "plan-card";
+  plansGrid.innerHTML = "";
 
-  div.innerHTML = `
-    <small>${plan.network}</small>
-    <h4>${plan.name}</h4>
-    <small>${plan.validity || "Plan"}</small>
-    <div class="price">₦${plan.price}</div>
-  `;
+  plans.forEach(plan => {
 
-  div.onclick = () => selectPlan(div, plan);
-  container.appendChild(div);
-});
-```
+    const div = document.createElement("div");
 
-} catch (err) {
-console.log("Failed to load plans", err);
-}
-}
+    div.className = "plan-card";
 
-function selectPlan(card, plan) {
-document.querySelectorAll(".plan-card").forEach(p => {
-p.classList.remove("selected");
-});
+    div.innerHTML = `
+      <h4>${plan.network}</h4>
+      <small>${plan.name}</small>
+      <div class="price">₦${plan.price}</div>
+    `;
 
-card.classList.add("selected");
-selectedPlan = plan;
+    div.onclick = () => {
 
-$("confirmOrderBtn")?.classList.remove("hidden");
-}
+      document
+        .querySelectorAll(".plan-card")
+        .forEach(p => p.classList.remove("selected"));
 
-/* ================= PIN MODAL ================= */
-const pinInputs = document.querySelectorAll(".pin-inputs input");
-let pinMode = "purchase";
+      div.classList.add("selected");
 
-function openPinModal(mode) {
-pinMode = mode;
+      selectedPlan = plan;
 
-$("pinActionBtn").textContent =
-mode === "set" ? "Verify PIN" : "Pay";
+      document
+        .getElementById("confirmOrderBtn")
+        ?.classList.remove("hidden");
 
-$("pinModal")?.classList.remove("hidden");
+    };
+
+    plansGrid.appendChild(div);
+
+  });
+
 }
 
-function closePinModal() {
-$("pinModal")?.classList.add("hidden");
-}
+/* ================= PURCHASE ================= */
 
-function clearPinInputs() {
-pinInputs.forEach(i => (i.value = ""));
-}
+async function confirmOrder() {
 
-/* ================= CONFIRM ORDER ================= */
-function confirmOrder() {
-if (!selectedPlan) {
-alert("Select a plan first");
-return;
-}
+  const phone = document.getElementById("phone")?.value;
 
-if (!$("phone")?.value) {
-alert("Enter phone number");
-return;
-}
+  if (!selectedPlan) {
+    alert("Select plan");
+    return;
+  }
 
-if (!hasPin) {
-openPinModal("set");
-return;
-}
+  const token = localStorage.getItem("token");
 
-openPinModal("purchase");
-}
+  const res = await fetch(`${backendUrl}/api/purchase`, {
 
-/* ================= SUBMIT PIN ================= */
-async function submitPin() {
-const pin = [...pinInputs].map(i => i.value).join("");
-
-if (!/^\d{4}$/.test(pin)) {
-alert("Enter 4 digit PIN");
-return;
-}
-
-showLoader();
-
-try {
-
-```
-/* ===== SET PIN ===== */
-if (pinMode === "set") {
-
-  const res = await fetch(`${backendUrl}/api/set-pin`, {
     method: "POST",
+
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${getToken()}`
+      Authorization: `Bearer ${token}`
     },
-    body: JSON.stringify({ pin })
+
+    body: JSON.stringify({
+      planId: selectedPlan.id,
+      phone
+    })
+
   });
 
   const data = await res.json();
 
-  if (!res.ok) {
-    throw new Error(data.error);
+  if (data.success) {
+    alert("Purchase successful");
+    location.reload();
+  } else {
+    alert(data.message);
   }
 
-  hasPin = true;
-  playSuccessSound();
+}
+
+/* ================= SET PIN ================= */
+
+async function submitSetPin() {
+
+  const inputs = document.querySelectorAll("#setPinModal input");
+
+  let pin = "";
+
+  inputs.forEach(i => pin += i.value);
+
+  const token = localStorage.getItem("token");
+
+  await fetch(`${backendUrl}/api/set-pin`, {
+
+    method: "POST",
+
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+
+    body: JSON.stringify({ pin })
+
+  });
+
   alert("PIN saved");
 
-  closePinModal();
-  return;
+  document.getElementById("setPinModal").classList.add("hidden");
+
 }
 
-/* ===== PURCHASE ===== */
-const res = await fetch(`${backendUrl}/api/wallet/purchase`, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${getToken()}`
-  },
-  body: JSON.stringify({
-    type: "data",
-    pin,
-    provider: selectedPlan.provider,
-    details: {
-      mobile_number: $("phone").value,
-      plan: selectedPlan.plan_id || selectedPlan.id
-    }
-  })
-});
+/* ================= ADMIN WITHDRAW ================= */
 
-const data = await res.json();
+async function adminWithdraw() {
 
-if (!res.ok) {
-  throw new Error(data.error || "Purchase failed");
+  const amount = prompt("Amount");
+
+  const token = localStorage.getItem("token");
+
+  const res = await fetch(`${backendUrl}/api/admin/withdraw`, {
+
+    method: "POST",
+
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+
+    body: JSON.stringify({ amount })
+
+  });
+
+  const data = await res.json();
+
+  alert(data.message);
+
 }
-
-playSuccessSound();
-
-$("receiptBody").innerHTML = `
-  <div><b>Reference:</b> ${data.receipt.reference}</div>
-  <div><b>Amount:</b> ₦${data.receipt.amount}</div>
-  <div style="color:green"><b>Status:</b> SUCCESS</div>
-`;
-
-$("receiptModal")?.classList.remove("hidden");
-
-updateWalletBalance();
-closePinModal();
-```
-
-} catch (err) {
-alert(err.message);
-} finally {
-hideLoader();
-}
-}
-
-$("pinActionBtn")?.addEventListener("click", submitPin);
-
-/* ================= MORE PANEL ================= */
-function logout() {
-localStorage.clear();
-location.href = "login.html";
-}
-
-/* ================= CHECK PIN ================= */
-async function checkPinStatus() {
-try {
-const res = await fetch(`${backendUrl}/api/wallet`, {
-headers: {
-Authorization: `Bearer ${getToken()}`
-}
-});
-
-```
-if (res.ok) {
-  hasPin = true;
-}
-```
-
-} catch {}
-}
-
-/* ================= INIT ================= */
-document.addEventListener("DOMContentLoaded", async () => {
-
-welcomeSound?.play().catch(() => {});
-
-const name = localStorage.getItem("name") || "User";
-$("greeting").textContent = `Hello, ${name} 👋`;
-
-const email = localStorage.getItem("email");
-isAdmin = email === adminEmail;
-
-await updateWalletBalance();
-await loadPlans();
-await checkPinStatus();
-
-});
-
-/* ================= AUTO WALLET REFRESH ================= */
-setInterval(async () => {
-
-if (!getToken()) return;
-
-await updateWalletBalance();
-
-}, 5 * 60 * 1000);
