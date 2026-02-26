@@ -2,71 +2,166 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>MAY-Connect | Login</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MAY CONNECT - Login</title>
+
 <style>
-  body { font-family:sans-serif; display:flex; justify-content:center; align-items:center; height:100vh; background:#f4f4f4; margin:0; }
-  .container { background:#fff; padding:2rem; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1); width:100%; max-width:400px; text-align:center; }
-  input { width:100%; padding:0.8rem; margin:0.5rem 0; border:1px solid #ccc; border-radius:4px; }
-  button { width:100%; padding:0.8rem; margin:0.5rem 0; border:none; border-radius:4px; background:#4A90E2; color:#fff; font-weight:bold; cursor:pointer; }
-  #loader { display:none; margin:1rem 0; }
-  small { cursor:pointer; color:#4A90E2; }
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial, Helvetica, sans-serif;
+}
+
+body{
+background:#020b1f;
+color:white;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+flex-direction:column;
+}
+
+.logo{
+width:110px;
+height:110px;
+border-radius:50%;
+border:4px solid #2b6cff;
+padding:8px;
+margin-bottom:40px;
+}
+
+.card{
+background:#08142c;
+padding:30px;
+border-radius:20px;
+width:90%;
+max-width:380px;
+box-shadow:0 0 30px rgba(0,0,0,0.4);
+}
+
+.title{
+text-align:center;
+font-size:26px;
+margin-bottom:25px;
+}
+
+.inputBox{
+margin-bottom:18px;
+position:relative;
+}
+
+input{
+width:100%;
+padding:14px;
+border-radius:12px;
+border:none;
+background:#020b1f;
+color:white;
+font-size:16px;
+outline:none;
+}
+
+.showBtn{
+position:absolute;
+right:12px;
+top:50%;
+transform:translateY(-50%);
+background:none;
+border:none;
+color:#4da3ff;
+font-size:14px;
+cursor:pointer;
+}
+
+.loginBtn{
+width:100%;
+padding:14px;
+border:none;
+border-radius:12px;
+background:#3b78e7;
+color:white;
+font-size:17px;
+margin-top:10px;
+cursor:pointer;
+}
+
+.biometric{
+margin-top:16px;
+border:2px dashed #3b78e7;
+padding:14px;
+border-radius:12px;
+text-align:center;
+cursor:pointer;
+}
+
+.signup{
+margin-top:15px;
+border:2px solid #3b78e7;
+padding:14px;
+border-radius:12px;
+text-align:center;
+cursor:pointer;
+}
+
+a{
+color:white;
+text-decoration:none;
+display:block;
+}
+
 </style>
 </head>
 <body>
 
-<div class="container">
-  <img src="images/logo.png" alt="Logo" width="80">
-  <h2>Login</h2>
-  <form id="loginForm">
-    <input type="email" id="email" placeholder="Email" required>
-    <input type="password" id="password" placeholder="Password" required>
-    <button type="submit">Login</button>
-    <div id="loader">Loading...</div>
-  </form>
-  <p>Don't have an account? <a href="signup.html">Sign up</a></p>
-  <p><small id="fingerprintBtn">Login with Fingerprint</small></p>
+<img src="logo.png" class="logo">
+
+<div class="card">
+
+<div class="title">Welcome Back</div>
+
+<div class="inputBox">
+<input id="username" placeholder="Username">
 </div>
 
-<audio id="welcomeSound" src="sounds/welcome.mp3" preload="auto"></audio>
+<div class="inputBox">
+<input id="password" type="password" placeholder="Password">
+<button class="showBtn" onclick="togglePassword()">Show</button>
+</div>
+
+<button class="loginBtn" onclick="login()">Login</button>
+
+<div class="biometric">
+🔐 Login with Biometrics
+</div>
+
+<a href="signup.html">
+<div class="signup">
+Create Account
+</div>
+</a>
+
+</div>
+
+<script src="app.js"></script>
 
 <script>
-const backendUrl = "https://mayconnect-backend-1.onrender.com";
 
-document.getElementById("loginForm").addEventListener("submit", async function(e){
-  e.preventDefault();
+function togglePassword(){
 
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value.trim();
+const pass=document.getElementById("password")
 
-  if(!email || !password){
-    alert("Fill all fields");
-    return;
-  }
+if(pass.type==="password"){
+pass.type="text"
+}else{
+pass.type="password"
+}
 
-  try{
-    const res = await fetch(backendUrl + "/api/login",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ email, password })
-    });
+}
 
-    const data = await res.json();
-
-    if(!res.ok){
-      alert(data.error || "Login failed");
-      return;
-    }
-
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("name", data.name);
-
-    location.href="dashboard.html";
-
-  }catch(err){
-    alert("Network error");
-  }
-});
 </script>
+
 </body>
 </html>

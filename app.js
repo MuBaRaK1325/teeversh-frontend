@@ -1,202 +1,465 @@
-const backendUrl = "https://mayconnect-backend-1.onrender.com"
+const API = "https://your-backend-url.onrender.com"
 
-const token = () => localStorage.getItem("token")
+/* =========================
+SOUNDS
+========================= */
 
-const $ = id => document.getElementById(id)
+const welcomeSound = new Audio("/sounds/welcome.mp3")
+const successSound = new Audio("/sounds/success.mp3")
 
-/* ================= AUTH GUARD ================= */
+/* =========================
+HELPERS
+========================= */
 
-if (!token() && !location.pathname.includes("login"))
-location.href = "login.html"
+function token(){
+return localStorage.getItem("token")
+}
 
-/* ================= DASHBOARD LOAD ================= */
+function authHeader(){
+return {
+Authorization:"Bearer "+token(),
+"Content-Type":"application/json"
+}
+}
 
-async function loadDashboard(){
+function logout(){
+localStorage.removeItem("token")
+window.location="login.html"
+}
 
-const res = await fetch(`${backendUrl}/api/wallet`,{
-headers:{Authorization:`Bearer ${token()}`}
+/* =========================
+LOGIN
+========================= */
+
+async function login(){
+
+const username=document.getElementById("username").value
+const password=document.getElementById("password").value
+
+try{
+
+const res = await fetch(API+"/api/login",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({username,password})
 })
 
 const data = await res.json()
 
-$("walletBalance").textContent=`₦${data.wallet_balance}`
+if(!res.ok){
+alert(data.message || "Login failed")
+return
+}
 
-$("greeting").textContent=`Hello, ${data.name} 👋`
+localStorage.setItem("token",data.token)
 
-if(data.is_admin){
+window.location="dashboard.html"
 
-document.getElementById("adminPanel").style.display="block"
+}catch(err){
+
+alert("Server error")
 
 }
 
 }
 
-/* ================= LOAD PLANS ================= */
+/* =========================
+SIGNUP
+========================= */
+
+async function signup(){
+
+const username=document.getElementById("username").value
+const email=document.getElementById("email").value
+const password=document.getElementById("password").value
+
+try{
+
+const res = await fetch(API+"/api/signup",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({username,email,password})
+})
+
+const data = await res.json()
+
+if(!res.ok){
+alert(data.message)
+return
+}
+
+localStorage.setItem("token",data.token)
+
+window.location="dashboard.html"
+
+}catch(err){
+
+alert("Signup error")
+
+}
+
+}
+
+/* =========================
+LOAD USER (DASHBOARD)
+========================= */
+
+async function loadDashboard(){
+
+try{
+
+const res = await fetch(API+"/api/me",{
+headers:authHeader()
+})
+
+if(res.status===401){
+logout()
+return
+}
+
+const user = await res.json()
+
+document.getElementById("usernameDisplay").innerText=user.username
+document.getElementById("walletBalance").innerText="₦"+user.wallet_balance
+
+welcomeSound.play()
+
+if(user.is_admin){
+
+const adminBtn=document.getElementById("adminBtn")
+
+if(adminBtn){
+adminBtn.style.display="block"
+}
+
+}
+
+}catch(err){
+
+console.log(err)
+
+}
+
+}
+
+/* =========================
+LOAD DATA PLANS
+========================= */
 
 async function loadPlans(){
 
-const res = await fetch(`${backendUrl}/api/plans`,{
-headers:{Authorization:`Bearer ${token()}`}
-})
+try{
 
+const res = await fetch(API+"/api/plans")
 const plans = await res.json()
 
-const grid = $("plansGrid")
+const box=document.getElementById("plans")
 
-grid.innerHTML=""
+if(!box) return
+
+box.innerHTML=""
 
 plans.forEach(p=>{
 
-const card=document.createElement("div")
-
-card.className="plan-card"
-
-card.innerHTML=`
-<h4>${p.network}</h4>
-<p>${p.name}</p>
-<strong>₦${p.price}</strong>
+box.innerHTML+=`
+<option value="${p.plan_id}">
+${p.network} ${p.name} - ₦${p.price}
+</option>
 `
 
-card.onclick=()=>selectPlan(p)
-
-grid.appendChild(card)
-
 })
 
-}
+}catch(err){
 
-/* ================= SELECT PLAN ================= */
-
-let selectedPlan=null
-
-function selectPlan(plan){
-
-selectedPlan=plan
-
-$("confirmOrderBtn").classList.remove("hidden")
+console.log(err)
 
 }
 
-/* ================= PURCHASE ================= */
+}
 
-async function confirmOrder(){
+/* =========================
+BUY DATA
+========================= */
 
-const phone=$("phone").value
+async function buyData(){
 
-if(!phone)return alert("Enter phone")
+const phone=document.getElementById("phone").value
+const plan_id=document.getElementById("plans").value
+const pin=prompt("Enter transaction PIN")
 
-const res = await fetch(`${backendUrl}/api/purchase`,{
+if(!pin) return
+
+try{
+
+const res = await fetch(API+"/api/buy-data",{
 
 method:"POST",
 
-headers:{
-"Content-Type":"application/json",
-Authorization:`Bearer ${token()}`
-},
+headers:authHeader(),
 
 body:JSON.stringify({
-plan:selectedPlan.plan_id,
-phone
+phone,
+plan_id,
+pin
 })
 
 })
 
-const data=await res.json()
+const data = await res.json()
 
-if(res.ok){
+if(!res.ok){
+alert(data.message)
+return
+}
 
-document.getElementById("successSound").play()
+successSound.play()
 
-alert("Purchase successful")
+alert("Data purchase successful")
 
-}else{
+loadDashboard()
+loadTransactions()
 
-alert(data.error)
+}catch(err){
+
+alert("Transaction error")
 
 }
 
 }
 
-/* ================= SET PIN ================= */
+/* =========================
+BUY AIRTIME
+========================= */
 
-async function submitPin(){
+async function buyAirtime(){
 
-const pin=[...document.querySelectorAll(".pin-inputs input")]
-.map(i=>i.value)
-.join("")
+const phone=document.getElementById("airtimePhone").value
+const network=document.getElementById("airtimeNetwork").value
+const amount=document.getElementById("airtimeAmount").value
+const pin=prompt("Enter PIN")
 
-const res=await fetch(`${backendUrl}/api/set-pin`,{
+if(!pin) return
+
+try{
+
+const res = await fetch(API+"/api/buy-airtime",{
 
 method:"POST",
 
-headers:{
-"Content-Type":"application/json",
-Authorization:`Bearer ${token()}`
-},
+headers:authHeader(),
+
+body:JSON.stringify({
+phone,
+network,
+amount,
+pin
+})
+
+})
+
+const data = await res.json()
+
+if(!res.ok){
+alert(data.message)
+return
+}
+
+successSound.play()
+
+alert("Airtime sent successfully")
+
+loadDashboard()
+loadTransactions()
+
+}catch(err){
+
+alert("Airtime error")
+
+}
+
+}
+
+/* =========================
+SET PIN
+========================= */
+
+async function setPin(){
+
+const pin=document.getElementById("newPin").value
+const confirm=document.getElementById("confirmPin").value
+
+if(pin!==confirm){
+alert("Pin does not match")
+return
+}
+
+try{
+
+const res = await fetch(API+"/api/set-pin",{
+
+method:"POST",
+
+headers:authHeader(),
 
 body:JSON.stringify({pin})
 
 })
 
-if(res.ok){
+const data = await res.json()
 
-alert("PIN saved")
+alert(data.message)
+
+}catch(err){
+
+alert("Pin error")
 
 }
 
 }
 
-/* ================= ADMIN WITHDRAW ================= */
+/* =========================
+TRANSACTIONS
+========================= */
 
-async function adminWithdraw(){
+async function loadTransactions(){
 
-const amount=$("withdrawAmount").value
-const bank=$("bankName").value
-const account=$("accountNumber").value
+try{
 
-const res=await fetch(`${backendUrl}/api/admin/withdraw`,{
+const res = await fetch(API+"/api/transactions",{
+headers:authHeader()
+})
 
-method:"POST",
+const tx = await res.json()
 
-headers:{
-"Content-Type":"application/json",
-Authorization:`Bearer ${token()}`
-},
+const box=document.getElementById("transactions")
 
-body:JSON.stringify({amount,bank,account})
+if(!box) return
+
+box.innerHTML=""
+
+tx.forEach(t=>{
+
+box.innerHTML+=`
+
+<div class="txCard">
+
+<div>${t.type.toUpperCase()}</div>
+
+<div>₦${t.amount}</div>
+
+<div>${new Date(t.created_at).toLocaleString()}</div>
+
+</div>
+
+`
 
 })
 
-const data=await res.json()
+}catch(err){
 
-alert(data.message || data.error)
-
-}
-
-/* ================= MORE ================= */
-
-function toggleMore(){
-
-document.getElementById("morePanel").classList.toggle("hidden")
+console.log(err)
 
 }
 
-/* ================= INIT ================= */
+}
 
-document.addEventListener("DOMContentLoaded",()=>{
+/* =========================
+ADMIN PAGE
+========================= */
 
-if(location.pathname.includes("dashboard")){
+async function loadAdmin(){
 
-document.getElementById("welcomeSound")?.play()
+try{
 
+const res = await fetch(API+"/api/admin/profit",{
+headers:authHeader()
+})
+
+const data = await res.json()
+
+document.getElementById("adminBalance").innerText="₦"+data.admin_wallet
+
+}catch(err){
+
+console.log(err)
+
+}
+
+}
+
+/* =========================
+ADMIN WITHDRAW
+========================= */
+
+async function adminWithdraw(){
+
+const amount=document.getElementById("amount").value
+const bank=document.getElementById("bank").value
+const account_number=document.getElementById("account_number").value
+const account_name=document.getElementById("account_name").value
+
+try{
+
+const res = await fetch(API+"/api/admin/withdraw",{
+
+method:"POST",
+
+headers:authHeader(),
+
+body:JSON.stringify({
+amount,
+bank,
+account_number,
+account_name
+})
+
+})
+
+const data = await res.json()
+
+if(!res.ok){
+alert(data.message)
+return
+}
+
+successSound.play()
+
+alert("Withdrawal submitted")
+
+loadAdmin()
+
+}catch(err){
+
+alert("Withdraw error")
+
+}
+
+}
+
+/* =========================
+MORE TAB
+========================= */
+
+function openTab(tab){
+
+const tabs=document.querySelectorAll(".tab")
+
+tabs.forEach(t=>t.style.display="none")
+
+document.getElementById(tab).style.display="block"
+
+}
+
+/* =========================
+PAGE INIT
+========================= */
+
+window.addEventListener("DOMContentLoaded",()=>{
+
+if(document.getElementById("usernameDisplay")){
 loadDashboard()
-
-}
-
-if(document.getElementById("plansGrid")){
-
 loadPlans()
-
+loadTransactions()
 }
 
 })
