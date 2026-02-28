@@ -1,4 +1,4 @@
-const API = "https://your-backend-url.onrender.com"
+const API = "https://mayconnect-backend-1.onrender.com"
 
 /* =========================
 SOUNDS
@@ -28,6 +28,28 @@ window.location="login.html"
 }
 
 /* =========================
+TAB SYSTEM (FIXED)
+========================= */
+
+function openTab(tabId){
+
+const tabs = document.querySelectorAll(".tab")
+
+tabs.forEach(tab=>{
+tab.style.display="none"
+})
+
+const activeTab = document.getElementById(tabId)
+
+if(activeTab){
+activeTab.style.display="block"
+}else{
+console.warn("Tab not found:", tabId)
+}
+
+}
+
+/* =========================
 LOGIN
 ========================= */
 
@@ -35,8 +57,6 @@ async function login(){
 
 const username=document.getElementById("username").value
 const password=document.getElementById("password").value
-
-try{
 
 const res = await fetch(API+"/api/login",{
 method:"POST",
@@ -52,15 +72,7 @@ return
 }
 
 localStorage.setItem("token",data.token)
-
 window.location="dashboard.html"
-
-}catch(err){
-
-alert("Server error")
-
-}
-
 }
 
 /* =========================
@@ -72,8 +84,6 @@ async function signup(){
 const username=document.getElementById("username").value
 const email=document.getElementById("email").value
 const password=document.getElementById("password").value
-
-try{
 
 const res = await fetch(API+"/api/signup",{
 method:"POST",
@@ -89,28 +99,16 @@ return
 }
 
 localStorage.setItem("token",data.token)
-
 window.location="dashboard.html"
-
-}catch(err){
-
-alert("Signup error")
-
-}
-
 }
 
 /* =========================
-LOAD USER (DASHBOARD)
+LOAD DASHBOARD
 ========================= */
 
 async function loadDashboard(){
 
-try{
-
-const res = await fetch(API+"/api/me",{
-headers:authHeader()
-})
+const res = await fetch(API+"/api/me",{ headers:authHeader() })
 
 if(res.status===401){
 logout()
@@ -119,24 +117,19 @@ return
 
 const user = await res.json()
 
-document.getElementById("usernameDisplay").innerText=user.username
-document.getElementById("walletBalance").innerText="₦"+user.wallet_balance
+document.getElementById("usernameDisplay").innerText = user.username
+document.getElementById("walletBalance").innerText =
+"₦"+Number(user.wallet_balance).toLocaleString()
 
 welcomeSound.play()
 
+// SHOW ADMIN BUTTON
 if(user.is_admin){
 
 const adminBtn=document.getElementById("adminBtn")
-
 if(adminBtn){
 adminBtn.style.display="block"
 }
-
-}
-
-}catch(err){
-
-console.log(err)
 
 }
 
@@ -148,33 +141,21 @@ LOAD DATA PLANS
 
 async function loadPlans(){
 
-try{
-
 const res = await fetch(API+"/api/plans")
 const plans = await res.json()
 
 const box=document.getElementById("plans")
-
 if(!box) return
 
 box.innerHTML=""
 
 plans.forEach(p=>{
-
 box.innerHTML+=`
 <option value="${p.plan_id}">
-${p.network} ${p.name} - ₦${p.price}
+${p.network} ${p.name} - ₦${Number(p.price).toLocaleString()}
 </option>
 `
-
 })
-
-}catch(err){
-
-console.log(err)
-
-}
-
 }
 
 /* =========================
@@ -189,20 +170,10 @@ const pin=prompt("Enter transaction PIN")
 
 if(!pin) return
 
-try{
-
 const res = await fetch(API+"/api/buy-data",{
-
 method:"POST",
-
 headers:authHeader(),
-
-body:JSON.stringify({
-phone,
-plan_id,
-pin
-})
-
+body:JSON.stringify({ phone, plan_id, pin })
 })
 
 const data = await res.json()
@@ -213,18 +184,10 @@ return
 }
 
 successSound.play()
-
 alert("Data purchase successful")
 
 loadDashboard()
 loadTransactions()
-
-}catch(err){
-
-alert("Transaction error")
-
-}
-
 }
 
 /* =========================
@@ -240,21 +203,10 @@ const pin=prompt("Enter PIN")
 
 if(!pin) return
 
-try{
-
 const res = await fetch(API+"/api/buy-airtime",{
-
 method:"POST",
-
 headers:authHeader(),
-
-body:JSON.stringify({
-phone,
-network,
-amount,
-pin
-})
-
+body:JSON.stringify({ phone, network, amount, pin })
 })
 
 const data = await res.json()
@@ -265,18 +217,10 @@ return
 }
 
 successSound.play()
-
 alert("Airtime sent successfully")
 
 loadDashboard()
 loadTransactions()
-
-}catch(err){
-
-alert("Airtime error")
-
-}
-
 }
 
 /* =========================
@@ -293,28 +237,14 @@ alert("Pin does not match")
 return
 }
 
-try{
-
 const res = await fetch(API+"/api/set-pin",{
-
 method:"POST",
-
 headers:authHeader(),
-
 body:JSON.stringify({pin})
-
 })
 
 const data = await res.json()
-
 alert(data.message)
-
-}catch(err){
-
-alert("Pin error")
-
-}
-
 }
 
 /* =========================
@@ -323,66 +253,42 @@ TRANSACTIONS
 
 async function loadTransactions(){
 
-try{
-
-const res = await fetch(API+"/api/transactions",{
-headers:authHeader()
-})
-
+const res = await fetch(API+"/api/transactions",{ headers:authHeader() })
 const tx = await res.json()
 
 const box=document.getElementById("transactions")
-
 if(!box) return
 
 box.innerHTML=""
 
 tx.forEach(t=>{
-
 box.innerHTML+=`
-
 <div class="txCard">
-
 <div>${t.type.toUpperCase()}</div>
-
-<div>₦${t.amount}</div>
-
+<div>₦${Number(t.amount).toLocaleString()}</div>
 <div>${new Date(t.created_at).toLocaleString()}</div>
-
 </div>
-
 `
-
 })
-
-}catch(err){
-
-console.log(err)
-
-}
-
 }
 
 /* =========================
-ADMIN PAGE
+ADMIN PROFIT
 ========================= */
 
 async function loadAdmin(){
 
-try{
+const res = await fetch(API+"/api/admin/profit",{ headers:authHeader() })
 
-const res = await fetch(API+"/api/admin/profit",{
-headers:authHeader()
-})
+if(!res.ok){
+return
+}
 
 const data = await res.json()
 
-document.getElementById("adminBalance").innerText="₦"+data.admin_wallet
-
-}catch(err){
-
-console.log(err)
-
+const bal=document.getElementById("adminBalance")
+if(bal){
+bal.innerText="₦"+Number(data.admin_wallet).toLocaleString()
 }
 
 }
@@ -398,21 +304,15 @@ const bank=document.getElementById("bank").value
 const account_number=document.getElementById("account_number").value
 const account_name=document.getElementById("account_name").value
 
-try{
-
 const res = await fetch(API+"/api/admin/withdraw",{
-
 method:"POST",
-
 headers:authHeader(),
-
 body:JSON.stringify({
 amount,
 bank,
 account_number,
 account_name
 })
-
 })
 
 const data = await res.json()
@@ -423,31 +323,17 @@ return
 }
 
 successSound.play()
-
 alert("Withdrawal submitted")
 
 loadAdmin()
-
-}catch(err){
-
-alert("Withdraw error")
-
-}
-
 }
 
 /* =========================
-MORE TAB
+MORE TAB LOADER
 ========================= */
 
-function openTab(tab){
-
-const tabs=document.querySelectorAll(".tab")
-
-tabs.forEach(t=>t.style.display="none")
-
-document.getElementById(tab).style.display="block"
-
+function loadMoreTab(){
+openTab("moreTab")
 }
 
 /* =========================
@@ -460,6 +346,10 @@ if(document.getElementById("usernameDisplay")){
 loadDashboard()
 loadPlans()
 loadTransactions()
+}
+
+if(document.getElementById("adminBalance")){
+loadAdmin()
 }
 
 })
