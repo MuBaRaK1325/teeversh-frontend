@@ -20,11 +20,28 @@ if (token && currentPage.includes("index.html")) {
 }
 
 // ========================================
+// SPLASH LOADER
+// ========================================
+
+window.addEventListener("load", () => {
+  const loader = document.getElementById("splashLoader")
+  if (loader) {
+    setTimeout(() => {
+      loader.style.display = "none"
+    }, 1500)
+  }
+})
+
+// ========================================
 // SOUNDS
 // ========================================
 
 const welcomeSound = new Audio("sounds/welcome.mp3")
 const successSound = new Audio("sounds/success.mp3")
+
+function playWelcomeSound() {
+  welcomeSound.play().catch(() => {})
+}
 
 // ========================================
 // AUTH FUNCTIONS
@@ -65,8 +82,38 @@ async function signup() {
   window.location.href = "dashboard.html"
 }
 
+async function forgotPassword() {
+  const email = document.getElementById("forgotEmail").value
+
+  const res = await fetch(`${API}/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email })
+  })
+
+  const data = await res.json()
+  alert(data.message)
+}
+
+async function changePassword() {
+  const oldPassword = document.getElementById("oldPassword").value
+  const newPassword = document.getElementById("newPassword").value
+
+  const res = await fetch(`${API}/change-password`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ oldPassword, newPassword })
+  })
+
+  const data = await res.json()
+  alert(data.message)
+}
+
 // ========================================
-// SET TRANSACTION PIN
+// PIN FUNCTIONS
 // ========================================
 
 async function setPin() {
@@ -85,6 +132,23 @@ async function setPin() {
   alert(data.message)
 }
 
+async function changePin() {
+  const oldPin = document.getElementById("oldPin").value
+  const newPin = document.getElementById("newPin").value
+
+  const res = await fetch(`${API}/change-pin`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ oldPin, newPin })
+  })
+
+  const data = await res.json()
+  alert(data.message)
+}
+
 // ========================================
 // DASHBOARD LOAD
 // ========================================
@@ -97,44 +161,32 @@ async function loadDashboard() {
   })
 
   const user = await res.json()
+  if (!res.ok) return
 
-  // Hello 👋 username
   const usernameDisplay = document.getElementById("usernameDisplay")
   if (usernameDisplay) {
-    usernameDisplay.innerHTML = `Hello 👋 ${user.username}`
+    usernameDisplay.innerText = `Hello 👋 ${user.username}`
   }
 
-  // Wallet balance
   const wallet = document.getElementById("walletBalance")
   if (wallet) {
     wallet.innerText = `₦${Number(user.wallet_balance).toLocaleString()}`
   }
 
-  // Admin panel
+  // ADMIN ONLY
   if (user.is_admin) {
-    const adminPanel = document.getElementById("adminPanel")
-    if (adminPanel) adminPanel.style.display = "block"
-
-    const profitRes = await fetch(`${API}/admin/profit`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-
-    const profitData = await profitRes.json()
-
-    const adminWallet = document.getElementById("adminWallet")
-    if (adminWallet) {
-      adminWallet.innerText = `₦${Number(profitData.admin_wallet).toLocaleString()}`
-    }
+    const adminTab = document.getElementById("adminWithdrawTab")
+    if (adminTab) adminTab.style.display = "block"
   }
 
-  loadTransactions()   // ✅ VERY IMPORTANT
-  welcomeSound.play()
+  playWelcomeSound()
+  loadTransactions()
 }
 
 loadDashboard()
 
 // ========================================
-// LOAD TRANSACTION HISTORY
+// LOAD TRANSACTIONS
 // ========================================
 
 async function loadTransactions() {
@@ -168,17 +220,10 @@ async function loadTransactions() {
 }
 
 // ========================================
-// LOAD DATA PLANS (FILTERED CORRECTLY)
+// LOAD DATA PLANS
 // ========================================
 
 async function loadPlans(network) {
-
-  document.querySelectorAll(".network-logo").forEach(logo => {
-    logo.classList.remove("active-network")
-  })
-
-  const activeLogo = document.getElementById(network)
-  if (activeLogo) activeLogo.classList.add("active-network")
 
   const res = await fetch(`${API}/plans?network=${network}`, {
     headers: { Authorization: `Bearer ${token}` }
@@ -202,7 +247,7 @@ async function loadPlans(network) {
 }
 
 // ========================================
-// PURCHASE
+// BUY DATA & AIRTIME
 // ========================================
 
 let selectedPlan = null
@@ -219,26 +264,37 @@ function closePinModal() {
 }
 
 async function confirmPurchase() {
+
   const phone = document.getElementById("phoneInput").value
   const pin = document.getElementById("pinInput").value
 
-  const res = await fetch(`${API}/buy-data`, {
+  let endpoint = ""
+  let body = {}
+
+  if (purchaseType === "data") {
+    endpoint = "/buy-data"
+    body = { plan_id: selectedPlan, phone, pin }
+  }
+
+  if (purchaseType === "airtime") {
+    endpoint = "/buy-airtime"
+    const amount = document.getElementById("airtimeAmount").value
+    body = { network: selectedPlan, phone, amount, pin }
+  }
+
+  const res = await fetch(`${API}${endpoint}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`
     },
-    body: JSON.stringify({
-      plan_id: selectedPlan,
-      phone,
-      pin
-    })
+    body: JSON.stringify(body)
   })
 
   const data = await res.json()
   if (!res.ok) return alert(data.message)
 
-  successSound.play()
+  successSound.play().catch(() => {})
   alert("Purchase successful")
   closePinModal()
   loadDashboard()
@@ -248,35 +304,40 @@ async function confirmPurchase() {
 // ADMIN WITHDRAW
 // ========================================
 
-function openWithdrawModal(){
-  document.getElementById("withdrawModal").style.display="flex"
-}
+async function adminWithdraw() {
 
-function closeWithdrawModal(){
-  document.getElementById("withdrawModal").style.display="none"
-}
-
-async function confirmWithdraw(){
   const bank = document.getElementById("bankName").value
   const account_number = document.getElementById("accountNumber").value
   const account_name = document.getElementById("accountName").value
   const amount = document.getElementById("withdrawAmount").value
 
-  const res = await fetch(`${API}/admin/withdraw`,{
-    method:"POST",
-    headers:{
-      "Content-Type":"application/json",
-      Authorization:`Bearer ${token}`
+  const res = await fetch(`${API}/admin/withdraw`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
     },
-    body:JSON.stringify({ bank, account_number, account_name, amount })
+    body: JSON.stringify({ bank, account_number, account_name, amount })
   })
 
   const data = await res.json()
-  if(!res.ok) return alert(data.message)
+  if (!res.ok) return alert(data.message)
 
-  alert("Withdrawal recorded")
-  closeWithdrawModal()
+  alert("Withdrawal successful")
   loadDashboard()
+}
+
+// ========================================
+// TAB NAVIGATION
+// ========================================
+
+function openTab(tabId) {
+  document.querySelectorAll(".tab-content").forEach(tab => {
+    tab.style.display = "none"
+  })
+
+  const active = document.getElementById(tabId)
+  if (active) active.style.display = "block"
 }
 
 // ========================================

@@ -7,47 +7,23 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<!-- ADMIN PANEL -->
-<div id="adminPanel" style="display:none; margin-top:20px;">
-  <div class="card">
-    <h4>Admin Profit</h4>
-    <p id="adminWallet">₦0</p>
-    <button onclick="openWithdrawModal()">Withdraw Profit</button>
-  </div>
-</div>
 
-<!-- Withdraw Modal -->
-<div id="withdrawModal" class="modal">
-  <div class="modal-content">
-    <h3>Withdraw Profit</h3>
-
-    <input type="text" id="bankName" placeholder="Bank Name">
-    <input type="text" id="accountNumber" placeholder="Account Number">
-    <input type="text" id="accountName" placeholder="Account Name">
-    <input type="number" id="withdrawAmount" placeholder="Amount">
-
-    <button onclick="confirmWithdraw()">Confirm</button>
-    <button onclick="closeWithdrawModal()">Cancel</button>
-  </div>
-</div>
 <!-- SPLASH LOADER -->
-<div id="splashLoader" class="splash-loader hidden">
-  <div id="loaderState" class="splash-content">
+<div id="splashLoader" class="splash-loader">
+  <div class="splash-content">
     <div class="splash-ring"></div>
     <img src="images/logo.png" alt="MAY-Connect">
   </div>
 </div>
 
-<!-- NETWORK STATUS -->
-<div id="networkStatus" class="network-status hidden"></div>
-
-<!-- LOGO + GREETING -->
+<!-- LOGO -->
 <div class="logo-circle">
   <img src="images/logo.png" alt="MAY-Connect Logo">
 </div>
 
+<!-- GREETING -->
 <div style="text-align:center; margin-bottom:1rem;">
-  <h3 id="greeting">Hello, User 👋</h3>
+  <h3 id="usernameDisplay">Hello 👋 User</h3>
 </div>
 
 <audio id="welcomeSound" src="sounds/welcome.mp3" preload="auto"></audio>
@@ -55,15 +31,12 @@
 
 <!-- MORE PANEL -->
 <div id="morePanel" class="more-panel hidden">
-  <button onclick="openSetPinFromMore()">Set Transaction PIN</button>
-  <button onclick="enableBiometric()">Enable Biometric</button>
-  <button onclick="forgotPin()">Forgot PIN</button>
+  <button onclick="openTab('setPinSection')">Set Transaction PIN</button>
+  <button onclick="openTab('changePinSection')">Change PIN</button>
+  <button onclick="openTab('changePasswordSection')">Change Password</button>
   <button onclick="forgotPassword()">Forgot Password</button>
-  <button onclick="contactWhatsApp()">WhatsApp Support</button>
-  <button onclick="callSupport()">Call Support</button>
-  <button onclick="copyAccount()">Copy Account</button>
   <button onclick="logout()">Logout</button>
-  <button onclick="closeMore()">Close</button>
+  <button onclick="toggleMore()">Close</button>
 </div>
 
 <!-- DASHBOARD CONTENT -->
@@ -73,46 +46,58 @@
   <div class="wallet-card">
     <p>Wallet Balance</p>
     <strong id="walletBalance">₦0</strong>
-    <button onclick="copyAccount()">Copy Account Number</button>
   </div>
-<div id="adminPanel" style="display:none">
 
-<h3>Admin Withdrawal</h3>
+  <!-- ADMIN PANEL (ONLY SHOWS FOR ADMIN) -->
+  <div id="adminPanel" class="admin-card" style="display:none;">
+    <h3>Admin Profit Withdrawal</h3>
 
-<input id="withdrawAmount" placeholder="Amount">
+    <div class="admin-balance">
+      <p>Total Profit</p>
+      <strong id="adminWallet">₦0</strong>
+    </div>
 
-<input id="bankName" placeholder="Bank">
+    <input type="number" id="withdrawAmount" placeholder="Enter Amount">
+    <input type="text" id="bankName" placeholder="Bank Name">
+    <input type="text" id="accountNumber" placeholder="Account Number">
 
-<input id="accountNumber" placeholder="Account Number">
+    <button class="admin-withdraw-btn" onclick="adminWithdraw()">
+      Withdraw Profit
+    </button>
+  </div>
 
-<button onclick="adminWithdraw()">Withdraw</button>
-<button id="adminWithdrawBtn" style="display:none;">
-Withdraw Profit
-</button>
-</div>
   <!-- QUICK ACTIONS -->
   <div class="quick-actions">
     <button onclick="location.href='data.html'">💳 Buy Data</button>
     <button onclick="location.href='airtime.html'">📞 Buy Airtime</button>
   </div>
 
-  <!-- TRANSACTIONS LIST -->
-  <div id="transactionsList" class="transactions-list"></div>
+  <!-- TRANSACTION HISTORY -->
+  <div>
+    <h3 style="margin-top:20px;">Recent Transactions</h3>
+    <div id="transactionHistory"></div>
+  </div>
+
 </div>
 
-<!-- PIN MODAL (for Set PIN from More panel only) -->
-<div id="pinModal" class="modal hidden">
-  <div class="modal-content">
-    <h3 id="pinTitle">Set Transaction PIN</h3>
-    <div class="pin-inputs">
-      <input maxlength="1" type="password">
-      <input maxlength="1" type="password">
-      <input maxlength="1" type="password">
-      <input maxlength="1" type="password">
-    </div>
-    <button id="pinActionBtn" class="primary-btn" onclick="submitPin()">Verify</button>
-    <button onclick="closePinModal()" class="secondary-btn">Cancel</button>
-  </div>
+<!-- SET PIN SECTION -->
+<div id="setPinSection" class="tab-content" style="display:none;">
+  <input type="password" id="setPinInput" placeholder="Enter New PIN">
+  <button onclick="setPin()">Set PIN</button>
+</div>
+
+<!-- CHANGE PIN SECTION -->
+<div id="changePinSection" class="tab-content" style="display:none;">
+  <input type="password" id="oldPin" placeholder="Old PIN">
+  <input type="password" id="newPin" placeholder="New PIN">
+  <button onclick="changePin()">Change PIN</button>
+</div>
+
+<!-- CHANGE PASSWORD SECTION -->
+<div id="changePasswordSection" class="tab-content" style="display:none;">
+  <input type="password" id="oldPassword" placeholder="Old Password">
+  <input type="password" id="newPassword" placeholder="New Password">
+  <button onclick="changePassword()">Change Password</button>
 </div>
 
 <!-- BOTTOM NAV -->
@@ -123,5 +108,13 @@ Withdraw Profit
 </div>
 
 <script src="app.js"></script>
+
+<script>
+function toggleMore(){
+  const panel = document.getElementById("morePanel")
+  panel.classList.toggle("hidden")
+}
+</script>
+
 </body>
 </html>

@@ -647,4 +647,67 @@ display:none;
   height: 60px;
   object-fit: contain;
   cursor: pointer;
+} /* ADMIN PANEL CLEAN DESIGN */
+
+.admin-card{
+background:#08142c;
+padding:20px;
+border-radius:20px;
+margin-top:20px;
+box-shadow:0 0 20px rgba(59,120,231,0.2);
+animation:fadeIn 0.4s ease-in-out;
+}
+
+.admin-card h3{
+text-align:center;
+margin-bottom:15px;
+color:#3b78e7;
+}
+
+.admin-balance{
+background:#020b1f;
+padding:15px;
+border-radius:15px;
+text-align:center;
+margin-bottom:20px;
+}
+
+.admin-balance p{
+margin:0;
+opacity:0.7;
+}
+
+.admin-balance strong{
+font-size:22px;
+}
+
+.admin-inputs input{
+width:100%;
+padding:12px;
+margin-bottom:12px;
+border-radius:12px;
+border:none;
+background:#020b1f;
+color:white;
+}
+
+.admin-withdraw-btn{
+width:100%;
+padding:14px;
+border:none;
+border-radius:12px;
+background:#3b78e7;
+color:white;
+font-size:16px;
+cursor:pointer;
+transition:0.3s;
+}
+
+.admin-withdraw-btn:hover{
+background:#2f63c9;
+}
+
+@keyframes fadeIn{
+from{opacity:0; transform:translateY(10px);}
+to{opacity:1; transform:translateY(0);}
 }
