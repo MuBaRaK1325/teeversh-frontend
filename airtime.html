@@ -1,78 +1,66 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Buy Airtime</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="styles.css">
+
+<title>Buy Airtime</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+
+body{
+background:#020b1f;
+color:white;
+font-family:Arial;
+padding:20px;
+}
+
+input{
+width:100%;
+padding:14px;
+margin-top:10px;
+border-radius:10px;
+border:none;
+background:#08142c;
+color:white;
+}
+
+button{
+background:#3b78e7;
+border:none;
+padding:14px;
+border-radius:10px;
+color:white;
+margin-top:10px;
+width:100%;
+}
+
+#networkLogo{
+width:45px;
+margin-top:10px;
+display:none;
+}
+
+</style>
+
 </head>
+
 <body>
 
-<!-- Circular MAY-Connect Logo -->
-<div class="logo-circle">
-  <img src="images/logo.png" alt="MAY Connect Logo">
-</div>
+<h2>Buy Airtime</h2>
 
-<div class="page-header">
-  <button onclick="history.back()">←</button>
-  <h2>Buy Airtime</h2>
-</div>
+<input id="phone" placeholder="Phone number"
+oninput="handlePhoneInput(this)">
 
-<audio id="successSound" src="sounds/success.mp3" preload="auto"></audio>
+<img id="networkLogo">
 
-<!-- RECEIPT MODAL -->
-<div id="receiptModal" class="modal hidden">
-  <div class="modal-card receipt-card animate-in">
-    <img src="images/logo.png" class="receipt-logo" alt="MAY Connect Logo">
-    <h3 class="success-title">Airtime Successful</h3>
-    <div id="receiptBody" class="receipt-body"></div>
-    <button class="primary-btn" onclick="closeReceipt()">Done</button>
-  </div>
-</div>
+<input id="airtimeAmount" placeholder="Amount">
 
-<div class="purchase-page">
-  <!-- AMOUNT PRESETS -->
-  <div class="amount-presets">
-    <button onclick="selectAmount(100)">₦100</button>
-    <button onclick="selectAmount(200)">₦200</button>
-    <button onclick="selectAmount(500)">₦500</button>
-  </div>
-
-  <input type="tel" id="airtimePhone" placeholder="Phone number">
-  <input type="number" id="airtimeAmount" placeholder="Amount">
-
-  <!-- NETWORKS -->
-  <div class="network-grid">
-    <div class="network-card" data-network="MTN" onclick="selectAirtimeNetwork(this)">
-      <img src="images/Mtn.png" alt="MTN Logo">
-      <span>MTN</span>
-    </div>
-
-    <div class="network-card" data-network="Airtel" onclick="selectAirtimeNetwork(this)">
-      <img src="images/Airtel.png" alt="Airtel Logo">
-      <span>Airtel</span>
-    </div>
-
-    <div class="network-card" data-network="Glo" onclick="selectAirtimeNetwork(this)">
-      <img src="images/Glo.png" alt="GLO Logo">
-      <span>GLO</span>
-    </div>
-  </div>
-
-  <!-- SHIMMER -->
-  <div id="airtimeShimmer" class="shimmer hidden"></div>
-
-  <button
-    id="airtimeConfirmBtn"
-    class="primary-btn disabled"
-    disabled
-    onclick="confirmAirtime()"
-  >
-    Buy Airtime
-  </button>
-
-</div>
+<button onclick="openPinModal(null,'airtime')">
+Buy Airtime
+</button>
 
 <script src="app.js"></script>
+
 </body>
 </html>

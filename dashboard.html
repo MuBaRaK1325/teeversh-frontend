@@ -1,119 +1,401 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>MAY-Connect | Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="styles.css">
+<meta charset="UTF-8">
+<title>MAY-Connect | Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="styles.css">
+
+<style>
+
+/* =========================
+SKELETON LOADER
+========================= */
+
+.skeleton{
+background:linear-gradient(90deg,#0c1a36 25%,#12264f 37%,#0c1a36 63%);
+background-size:400% 100%;
+animation:skeletonLoading 1.4s ease infinite;
+border-radius:10px;
+height:20px;
+margin:8px 0;
+}
+
+@keyframes skeletonLoading{
+0%{background-position:100% 0}
+100%{background-position:0 0}
+}
+
+/* =========================
+TRANSACTION CARD
+========================= */
+
+.transaction-card{
+background:#0c1a36;
+padding:12px;
+border-radius:12px;
+margin-top:10px;
+box-shadow:0 4px 15px rgba(0,0,0,0.4);
+}
+
+.transaction-card h4{
+margin:0;
+font-size:14px;
+}
+
+.transaction-card p{
+margin:4px 0;
+font-weight:bold;
+}
+
+.transaction-card small{
+opacity:0.7;
+}
+
+/* =========================
+FLOATING QUICK ACTIONS
+========================= */
+
+.quickActions{
+position:fixed;
+bottom:90px;
+right:20px;
+display:flex;
+flex-direction:column;
+gap:12px;
+z-index:1000;
+}
+
+.quickActions button{
+background:#3b78e7;
+border:none;
+color:white;
+width:65px;
+height:65px;
+border-radius:50%;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+font-size:20px;
+box-shadow:0 5px 20px rgba(0,0,0,0.4);
+cursor:pointer;
+}
+
+.quickActions span{
+font-size:10px;
+}
+
+/* =========================
+FINTECH BOTTOM NAV
+========================= */
+
+.bottomNav{
+position:fixed;
+bottom:0;
+left:0;
+width:100%;
+height:70px;
+background:#08142c;
+display:flex;
+justify-content:space-around;
+align-items:center;
+border-top:1px solid rgba(255,255,255,0.05);
+}
+
+.bottomNav button{
+background:none;
+border:none;
+color:white;
+display:flex;
+flex-direction:column;
+align-items:center;
+font-size:20px;
+cursor:pointer;
+}
+
+.bottomNav span{
+font-size:11px;
+}
+
+/* =========================
+POPULAR PLAN CARD
+========================= */
+
+.popular-plan{
+background:#112c64;
+padding:12px;
+border-radius:12px;
+margin-top:15px;
+text-align:center;
+}
+
+.popular-plan button{
+margin-top:10px;
+padding:10px 14px;
+border:none;
+background:#3b78e7;
+color:white;
+border-radius:8px;
+cursor:pointer;
+}
+
+</style>
+
 </head>
+
 <body>
 
 <!-- SPLASH LOADER -->
 <div id="splashLoader" class="splash-loader">
-  <div class="splash-content">
-    <div class="splash-ring"></div>
-    <img src="images/logo.png" alt="MAY-Connect">
-  </div>
+<div class="splash-content">
+<div class="splash-ring"></div>
+<img src="images/logo.png">
+</div>
 </div>
 
 <!-- LOGO -->
 <div class="logo-circle">
-  <img src="images/logo.png" alt="MAY-Connect Logo">
+<img src="images/logo.png">
 </div>
 
 <!-- GREETING -->
-<div style="text-align:center; margin-bottom:1rem;">
-  <h3 id="usernameDisplay">Hello 👋 User</h3>
+<div style="text-align:center;margin-bottom:1rem;">
+<h3 id="usernameDisplay">Hello 👋 User</h3>
 </div>
 
-<audio id="welcomeSound" src="sounds/welcome.mp3" preload="auto"></audio>
-<audio id="successSound" src="sounds/success.mp3" preload="auto"></audio>
+<audio id="welcomeSound" src="sounds/welcome.mp3"></audio>
+<audio id="successSound" src="sounds/success.mp3"></audio>
 
 <!-- MORE PANEL -->
 <div id="morePanel" class="more-panel hidden">
-  <button onclick="openTab('setPinSection')">Set Transaction PIN</button>
-  <button onclick="openTab('changePinSection')">Change PIN</button>
-  <button onclick="openTab('changePasswordSection')">Change Password</button>
-  <button onclick="forgotPassword()">Forgot Password</button>
-  <button onclick="logout()">Logout</button>
-  <button onclick="toggleMore()">Close</button>
-</div>
 
-<!-- DASHBOARD CONTENT -->
-<div class="dashboard-content">
+<button onclick="openTab('setPinSection')">Set Transaction PIN</button>
 
-  <!-- WALLET -->
-  <div class="wallet-card">
-    <p>Wallet Balance</p>
-    <strong id="walletBalance">₦0</strong>
-  </div>
+<button onclick="openTab('changePinSection')">Change PIN</button>
 
-  <!-- ADMIN PANEL (ONLY SHOWS FOR ADMIN) -->
-  <div id="adminPanel" class="admin-card" style="display:none;">
-    <h3>Admin Profit Withdrawal</h3>
+<button onclick="openTab('changePasswordSection')">Change Password</button>
 
-    <div class="admin-balance">
-      <p>Total Profit</p>
-      <strong id="adminWallet">₦0</strong>
-    </div>
+<button onclick="forgotPassword()">Forgot Password</button>
 
-    <input type="number" id="withdrawAmount" placeholder="Enter Amount">
-    <input type="text" id="bankName" placeholder="Bank Name">
-    <input type="text" id="accountNumber" placeholder="Account Number">
+<button onclick="logout()">Logout</button>
 
-    <button class="admin-withdraw-btn" onclick="adminWithdraw()">
-      Withdraw Profit
-    </button>
-  </div>
-
-  <!-- QUICK ACTIONS -->
-  <div class="quick-actions">
-    <button onclick="location.href='data.html'">💳 Buy Data</button>
-    <button onclick="location.href='airtime.html'">📞 Buy Airtime</button>
-  </div>
-
-  <!-- TRANSACTION HISTORY -->
-  <div>
-    <h3 style="margin-top:20px;">Recent Transactions</h3>
-    <div id="transactionHistory"></div>
-  </div>
+<button onclick="toggleMore()">Close</button>
 
 </div>
 
-<!-- SET PIN SECTION -->
+<!-- MAIN DASHBOARD -->
+<div id="homeTab" class="dashboard-content">
+
+<!-- WALLET -->
+<div class="wallet-card">
+<p>Wallet Balance</p>
+<strong id="walletBalance">₦0</strong>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="adminPanel" class="admin-card" style="display:none;">
+
+<h3>Admin Profit Withdrawal</h3>
+
+<div class="admin-balance">
+<p>Total Profit</p>
+<strong id="adminWallet">₦0</strong>
+</div>
+
+<input type="number" id="withdrawAmount" placeholder="Enter Amount">
+
+<input type="text" id="bankName" placeholder="Bank Name">
+
+<input type="text" id="accountNumber" placeholder="Account Number">
+
+<button class="admin-withdraw-btn" onclick="adminWithdraw()">
+Withdraw Profit
+</button>
+
+</div>
+
+<!-- QUICK ACTIONS -->
+<div class="quick-actions">
+
+<button onclick="location.href='data.html'">
+💳 Buy Data
+</button>
+
+<button onclick="location.href='airtime.html'">
+📞 Buy Airtime
+</button>
+
+</div>
+
+<!-- SMART DATA RECOMMENDATION -->
+
+<div class="popular-plan">
+
+<h4>🔥 Most Popular Data Plan</h4>
+
+<p>1GB for ₦300</p>
+
+<button onclick="location.href='data.html'">
+Buy Now
+</button>
+
+</div>
+
+<!-- TRANSACTIONS -->
+
+<div>
+
+<h3 style="margin-top:20px;">Recent Transactions</h3>
+
+<div id="transactionHistory">
+
+<div class="skeleton"></div>
+<div class="skeleton"></div>
+<div class="skeleton"></div>
+
+</div>
+
+</div>
+
+</div>
+
+<!-- SET PIN -->
 <div id="setPinSection" class="tab-content" style="display:none;">
-  <input type="password" id="setPinInput" placeholder="Enter New PIN">
-  <button onclick="setPin()">Set PIN</button>
+
+<input type="password" id="setPinInput" placeholder="Enter New PIN">
+
+<button onclick="setPin()">Set PIN</button>
+
 </div>
 
-<!-- CHANGE PIN SECTION -->
+<!-- CHANGE PIN -->
 <div id="changePinSection" class="tab-content" style="display:none;">
-  <input type="password" id="oldPin" placeholder="Old PIN">
-  <input type="password" id="newPin" placeholder="New PIN">
-  <button onclick="changePin()">Change PIN</button>
+
+<input type="password" id="oldPin" placeholder="Old PIN">
+
+<input type="password" id="newPin" placeholder="New PIN">
+
+<button onclick="changePin()">Change PIN</button>
+
 </div>
 
-<!-- CHANGE PASSWORD SECTION -->
+<!-- CHANGE PASSWORD -->
 <div id="changePasswordSection" class="tab-content" style="display:none;">
-  <input type="password" id="oldPassword" placeholder="Old Password">
-  <input type="password" id="newPassword" placeholder="New Password">
-  <button onclick="changePassword()">Change Password</button>
+
+<input type="password" id="oldPassword" placeholder="Old Password">
+
+<input type="password" id="newPassword" placeholder="New Password">
+
+<button onclick="changePassword()">Change Password</button>
+
 </div>
 
-<!-- BOTTOM NAV -->
-<div class="bottom-nav">
-  <button onclick="location.href='dashboard.html'">🏠<br>Home</button>
-  <button onclick="location.href='transactions.html'">💳<br>Transactions</button>
-  <button onclick="toggleMore()">⚙️<br>More</button>
+<!-- FLOATING QUICK ACTIONS -->
+
+<div class="quickActions">
+
+<button onclick="openTab('dataTab')">
+📶
+<span>Data</span>
+</button>
+
+<button onclick="openTab('airtimeTab')">
+📞
+<span>Airtime</span>
+</button>
+
+<button onclick="openTab('fundTab')">
+💳
+<span>Fund</span>
+</button>
+
+</div>
+
+<!-- FINTECH BOTTOM NAV -->
+
+<div class="bottomNav">
+
+<button onclick="openTab('homeTab')">
+🏠
+<span>Home</span>
+</button>
+
+<button onclick="location.href='data.html'">
+📶
+<span>Data</span>
+</button>
+
+<button onclick="location.href='transactions.html'">
+📜
+<span>History</span>
+</button>
+
+<button onclick="toggleMore()">
+👤
+<span>Profile</span>
+</button>
+
 </div>
 
 <script src="app.js"></script>
 
 <script>
+
+/* MORE PANEL */
+
 function toggleMore(){
-  const panel = document.getElementById("morePanel")
-  panel.classList.toggle("hidden")
+const panel=document.getElementById("morePanel")
+panel.classList.toggle("hidden")
 }
+
+/* TAB SYSTEM */
+
+function openTab(id){
+
+document.querySelectorAll(".tab-content").forEach(tab=>{
+tab.style.display="none"
+})
+
+const el=document.getElementById(id)
+
+if(el) el.style.display="block"
+
+}
+
+/* ANIMATED WALLET COUNTER */
+
+function animateBalance(balance){
+
+const el=document.getElementById("walletBalance")
+
+let start=0
+
+const speed=30
+
+const step=balance/50
+
+const counter=setInterval(()=>{
+
+start+=step
+
+if(start>=balance){
+
+el.innerText="₦"+balance.toLocaleString()
+
+clearInterval(counter)
+
+}else{
+
+el.innerText="₦"+Math.floor(start).toLocaleString()
+
+}
+
+},speed)
+
+}
+
 </script>
 
 </body>

@@ -1,300 +1,76 @@
 <!DOCTYPE html>
 <html>
 <head>
+
+<title>Buy Data</title>
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Buy Data - MAYCONNECT</title>
 
 <style>
+
 body{
 background:#020b1f;
-font-family:Arial;
 color:white;
-margin:0;
-}
-
-.topLogo{
-text-align:center;
-margin-top:25px;
-}
-
-.topLogo img{
-width:95px;
-border-radius:50%;
-border:4px solid #3b78e7;
-padding:6px;
-}
-
-.container{
+font-family:Arial;
 padding:20px;
 }
 
-h2{
-text-align:center;
-margin:20px 0;
-}
-
-.phoneInput{
+input{
 width:100%;
-padding:15px;
-border-radius:12px;
+padding:14px;
+margin-top:10px;
+border-radius:10px;
 border:none;
 background:#08142c;
 color:white;
-margin-bottom:25px;
-font-size:16px;
 }
 
-.networks{
-display:flex;
-justify-content:space-between;
-margin-bottom:25px;
-}
-
-.network{
-width:30%;
-background:#08142c;
-padding:15px;
-border-radius:15px;
-text-align:center;
-cursor:pointer;
-transition:0.3s;
-border-bottom:3px solid transparent;
-}
-
-.network img{
+#networkLogo{
 width:45px;
-}
-
-.network.active{
-border-bottom:3px solid #3b78e7;
+margin-top:10px;
+display:none;
 }
 
 .planCard{
-display:flex;
-align-items:center;
 background:#08142c;
 padding:15px;
-margin-bottom:15px;
-border-radius:15px;
-cursor:pointer;
-border-left:5px solid #3b78e7;
-}
-
-.planCard img{
-width:35px;
-margin-right:15px;
-}
-
-.planDetails{
-flex:1;
-}
-
-.chooseScreen{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:#020b1f;
-display:none;
-padding:20px;
-}
-
-.chooseBox{
-background:#08142c;
-padding:20px;
-border-radius:20px;
-margin-top:80px;
-}
-
-.buyBtn{
-width:100%;
-padding:15px;
-border:none;
 border-radius:12px;
+margin-top:12px;
+}
+
+button{
 background:#3b78e7;
-color:white;
-font-size:16px;
-margin-top:20px;
-cursor:pointer;
-}
-
-.pinModal{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:rgba(0,0,0,0.7);
-display:none;
-justify-content:center;
-align-items:center;
-}
-
-.pinBox{
-background:#08142c;
-padding:20px;
-border-radius:16px;
-width:90%;
-max-width:350px;
-}
-
-.pinInput{
-width:100%;
-padding:14px;
-border-radius:10px;
 border:none;
-background:#020b1f;
+padding:12px;
+border-radius:8px;
 color:white;
-margin-top:10px;
+margin-top:8px;
+width:100%;
 }
 
-.status{
-text-align:center;
-margin-top:15px;
+#bestPlan{
+margin-top:10px;
+color:#4da3ff;
 }
+
 </style>
+
 </head>
 
 <body>
 
-<div class="topLogo">
-<img src="images/logo.png">
-</div>
-
-<div class="container">
-
 <h2>Buy Data</h2>
 
-<input id="phone" class="phoneInput" placeholder="Enter Phone Number">
+<input id="phone" placeholder="Enter phone number"
+oninput="handlePhoneInput(this)">
 
-<div class="networks">
+<img id="networkLogo">
 
-<div class="network" onclick="selectNetwork('MTN',this)">
-<img src="images/mtn.png">
-</div>
-
-<div class="network" onclick="selectNetwork('AIRTEL',this)">
-<img src="images/airtel.png">
-</div>
-
-<div class="network" onclick="selectNetwork('GLO',this)">
-<img src="images/glo.png">
-</div>
-
-</div>
+<div id="bestPlan"></div>
 
 <div id="plans"></div>
 
-</div>
-
-<div class="chooseScreen" id="chooseScreen">
-<div class="chooseBox">
-<h3>Confirm Purchase</h3>
-<div id="chosenDetails"></div>
-<button class="buyBtn" onclick="openPin()">Buy</button>
-<div class="status" id="status"></div>
-</div>
-</div>
-
-<div class="pinModal" id="pinModal">
-<div class="pinBox">
-<h3>Enter Transaction PIN</h3>
-<input type="password" id="pin" class="pinInput" placeholder="Enter PIN">
-<button class="buyBtn" onclick="confirmPurchase()">Confirm</button>
-</div>
-</div>
-
 <script src="app.js"></script>
-
-<script>
-let selectedPlan=null
-let selectedNetwork=null
-
-function selectNetwork(network,el){
-selectedNetwork=network
-document.querySelectorAll(".network").forEach(n=>n.classList.remove("active"))
-el.classList.add("active")
-loadPlans(network)
-}
-
-async function loadPlans(network){
-
-const token = localStorage.getItem("token")
-
-const res = await fetch(API + "/plans?network=" + network,{
-headers:{
-"Content-Type":"application/json",
-Authorization:`Bearer ${token}`
-}
-})
-
-const plans = await res.json()
-const box=document.getElementById("plans")
-box.innerHTML=""
-
-plans
-.filter(p => p.network === network)
-.forEach(p=>{
-
-box.innerHTML+=`
-<div class="planCard"
-onclick="choosePlan('${p.plan_id}','${p.name}',${p.price})">
-<img src="images/${network.toLowerCase()}.png">
-<div class="planDetails">
-<div>${p.name}</div>
-<div>₦${Number(p.price).toLocaleString()}</div>
-</div>
-</div>`
-})
-}
-
-function choosePlan(id,name,price){
-
-const phone=document.getElementById("phone").value
-if(!phone){ alert("Enter phone number first"); return }
-
-selectedPlan={id,name,price}
-
-document.getElementById("chosenDetails").innerHTML=`
-<p><b>Network:</b> ${selectedNetwork}</p>
-<p><b>Phone:</b> ${phone}</p>
-<p><b>Plan:</b> ${name}</p>
-<p><b>Amount:</b> ₦${price}</p>`
-
-document.getElementById("chooseScreen").style.display="block"
-}
-
-function openPin(){
-document.getElementById("pinModal").style.display="flex"
-}
-
-async function confirmPurchase(){
-
-const phone=document.getElementById("phone").value
-const pin=document.getElementById("pin").value
-
-document.getElementById("status").innerText="Processing..."
-
-const res=await fetch(API+"/buy-data",{
-method:"POST",
-headers:{
-"Content-Type":"application/json",
-Authorization:`Bearer ${localStorage.getItem("token")}`
-},
-body:JSON.stringify({ phone, plan_id:selectedPlan.id, pin })
-})
-
-const data=await res.json()
-
-if(res.ok){
-document.getElementById("status").innerText="Purchase Successful!"
-setTimeout(()=>location.reload(),2000)
-}else{
-document.getElementById("status").innerText=data.message || "Transaction Failed"
-}
-}
-</script>
 
 </body>
 </html>

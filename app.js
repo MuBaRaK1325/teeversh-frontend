@@ -6,34 +6,19 @@ const API = "https://mayconnect-backend-1.onrender.com"
 const token = localStorage.getItem("token")
 
 // ========================================
-// PAGE GUARD (DEPLOYMENT SAFE)
+// PAGE GUARD
 // ========================================
 
-const currentPage = window.location.pathname
-const isLoginPage =
-  currentPage.endsWith("/") ||
-  currentPage.includes("index.html")
+const page = window.location.pathname
+const isLogin = page.endsWith("/") || page.includes("index.html")
 
-if (!token && !isLoginPage) {
-  window.location.href = "index.html"
+if(!token && !isLogin){
+window.location.href="index.html"
 }
 
-if (token && isLoginPage) {
-  window.location.href = "dashboard.html"
+if(token && isLogin){
+window.location.href="dashboard.html"
 }
-
-// ========================================
-// SPLASH LOADER
-// ========================================
-
-window.addEventListener("load", () => {
-  const loader = document.getElementById("splashLoader")
-  if (loader) {
-    setTimeout(() => {
-      loader.style.display = "none"
-    }, 1500)
-  }
-})
 
 // ========================================
 // SOUNDS
@@ -42,296 +27,558 @@ window.addEventListener("load", () => {
 const welcomeSound = new Audio("sounds/welcome.mp3")
 const successSound = new Audio("sounds/success.mp3")
 
-function playWelcomeSound() {
-  welcomeSound.play().catch(() => {})
+function playWelcome(){
+welcomeSound.currentTime = 0
+welcomeSound.play().catch(()=>{})
+}
+
+function playSuccess(){
+successSound.currentTime = 0
+successSound.play().catch(()=>{})
 }
 
 // ========================================
-// AUTH FUNCTIONS
+// TOAST NOTIFICATIONS
 // ========================================
 
-async function login() {
+function showToast(message){
 
-  const usernameInput = document.getElementById("loginUsername")
-  const passwordInput = document.getElementById("loginPassword")
+const toast=document.createElement("div")
 
-  if (!usernameInput || !passwordInput) {
-    alert("Login inputs not found")
-    return
-  }
+toast.className="toast"
+toast.innerText=message
 
-  const username = usernameInput.value.trim()
-  const password = passwordInput.value.trim()
+document.body.appendChild(toast)
 
-  if (!username || !password) {
-    alert("Enter username and password")
-    return
-  }
+setTimeout(()=>{ toast.remove() },4000)
 
-  try {
-    const res = await fetch(`${API}/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password })
-    })
-
-    const data = await res.json()
-
-    if (!res.ok) {
-      alert(data.message || "Login failed")
-      return
-    }
-
-    localStorage.setItem("token", data.token)
-    window.location.href = "dashboard.html"
-
-  } catch (err) {
-    alert("Server error")
-  }
-}
-
-async function signup() {
-
-  const username = document.getElementById("signupUsername").value
-  const email = document.getElementById("signupEmail").value
-  const password = document.getElementById("signupPassword").value
-
-  const res = await fetch(`${API}/signup`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, email, password })
-  })
-
-  const data = await res.json()
-  if (!res.ok) return alert(data.message)
-
-  localStorage.setItem("token", data.token)
-  window.location.href = "dashboard.html"
 }
 
 // ========================================
-// DASHBOARD LOAD
+// NETWORK PREFIX
 // ========================================
 
-async function loadDashboard() {
+const NETWORK_PREFIX = {
 
-  if (!token) return
+MTN:["0803","0806","0813","0816","0703","0706","0903","0906","0913","0916"],
+AIRTEL:["0802","0808","0812","0701","0708","0901","0902","0907"],
+GLO:["0805","0807","0811","0705","0905"],
+"9MOBILE":["0809","0817","0818","0908","0909"]
 
-  try {
-    const res = await fetch(`${API}/me`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+}
 
-    const user = await res.json()
-    if (!res.ok) return
+// ========================================
+// FORMAT PHONE
+// ========================================
 
-    const usernameDisplay = document.getElementById("usernameDisplay")
-    if (usernameDisplay) {
-      usernameDisplay.innerText = `Hello 👋 ${user.username}`
-    }
+function formatPhone(phone){
 
-    const wallet = document.getElementById("walletBalance")
-    if (wallet) {
-      wallet.innerText = `₦${Number(user.wallet_balance || 0).toLocaleString()}`
-    }
+phone=phone.replace(/\D/g,"")
 
-    // ADMIN PANEL
-    if (user.is_admin) {
-      const adminPanel = document.getElementById("adminPanel")
-      if (adminPanel) adminPanel.style.display = "block"
-    }
+if(phone.startsWith("0")){
+return "+234"+phone.substring(1)
+}
 
-    playWelcomeSound()
-    loadTransactions()
+if(phone.startsWith("234")){
+return "+"+phone
+}
 
-  } catch (err) {
-    console.log("Dashboard load error")
-  }
+return phone
+
+}
+
+// ========================================
+// DETECT NETWORK
+// ========================================
+
+function detectNetwork(phone){
+
+phone = phone.replace(/\D/g,"")
+
+const prefix = phone.substring(0,4)
+
+for(const net in NETWORK_PREFIX){
+
+if(NETWORK_PREFIX[net].includes(prefix)){
+return net
+}
+
+}
+
+return null
+
+}
+
+// ========================================
+// NETWORK LOGO
+// ========================================
+
+function showNetworkLogo(network){
+
+const logo=document.getElementById("networkLogo")
+
+if(!logo) return
+
+const logos={
+MTN:"logos/mtn.png",
+AIRTEL:"logos/airtel.png",
+GLO:"logos/glo.png",
+"9MOBILE":"logos/9mobile.png"
+}
+
+if(network && logos[network]){
+
+logo.src=logos[network]
+logo.style.display="block"
+
+}else{
+
+logo.style.display="none"
+
+}
+
+}
+
+// ========================================
+// PHONE INPUT HANDLER
+// ========================================
+
+function handlePhoneInput(input){
+
+let phone=input.value.replace(/\D/g,"")
+
+if(phone.length>11) phone=phone.slice(0,11)
+
+input.value=phone
+
+if(phone.length>=4){
+
+const network=detectNetwork(phone)
+
+showNetworkLogo(network)
+
+if(network){
+loadPlans(network)
+}
+
+}
+
+}
+
+// ========================================
+// CONTACT STORAGE
+// ========================================
+
+function saveRecipient(phone){
+
+let contacts=JSON.parse(localStorage.getItem("recipients")||"[]")
+
+if(!contacts.includes(phone)){
+
+contacts.push(phone)
+
+localStorage.setItem("recipients",JSON.stringify(contacts))
+
+}
+
+}
+
+function loadRecipients(){
+
+const container=document.getElementById("savedRecipients")
+
+if(!container) return
+
+const contacts=JSON.parse(localStorage.getItem("recipients")||"[]")
+
+container.innerHTML=""
+
+contacts.forEach(phone=>{
+
+container.innerHTML+=`
+<button onclick="useRecipient('${phone}')">${phone}</button>
+`
+
+})
+
+}
+
+function useRecipient(phone){
+
+const input=document.getElementById("phone")
+
+if(input){
+
+input.value=phone
+
+handlePhoneInput(input)
+
+}
+
+}
+
+// ========================================
+// LOGIN
+// ========================================
+
+async function login(){
+
+const username=document.getElementById("loginUsername").value
+const password=document.getElementById("loginPassword").value
+
+const res=await fetch(`${API}/api/login`,{
+
+method:"POST",
+headers:{ "Content-Type":"application/json" },
+body:JSON.stringify({username,password})
+
+})
+
+const data=await res.json()
+
+if(!res.ok){
+alert(data.message)
+return
+}
+
+localStorage.setItem("token",data.token)
+
+window.location.href="dashboard.html"
+
+}
+
+// ========================================
+// DASHBOARD
+// ========================================
+
+async function loadDashboard(){
+
+if(!token) return
+
+const res=await fetch(`${API}/api/me`,{
+headers:{ Authorization:`Bearer ${token}` }
+})
+
+const user=await res.json()
+
+if(!res.ok) return
+
+const name=document.getElementById("usernameDisplay")
+
+if(name){
+name.innerText=`Hello 👋 ${user.username}`
+}
+
+const wallet=document.getElementById("walletBalance")
+
+if(wallet){
+
+animateBalance(Number(user.wallet_balance||0))
+
+}
+
+if(user.is_admin){
+
+const adminPanel=document.getElementById("adminPanel")
+
+if(adminPanel) adminPanel.style.display="block"
+
+}
+
+playWelcome()
+
+loadTransactions()
+
+loadRecipients()
+
 }
 
 loadDashboard()
 
 // ========================================
-// LOAD TRANSACTIONS
+// BALANCE ANIMATION
 // ========================================
 
-async function loadTransactions() {
+function animateBalance(balance){
 
-  if (!token) return
+const el=document.getElementById("walletBalance")
 
-  const res = await fetch(`${API}/transactions`, {
-    headers: { Authorization: `Bearer ${token}` }
-  })
+let start=0
 
-  const transactions = await res.json()
-  const container = document.getElementById("transactionHistory")
-  if (!container) return
+const step=balance/40
 
-  container.innerHTML = ""
+const timer=setInterval(()=>{
 
-  if (!transactions.length) {
-    container.innerHTML = "<p>No transactions yet</p>"
-    return
-  }
+start+=step
 
-  transactions.reverse().forEach(tx => {
-    container.innerHTML += `
-      <div class="transaction-card">
-        <h4>${tx.network || ""} - ${tx.type}</h4>
-        <p>₦${Number(tx.amount).toLocaleString()}</p>
-        <small>Status: ${tx.status}</small><br>
-        <small>${new Date(tx.created_at).toLocaleString()}</small>
-      </div>
-    `
-  })
+if(start>=balance){
+
+el.innerText="₦"+balance.toLocaleString()
+
+clearInterval(timer)
+
+}else{
+
+el.innerText="₦"+Math.floor(start).toLocaleString()
+
+}
+
+},30)
+
+}
+
+// ========================================
+// TRANSACTIONS
+// ========================================
+
+async function loadTransactions(){
+
+const container=document.getElementById("transactionHistory")
+
+if(!container) return
+
+const res=await fetch(`${API}/api/transactions`,{
+headers:{ Authorization:`Bearer ${token}` }
+})
+
+const tx=await res.json()
+
+container.innerHTML=""
+
+if(!Array.isArray(tx)) return
+
+tx.forEach(t=>{
+
+container.innerHTML+=`
+
+<div class="transaction-card">
+
+<h4>${t.type.toUpperCase()}</h4>
+
+<p>₦${Number(t.amount).toLocaleString()}</p>
+
+<small>${new Date(t.created_at).toLocaleString()}</small>
+
+<span class="status">${t.status||"Successful"}</span>
+
+<button onclick="repeatPurchase('${t.phone}')">Repeat</button>
+
+</div>
+
+`
+
+})
+
+}
+
+// ========================================
+// REPEAT PURCHASE
+// ========================================
+
+function repeatPurchase(phone){
+
+const phoneInput=document.getElementById("phone")
+
+if(phoneInput){
+
+phoneInput.value=phone
+
+handlePhoneInput(phoneInput)
+
+}
+
 }
 
 // ========================================
 // LOAD DATA PLANS
 // ========================================
 
-async function loadPlans(network) {
+async function loadPlans(network){
 
-  const res = await fetch(`${API}/plans?network=${network}`, {
-    headers: { Authorization: `Bearer ${token}` }
-  })
+const container=document.getElementById("plans")
 
-  const plans = await res.json()
-  const container = document.getElementById("plans")
-  if (!container) return
+if(!container) return
 
-  container.innerHTML = ""
+const res=await fetch(`${API}/api/plans?network=${network}`,{
+headers:{ Authorization:`Bearer ${token}` }
+})
 
-  plans.forEach(plan => {
-    container.innerHTML += `
-      <div class="planCard">
-        <h4>${plan.name}</h4>
-        <p>₦${Number(plan.price).toLocaleString()}</p>
-        <button onclick="openPinModal(${plan.plan_id}, 'data')">
-          Buy
-        </button>
-      </div>
-    `
-  })
+const plans=await res.json()
+
+container.innerHTML=""
+
+if(!Array.isArray(plans)) return
+
+// SMART BEST PLAN
+const best=plans[0]
+
+if(best){
+
+document.getElementById("bestPlan").innerText=
+`🔥 Recommended: ${best.plan_name} for ₦${best.price}`
+
+}
+
+plans.forEach(plan=>{
+
+container.innerHTML+=`
+
+<div class="planCard">
+
+<h4>${plan.plan_name}</h4>
+
+<p>₦${Number(plan.price).toLocaleString()}</p>
+
+<button onclick="openPinModal(${plan.plan_id},'data')">Buy</button>
+
+</div>
+
+`
+
+})
+
 }
 
 // ========================================
-// BUY DATA & AIRTIME
+// PURCHASE
 // ========================================
 
-let selectedPlan = null
-let purchaseType = null
+let selectedPlan=null
+let purchaseType=null
 
-function openPinModal(id, type) {
-  selectedPlan = id
-  purchaseType = type
-  const modal = document.getElementById("pinModal")
-  if (modal) modal.style.display = "flex"
+function openPinModal(id,type){
+
+selectedPlan=id
+purchaseType=type
+
+document.getElementById("pinModal").style.display="flex"
+
 }
 
-function closePinModal() {
-  const modal = document.getElementById("pinModal")
-  if (modal) modal.style.display = "none"
+function closePinModal(){
+
+document.getElementById("pinModal").style.display="none"
+
 }
 
-async function confirmPurchase() {
+async function confirmPurchase(){
 
-  const phone = document.getElementById("phone")?.value
-  const pin = document.getElementById("pin")?.value
+const phone=formatPhone(document.getElementById("phone").value)
+const pin=document.getElementById("pin").value
 
-  if (!phone || !pin) {
-    alert("Enter phone and PIN")
-    return
-  }
+let endpoint=""
+let body={}
 
-  let endpoint = ""
-  let body = {}
+if(purchaseType==="data"){
 
-  // DATA
-  if (purchaseType === "data") {
-    endpoint = "/buy-data"
-    body = { plan_id: selectedPlan, phone, pin }
-  }
+endpoint="/api/buy-data"
 
-  // AIRTIME
-  if (purchaseType === "airtime") {
-    const amount = document.getElementById("airtimeAmount")?.value
-    if (!amount) {
-      alert("Enter airtime amount")
-      return
-    }
-    endpoint = "/buy-airtime"
-    body = { network: selectedPlan, phone, amount, pin }
-  }
+body={
+plan_id:selectedPlan,
+phone,
+pin
+}
 
-  const res = await fetch(`${API}${endpoint}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify(body)
-  })
+}
 
-  const data = await res.json()
-  if (!res.ok) return alert(data.message)
+if(purchaseType==="airtime"){
 
-  successSound.play().catch(() => {})
-  alert("Purchase successful")
+const amount=document.getElementById("airtimeAmount").value
 
-  closePinModal()
-  loadDashboard()
+const network=detectNetwork(phone)
+
+endpoint="/api/buy-airtime"
+
+body={
+network,
+phone,
+amount,
+pin
+}
+
+}
+
+const res=await fetch(`${API}${endpoint}`,{
+
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+Authorization:`Bearer ${token}`
+},
+body:JSON.stringify(body)
+
+})
+
+const data=await res.json()
+
+if(!res.ok){
+alert(data.message)
+return
+}
+
+saveRecipient(phone)
+
+playSuccess()
+
+if(purchaseType==="data"){
+showToast("📶 Data delivered successfully")
+}
+
+if(purchaseType==="airtime"){
+showToast("✅ Airtime sent successfully")
+}
+
+closePinModal()
+
+loadDashboard()
+
 }
 
 // ========================================
 // ADMIN WITHDRAW
 // ========================================
 
-async function adminWithdraw() {
+async function adminWithdraw(){
 
-  const bank = document.getElementById("bankName")?.value
-  const account_number = document.getElementById("accountNumber")?.value
-  const account_name = document.getElementById("accountName")?.value
-  const amount = document.getElementById("withdrawAmount")?.value
+const bank=document.getElementById("bankName").value
+const account_number=document.getElementById("accountNumber").value
+const account_name=document.getElementById("accountName").value
+const amount=document.getElementById("withdrawAmount").value
 
-  if (!bank || !account_number || !account_name || !amount) {
-    alert("Fill all fields")
-    return
-  }
+const res=await fetch(`${API}/api/admin/withdraw`,{
 
-  const res = await fetch(`${API}/admin/withdraw`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify({ bank, account_number, account_name, amount })
-  })
+method:"POST",
 
-  const data = await res.json()
-  if (!res.ok) return alert(data.message)
+headers:{
+"Content-Type":"application/json",
+Authorization:`Bearer ${token}`
+},
 
-  alert("Withdrawal successful")
-  loadDashboard()
+body:JSON.stringify({bank,account_number,account_name,amount})
+
+})
+
+const data=await res.json()
+
+if(!res.ok){
+alert(data.message)
+return
 }
 
-// ========================================
-// TAB NAVIGATION
-// ========================================
+showToast("💰 Withdrawal successful")
 
-function openTab(tabId) {
-  document.querySelectorAll(".tab-content").forEach(tab => {
-    tab.style.display = "none"
-  })
-  const active = document.getElementById(tabId)
-  if (active) active.style.display = "block"
+loadDashboard()
+
 }
 
 // ========================================
 // LOGOUT
 // ========================================
 
-function logout() {
-  localStorage.removeItem("token")
-  window.location.href = "index.html"
+function logout(){
+
+localStorage.removeItem("token")
+
+window.location.href="index.html"
+
 }
