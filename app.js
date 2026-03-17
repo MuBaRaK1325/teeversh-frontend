@@ -1,13 +1,9 @@
-// ========================================
-// CONFIG
-// ========================================
-
 const API = "https://mayconnect-backend-1.onrender.com"
 const token = localStorage.getItem("token")
 
-// ========================================
-// PAGE GUARD
-// ========================================
+/* ==============================
+PAGE GUARD
+============================== */
 
 const page = window.location.pathname
 const isLogin = page.endsWith("/") || page.includes("index.html")
@@ -20,31 +16,30 @@ if(token && isLogin){
 window.location.href="dashboard.html"
 }
 
-// ========================================
-// SOUNDS
-// ========================================
+/* ==============================
+SOUNDS
+============================== */
 
 const welcomeSound = new Audio("sounds/welcome.mp3")
 const successSound = new Audio("sounds/success.mp3")
 
 function playWelcome(){
-welcomeSound.currentTime = 0
+welcomeSound.currentTime=0
 welcomeSound.play().catch(()=>{})
 }
 
 function playSuccess(){
-successSound.currentTime = 0
+successSound.currentTime=0
 successSound.play().catch(()=>{})
 }
 
-// ========================================
-// SPLASH LOADER
-// ========================================
+/* ==============================
+LOADER
+============================== */
 
 function hideLoader(){
 
-const loader = document.getElementById("splashLoader")
-
+const loader=document.getElementById("splashLoader")
 if(!loader) return
 
 loader.classList.add("hide")
@@ -55,9 +50,9 @@ loader.style.display="none"
 
 }
 
-// ========================================
-// TOAST
-// ========================================
+/* ==============================
+TOAST
+============================== */
 
 function showToast(msg){
 
@@ -67,15 +62,13 @@ toast.innerText=msg
 
 document.body.appendChild(toast)
 
-setTimeout(()=>{
-toast.remove()
-},4000)
+setTimeout(()=>toast.remove(),3000)
 
 }
 
-// ========================================
-// NETWORK PREFIX
-// ========================================
+/* ==============================
+NETWORK PREFIX
+============================== */
 
 const NETWORK_PREFIX={
 
@@ -86,13 +79,17 @@ GLO:["0805","0807","0811","0705","0905"],
 
 }
 
-// ========================================
-// FORMAT PHONE
-// ========================================
+/* ==============================
+PHONE FORMAT
+============================== */
+
+function normalizePhone(phone){
+return phone.replace(/\D/g,"")
+}
 
 function formatPhone(phone){
 
-phone=phone.replace(/\D/g,"")
+phone=normalizePhone(phone)
 
 if(phone.startsWith("0")){
 return "+234"+phone.substring(1)
@@ -106,13 +103,13 @@ return phone
 
 }
 
-// ========================================
-// DETECT NETWORK
-// ========================================
+/* ==============================
+DETECT NETWORK
+============================== */
 
 function detectNetwork(phone){
 
-phone=phone.replace(/\D/g,"")
+phone=normalizePhone(phone)
 
 const prefix=phone.substring(0,4)
 
@@ -128,14 +125,13 @@ return null
 
 }
 
-// ========================================
-// NETWORK LOGO
-// ========================================
+/* ==============================
+NETWORK LOGO
+============================== */
 
 function showNetworkLogo(network){
 
 const logo=document.getElementById("networkLogo")
-
 if(!logo) return
 
 const logos={
@@ -146,25 +142,35 @@ GLO:"logos/glo.png",
 }
 
 if(network && logos[network]){
+
 logo.src=logos[network]
 logo.style.display="block"
+
 }else{
+
 logo.style.display="none"
-}
 
 }
 
-// ========================================
-// PHONE INPUT HANDLER
-// ========================================
+}
+
+/* ==============================
+PHONE INPUT
+============================== */
+
+let typingTimer=null
 
 function handlePhoneInput(input){
 
-let phone=input.value.replace(/\D/g,"")
+let phone=normalizePhone(input.value)
 
 if(phone.length>11) phone=phone.slice(0,11)
 
 input.value=phone
+
+clearTimeout(typingTimer)
+
+typingTimer=setTimeout(()=>{
 
 if(phone.length>=4){
 
@@ -178,73 +184,23 @@ loadPlans(network)
 
 }
 
-}
-
-// ========================================
-// CONTACT SAVE
-// ========================================
-
-function saveRecipient(phone){
-
-let contacts=JSON.parse(localStorage.getItem("recipients")||"[]")
-
-if(!contacts.includes(phone)){
-
-contacts.push(phone)
-
-localStorage.setItem("recipients",JSON.stringify(contacts))
+},400)
 
 }
 
-}
-
-function loadRecipients(){
-
-const container=document.getElementById("savedRecipients")
-
-if(!container) return
-
-const contacts=JSON.parse(localStorage.getItem("recipients")||"[]")
-
-container.innerHTML=""
-
-contacts.forEach(phone=>{
-
-container.innerHTML+=`
-<button onclick="useRecipient('${phone}')">${phone}</button>
-`
-
-})
-
-}
-
-function useRecipient(phone){
-
-const input=document.getElementById("phone")
-
-if(input){
-
-input.value=phone
-
-handlePhoneInput(input)
-
-}
-
-}
-
-// ========================================
-// LOGIN
-// ========================================
+/* ==============================
+LOGIN
+============================== */
 
 async function login(){
 
 const username=document.getElementById("loginUsername").value
 const password=document.getElementById("loginPassword").value
 
-const res=await fetch(`${API}/api/login`,{
+const res=await fetch("${API}/api/login",{
 
 method:"POST",
-headers:{ "Content-Type":"application/json" },
+headers:{"Content-Type":"application/json"},
 body:JSON.stringify({username,password})
 
 })
@@ -258,47 +214,20 @@ return
 
 localStorage.setItem("token",data.token)
 
-window.location.href="dashboard.html"
+window.location.replace("dashboard.html")
 
 }
 
-// ========================================
-// BIOMETRIC LOGIN
-// ========================================
-
-async function biometricLogin(){
-
-if(!window.PublicKeyCredential){
-alert("Biometric not supported")
-return
-}
-
-alert("Biometric login coming from saved session")
-
-const savedToken = localStorage.getItem("token")
-
-if(savedToken){
-
-window.location.href="dashboard.html"
-
-}else{
-
-alert("No biometric session found")
-
-}
-
-}
-
-// ========================================
-// DASHBOARD
-// ========================================
+/* ==============================
+DASHBOARD
+============================== */
 
 async function loadDashboard(){
 
 if(!token) return
 
-const res=await fetch(`${API}/api/me`,{
-headers:{ Authorization:`Bearer ${token}` }
+const res=await fetch("${API}/api/me",{
+headers:{Authorization:"Bearer ${token}"}
 })
 
 const user=await res.json()
@@ -308,7 +237,7 @@ if(!res.ok) return
 const name=document.getElementById("usernameDisplay")
 
 if(name){
-name.innerText=`Hello 👋 ${user.username}`
+name.innerText="Hello 👋 ${user.username}"
 }
 
 animateBalance(Number(user.wallet_balance||0))
@@ -321,28 +250,30 @@ if(adminPanel) adminPanel.style.display="block"
 
 }
 
-playWelcome()
-
 loadTransactions()
-
-loadRecipients()
-
 hideLoader()
+
+playWelcome()
 
 }
 
-window.addEventListener("load",loadDashboard)
+/* run dashboard only on dashboard page */
 
-// ========================================
-// WALLET ANIMATION
-// ========================================
+if(page.includes("dashboard.html")){
+window.addEventListener("load",loadDashboard)
+}
+
+/* ==============================
+BALANCE ANIMATION
+============================== */
 
 function animateBalance(balance){
 
 const el=document.getElementById("walletBalance")
 
-let start=0
+if(!el) return
 
+let start=0
 const step=balance/40
 
 const timer=setInterval(()=>{
@@ -352,7 +283,6 @@ start+=step
 if(start>=balance){
 
 el.innerText="₦"+balance.toLocaleString()
-
 clearInterval(timer)
 
 }else{
@@ -365,18 +295,17 @@ el.innerText="₦"+Math.floor(start).toLocaleString()
 
 }
 
-// ========================================
-// TRANSACTIONS
-// ========================================
+/* ==============================
+TRANSACTIONS
+============================== */
 
 async function loadTransactions(){
 
 const container=document.getElementById("transactionHistory")
-
 if(!container) return
 
-const res=await fetch(`${API}/api/transactions`,{
-headers:{ Authorization:`Bearer ${token}` }
+const res=await fetch("${API}/api/transactions",{
+headers:{Authorization:"Bearer ${token}"}
 })
 
 const tx=await res.json()
@@ -385,89 +314,79 @@ container.innerHTML=""
 
 if(!Array.isArray(tx)) return
 
-tx.forEach(t=>{
+tx.slice(0,5).forEach(t=>{
 
 container.innerHTML+=`
 
-<div class="transaction-card">
-
-<h4>${t.type.toUpperCase()}</h4>
-
-<p>₦${Number(t.amount).toLocaleString()}</p>
-
-<small>${new Date(t.created_at).toLocaleString()}</small>
+<div class="transaction-card"><h4>${t.type.toUpperCase()}</h4><p>₦${Number(t.amount).toLocaleString()}</p><small>${new Date(t.created_at).toLocaleString()}</small>
 
 <button onclick="repeatPurchase('${t.phone}')">Repeat</button>
 
-</div>
-
-`
+</div>`
 
 })
 
 }
 
-// ========================================
-// REPEAT PURCHASE
-// ========================================
+/* ==============================
+REPEAT PURCHASE
+============================== */
 
 function repeatPurchase(phone){
 
-const phoneInput=document.getElementById("phone")
+const input=document.getElementById("phone")
 
-if(phoneInput){
+if(input){
 
-phoneInput.value=phone
-
-handlePhoneInput(phoneInput)
-
-}
+input.value=phone
+handlePhoneInput(input)
 
 }
 
-// ========================================
-// LOAD DATA PLANS
-// ========================================
+}
+
+/* ==============================
+LOAD PLANS
+============================== */
 
 async function loadPlans(network){
 
 const container=document.getElementById("plans")
-
 if(!container) return
 
-const res=await fetch(`${API}/api/plans?network=${network}`,{
-headers:{ Authorization:`Bearer ${token}` }
+const res=await fetch("${API}/api/plans?network=${network}",{
+headers:{Authorization:"Bearer ${token}"}
 })
 
-const plans=await res.json()
-
-container.innerHTML=""
+let plans=await res.json()
 
 if(!Array.isArray(plans)) return
 
-plans.forEach(plan=>{
+/* remove duplicates */
+
+const unique=[...new Map(plans.map(p=>[p.plan_id,p])).values()]
+
+/* sort by price */
+
+unique.sort((a,b)=>a.price-b.price)
+
+container.innerHTML=""
+
+unique.forEach(plan=>{
 
 container.innerHTML+=`
 
-<div class="planCard">
+<div class="planCard"><h4>${plan.plan_name}</h4><p>₦${Number(plan.price).toLocaleString()}</p><button onclick="openPinModal(${plan.plan_id},'data')">Buy</button>
 
-<h4>${plan.plan_name}</h4>
-
-<p>₦${Number(plan.price).toLocaleString()}</p>
-
-<button onclick="openPinModal(${plan.plan_id},'data')">Buy</button>
-
-</div>
-
-`
+</div>`
 
 })
 
 }
 
-// ========================================
-// PURCHASE
-// ========================================
+/* ==============================
+PURCHASE
+============================== */
 
 let selectedPlan=null
 let purchaseType=null
@@ -514,13 +433,13 @@ body={network,phone,amount,pin}
 
 }
 
-const res=await fetch(`${API}${endpoint}`,{
+const res=await fetch("${API}${endpoint}",{
 
 method:"POST",
 
 headers:{
 "Content-Type":"application/json",
-Authorization:`Bearer ${token}`
+Authorization:"Bearer ${token}"
 },
 
 body:JSON.stringify(body)
@@ -534,21 +453,23 @@ alert(data.message)
 return
 }
 
-saveRecipient(phone)
-
 playSuccess()
 
 showToast("✅ Purchase Successful")
 
 closePinModal()
 
+saveRecipient(phone)
+
+if(page.includes("dashboard")){
 loadDashboard()
+}
 
 }
 
-// ========================================
-// ADMIN WITHDRAW
-// ========================================
+/* ==============================
+ADMIN WITHDRAW
+============================== */
 
 async function adminWithdraw(){
 
@@ -556,13 +477,13 @@ const bank=document.getElementById("bankName").value
 const account_number=document.getElementById("accountNumber").value
 const amount=document.getElementById("withdrawAmount").value
 
-const res=await fetch(`${API}/api/admin/withdraw`,{
+const res=await fetch("${API}/api/admin/withdraw",{
 
 method:"POST",
 
 headers:{
 "Content-Type":"application/json",
-Authorization:`Bearer ${token}`
+Authorization:"Bearer ${token}"
 },
 
 body:JSON.stringify({bank,account_number,amount})
@@ -582,33 +503,14 @@ loadDashboard()
 
 }
 
-// ========================================
-// SUPPORT
-// ========================================
-
-function contactSupport(){
-
-window.open(
-"https://wa.me/2348117988561",
-"_blank"
-)
-
-}
-
-function callSupport(){
-
-window.location.href="tel:08117988561"
-
-}
-
-// ========================================
-// LOGOUT
-// ========================================
+/* ==============================
+LOGOUT
+============================== */
 
 function logout(){
 
 localStorage.removeItem("token")
 
-window.location.href="index.html"
+window.location.replace("index.html")
 
 }

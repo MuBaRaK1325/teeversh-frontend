@@ -1,12 +1,5 @@
-<!DOCTYPE html>
-<html>
-<head>
-
-<title>Buy Airtime</title>
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<style>
+<!DOCTYPE html><html>
+<head><title>Buy Airtime</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>
 
 body{
 background:#020b1f;
@@ -14,6 +7,8 @@ color:white;
 font-family:Arial;
 padding:20px;
 }
+
+/* INPUT */
 
 input{
 width:100%;
@@ -25,6 +20,8 @@ background:#08142c;
 color:white;
 }
 
+/* BUTTON */
+
 button{
 background:#3b78e7;
 border:none;
@@ -33,7 +30,10 @@ border-radius:10px;
 color:white;
 margin-top:10px;
 width:100%;
+cursor:pointer;
 }
+
+/* NETWORK LOGO */
 
 #networkLogo{
 width:45px;
@@ -41,26 +41,96 @@ margin-top:10px;
 display:none;
 }
 
-</style>
+/* MODAL */
 
-</head>
+.modalOverlay{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.6);
+display:flex;
+align-items:center;
+justify-content:center;
+z-index:2000;
+}
 
-<body>
+.modalCard{
+background:#08142c;
+padding:20px;
+border-radius:12px;
+width:90%;
+max-width:350px;
+}
 
-<h2>Buy Airtime</h2>
+.hidden{
+display:none;
+}
 
-<input id="phone" placeholder="Phone number"
-oninput="handlePhoneInput(this)">
+.modalCard input{
+width:100%;
+padding:12px;
+margin-top:10px;
+border-radius:8px;
+border:none;
+background:#020b1f;
+color:white;
+}
 
-<img id="networkLogo">
+</style></head><body><h2>Buy Airtime</h2><input
+id="phone"
+placeholder="Phone number"
+oninput="handlePhoneInput(this)"
 
-<input id="airtimeAmount" placeholder="Amount">
+«»
+
+<img id="networkLogo"><input
+id="airtimeAmount"
+type="number"
+placeholder="Amount"
+
+«»
 
 <button onclick="openPinModal(null,'airtime')">
 Buy Airtime
-</button>
+</button><!-- PIN MODAL --><div id="pinModal" class="modalOverlay hidden"><div class="modalCard"><h3>Confirm Airtime Purchase</h3><p>Enter Transaction PIN</p><input
+type="password"
+id="pin"
+placeholder="PIN"
 
-<script src="app.js"></script>
+«»
 
-</body>
+<button onclick="confirmPurchase()">
+Confirm
+</button><button onclick="closePinModal()">
+Cancel
+</button></div></div><script src="app.js"></script><script>
+
+/* CLOSE PIN MODAL */
+
+function closePinModal(){
+
+document
+.getElementById("pinModal")
+.classList
+.add("hidden")
+
+}
+
+/* OPEN PIN MODAL */
+
+function openPinModal(planId,type){
+
+window.selectedPlan = planId
+window.purchaseType = type
+
+document
+.getElementById("pinModal")
+.classList
+.remove("hidden")
+
+}
+
+</script></body>
 </html>

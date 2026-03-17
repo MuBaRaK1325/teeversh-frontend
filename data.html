@@ -1,12 +1,5 @@
-<!DOCTYPE html>
-<html>
-<head>
-
-<title>Buy Data</title>
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<style>
+<!DOCTYPE html><html>
+<head><title>Buy Data</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>
 
 body{
 background:#020b1f;
@@ -14,6 +7,8 @@ color:white;
 font-family:Arial;
 padding:20px;
 }
+
+/* INPUT */
 
 input{
 width:100%;
@@ -25,11 +20,23 @@ background:#08142c;
 color:white;
 }
 
+/* NETWORK LOGO */
+
 #networkLogo{
 width:45px;
 margin-top:10px;
 display:none;
 }
+
+/* BEST PLAN */
+
+#bestPlan{
+margin-top:10px;
+color:#4da3ff;
+font-weight:bold;
+}
+
+/* PLAN CARD */
 
 .planCard{
 background:#08142c;
@@ -37,6 +44,16 @@ padding:15px;
 border-radius:12px;
 margin-top:12px;
 }
+
+.planCard h4{
+margin:0;
+}
+
+.planCard p{
+margin:6px 0;
+}
+
+/* BUTTON */
 
 button{
 background:#3b78e7;
@@ -46,31 +63,73 @@ border-radius:8px;
 color:white;
 margin-top:8px;
 width:100%;
+cursor:pointer;
 }
 
-#bestPlan{
+/* MODAL */
+
+.modalOverlay{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.6);
+display:flex;
+align-items:center;
+justify-content:center;
+z-index:2000;
+}
+
+.modalCard{
+background:#08142c;
+padding:20px;
+border-radius:12px;
+width:90%;
+max-width:350px;
+}
+
+.hidden{
+display:none;
+}
+
+.modalCard input{
+width:100%;
+padding:12px;
 margin-top:10px;
-color:#4da3ff;
+border-radius:8px;
+border:none;
+background:#020b1f;
+color:white;
 }
 
-</style>
-
-</head>
-
-<body>
-
-<h2>Buy Data</h2>
-
-<input id="phone" placeholder="Enter phone number"
+</style></head><body><h2>Buy Data</h2><input id="phone"
+placeholder="Enter phone number"
 oninput="handlePhoneInput(this)">
 
-<img id="networkLogo">
+<img id="networkLogo"><div id="bestPlan"></div><div id="plans"></div><!-- PURCHASE MODAL --><div id="pinModal" class="modalOverlay hidden"><div class="modalCard"><h3>Confirm Purchase</h3><p>Enter Transaction PIN</p><input type="password" id="pin" placeholder="PIN"><button onclick="confirmPurchase()">Confirm</button>
 
-<div id="bestPlan"></div>
+<button onclick="closePinModal()">Cancel</button>
 
-<div id="plans"></div>
+</div></div><script src="app.js"></script><script>
 
-<script src="app.js"></script>
+/* CLOSE PIN MODAL */
 
-</body>
+function closePinModal(){
+
+document.getElementById("pinModal").classList.add("hidden")
+
+}
+
+/* OPEN PIN MODAL */
+
+function openPinModal(planId){
+
+window.selectedPlan = planId
+
+document.getElementById("pinModal").classList.remove("hidden")
+
+}
+
+</script></body>
 </html>
