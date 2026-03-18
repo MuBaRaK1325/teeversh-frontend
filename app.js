@@ -50,6 +50,12 @@ loader.style.display="none"
 
 }
 
+/* loader safety timeout */
+
+setTimeout(()=>{
+hideLoader()
+},5000)
+
 /* ==============================
 TOAST
 ============================== */
@@ -226,13 +232,17 @@ async function loadDashboard(){
 
 if(!token) return
 
+try{
+
 const res=await fetch("${API}/api/me",{
 headers:{Authorization:"Bearer ${token}"}
 })
 
-const user=await res.json()
+if(!res.ok){
+throw new Error("Session expired")
+}
 
-if(!res.ok) return
+const user=await res.json()
 
 const name=document.getElementById("usernameDisplay")
 
@@ -251,9 +261,24 @@ if(adminPanel) adminPanel.style.display="block"
 }
 
 loadTransactions()
-hideLoader()
 
 playWelcome()
+
+}catch(err){
+
+console.error(err)
+
+showToast("Session expired, login again")
+
+localStorage.removeItem("token")
+
+setTimeout(()=>{
+window.location.replace("index.html")
+},1500)
+
+}
+
+hideLoader()
 
 }
 
@@ -362,11 +387,7 @@ let plans=await res.json()
 
 if(!Array.isArray(plans)) return
 
-/* remove duplicates */
-
 const unique=[...new Map(plans.map(p=>[p.plan_id,p])).values()]
-
-/* sort by price */
 
 unique.sort((a,b)=>a.price-b.price)
 
