@@ -271,6 +271,12 @@ opacity:0;
 pointer-events:none;
 }
 
+@keyframes spin{
+0%{transform:rotate(0deg)}
+100%{transform:rotate(360deg)}
+}
+
+
 /* ADMIN PANEL */
 
 .admin-card{
