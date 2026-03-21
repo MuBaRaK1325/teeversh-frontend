@@ -9,6 +9,43 @@ return localStorage.getItem("token")
 }
 
 /* ==============================
+DEVICE SESSION PROTECTION
+============================== */
+
+const DEVICE_ID="mayconnect_device"
+
+if(!localStorage.getItem(DEVICE_ID)){
+localStorage.setItem(DEVICE_ID,crypto.randomUUID())
+}
+
+function getDevice(){
+return localStorage.getItem(DEVICE_ID)
+}
+
+/* ==============================
+RATE LIMIT
+============================== */
+
+const RATE_LIMIT={}
+
+function limitAction(key,delay=3000){
+
+const now=Date.now()
+
+if(RATE_LIMIT[key] && now-RATE_LIMIT[key]<delay){
+
+showToast("Please wait a moment")
+
+return false
+
+}
+
+RATE_LIMIT[key]=now
+return true
+
+}
+
+/* ==============================
 GLOBAL ERROR
 ============================== */
 
@@ -96,6 +133,8 @@ LOGIN
 
 async function login(){
 
+if(!limitAction("login",2000)) return
+
 const username=document.getElementById("loginUsername").value
 const password=document.getElementById("loginPassword").value
 
@@ -107,7 +146,11 @@ headers:{
 "Content-Type":"application/json"
 },
 
-body:JSON.stringify({username,password})
+body:JSON.stringify({
+username,
+password,
+device:getDevice()
+})
 
 })
 
@@ -148,13 +191,15 @@ const data=JSON.parse(event.data)
 
 if(data.type==="wallet_update"){
 
-updateWalletUI(data.balance)
+animateBalance(data.balance)
 
 }
 
 if(data.type==="transaction"){
 
 loadTransactions()
+
+playSuccessSound()
 
 sendNotification("New Transaction","Transaction received")
 
@@ -171,18 +216,6 @@ setTimeout(connectWalletSocket,4000)
 }catch{
 
 console.log("Websocket failed")
-
-}
-
-}
-
-function updateWalletUI(balance){
-
-const walletEl=document.getElementById("walletBalance")
-
-if(walletEl){
-
-walletEl.innerText="₦"+Number(balance).toLocaleString()
 
 }
 
@@ -236,9 +269,7 @@ const prefix=phone.substring(0,4)
 for(const network in NETWORK_PREFIX){
 
 if(NETWORK_PREFIX[network].includes(prefix)){
-
 return network
-
 }
 
 }
@@ -418,19 +449,15 @@ function calculateProfit(transactions){
 let profit=0
 
 transactions.forEach(t=>{
-
 if(t.profit){
 profit+=Number(t.profit)
 }
-
 })
 
 const profitEl=document.getElementById("profitBalance")
 
 if(profitEl){
-
 profitEl.innerText="₦"+profit.toLocaleString()
-
 }
 
 }
@@ -444,50 +471,92 @@ async function loadDashboard(){
 const token=getToken()
 
 if(!token){
-
 window.location="login.html"
 return
-
 }
 
 try{
 
 const res=await smartFetch(`${API}/api/me`,{
-
-headers:{
-Authorization:`Bearer ${token}`
-}
-
+headers:{Authorization:`Bearer ${token}`}
 })
 
 if(!res.ok){
-
 localStorage.removeItem("token")
 window.location="login.html"
 return
-
 }
 
 const user=await res.json()
 
+/* USERNAME */
+
+const nameEl=document.getElementById("usernameDisplay")
+if(nameEl){
+nameEl.innerText=`Hello 👋 ${user.username}`
+}
+
+/* PROFILE */
+
+const avatar=document.getElementById("avatar")
+if(avatar){
+avatar.innerText=user.username.charAt(0).toUpperCase()
+}
+
+const profileName=document.getElementById("profileName")
+if(profileName){
+profileName.innerText=user.username
+}
+
+const profileEmail=document.getElementById("profileEmail")
+if(profileEmail){
+profileEmail.innerText=user.email
+}
+
+/* WALLET */
+
 animateBalance(user.wallet_balance||0)
 
-enableNotifications()
+/* ADMIN PANEL */
 
-connectWalletSocket()
+const adminPanel=document.getElementById("adminPanel")
 
-loadTransactions()
+if(adminPanel){
 
 if(user.is_admin){
 
+adminPanel.style.display="block"
 adminLiveMonitor()
 
+}else{
+
+adminPanel.style.display="none"
+
 }
+
+}
+
+/* SYSTEMS */
+
+enableNotifications()
+connectWalletSocket()
+loadTransactions()
+
+/* WELCOME SOUND */
+
+const sound=document.getElementById("welcomeSound")
+
+if(sound){
+setTimeout(()=>{
+sound.play().catch(()=>{})
+},1200)
+}
+
+hideLoader()
 
 }catch{
 
 localStorage.removeItem("token")
-
 window.location="login.html"
 
 }
@@ -495,8 +564,77 @@ window.location="login.html"
 }
 
 if(window.location.pathname.includes("dashboard")){
-
 window.addEventListener("load",loadDashboard)
+}
+
+/* ==============================
+BIOMETRIC AUTH
+============================== */
+
+async function biometricAuth(){
+
+if(!window.PublicKeyCredential){
+showToast("Biometric not supported")
+return false
+}
+
+try{
+
+await navigator.credentials.get({
+publicKey:{
+challenge:new Uint8Array(32),
+timeout:60000,
+userVerification:"required"
+}
+})
+
+return true
+
+}catch{
+
+showToast("Biometric verification failed")
+return false
+
+}
+
+}
+
+/* ==============================
+BIOMETRIC LOGIN
+============================== */
+
+async function biometricLogin(){
+
+if(localStorage.getItem("biometric")!=="true"){
+alert("Biometric login not enabled")
+return
+}
+
+const verified=await biometricAuth()
+
+if(!verified) return
+
+const token=localStorage.getItem("token")
+
+if(token){
+window.location="dashboard.html"
+}else{
+alert("Login once with password first")
+}
+
+}
+
+/* ==============================
+SUCCESS SOUND
+============================== */
+
+function playSuccessSound(){
+
+const sound=document.getElementById("successSound")
+
+if(sound){
+sound.play().catch(()=>{})
+}
 
 }
 

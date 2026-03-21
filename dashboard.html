@@ -16,9 +16,11 @@ body{
 background:#000;
 color:white;
 font-family:Arial;
+margin:0;
+padding-bottom:90px;
 }
 
-/* DASHBOARD SPLASH */
+/* DASHBOARD LOADER */
 
 #dashboardLoader{
 position:fixed;
@@ -46,6 +48,137 @@ animation:spin 1s linear infinite;
 @keyframes spin{
 0%{transform:rotate(0deg)}
 100%{transform:rotate(360deg)}
+}
+
+/* HEADER */
+
+.logo-circle{
+text-align:center;
+margin-top:20px;
+}
+
+.logo-circle img{
+width:90px;
+}
+
+/* WALLET */
+
+.wallet-card{
+background:linear-gradient(135deg,#3b78e7,#274ea3);
+padding:20px;
+border-radius:16px;
+margin:20px;
+text-align:center;
+}
+
+.wallet-card strong{
+font-size:30px;
+}
+
+/* ADMIN PANEL */
+
+.admin-card{
+background:#08142c;
+margin:20px;
+padding:20px;
+border-radius:16px;
+}
+
+.admin-card input{
+width:100%;
+padding:12px;
+margin-top:10px;
+border:none;
+border-radius:10px;
+background:#020b1f;
+color:white;
+}
+
+.admin-withdraw-btn{
+margin-top:15px;
+width:100%;
+padding:14px;
+border:none;
+background:#3b78e7;
+color:white;
+border-radius:10px;
+}
+
+/* QUICK ACTION BUTTONS */
+
+.quickActions{
+position:fixed;
+bottom:100px;
+right:20px;
+display:flex;
+flex-direction:column;
+gap:14px;
+}
+
+.quickActions button{
+background:#3b78e7;
+border:none;
+width:65px;
+height:65px;
+border-radius:50%;
+color:white;
+font-size:22px;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+box-shadow:0 5px 20px rgba(0,0,0,0.5);
+}
+
+.quickActions span{
+font-size:10px;
+}
+
+/* POPULAR PLAN */
+
+.popular-plan{
+background:#112c64;
+margin:20px;
+padding:15px;
+border-radius:12px;
+text-align:center;
+}
+
+.popular-plan button{
+margin-top:10px;
+padding:10px 15px;
+background:#3b78e7;
+border:none;
+border-radius:8px;
+color:white;
+}
+
+/* TRANSACTIONS */
+
+.transaction-card{
+background:#0c1a36;
+padding:12px;
+border-radius:12px;
+margin:10px 20px;
+}
+
+/* SUPPORT */
+
+.support-box{
+margin:20px;
+background:#0c1a36;
+padding:15px;
+border-radius:12px;
+text-align:center;
+}
+
+.support-box button{
+margin-top:8px;
+padding:10px 14px;
+border:none;
+border-radius:8px;
+background:#3b78e7;
+color:white;
 }
 
 /* PROFILE PANEL */
@@ -133,15 +266,6 @@ background:black;
 color:white;
 }
 
-/* TRANSACTIONS */
-
-.transaction-card{
-background:#0c1a36;
-padding:12px;
-border-radius:12px;
-margin-top:10px;
-}
-
 /* BOTTOM NAV */
 
 .bottomNav{
@@ -172,19 +296,30 @@ font-size:11px;
 }
 
 </style>
-
 </head>
 
 <body>
 
-<!-- DASHBOARD LOADER -->
+<!-- LOADER -->
 
 <div id="dashboardLoader">
-
 <div class="loader"></div>
 <p style="margin-top:15px">Loading dashboard...</p>
-
 </div>
+
+<!-- HEADER -->
+
+<div class="logo-circle">
+<img src="images/logo.png">
+</div>
+
+<div style="text-align:center;margin-bottom:10px;">
+<h3 id="usernameDisplay">Hello 👋 User</h3>
+</div>
+
+<!-- SOUNDS -->
+
+<audio id="welcomeSound" src="sounds/welcome.mp3"></audio>
 
 <!-- WALLET -->
 
@@ -193,11 +328,76 @@ font-size:11px;
 <strong id="walletBalance">₦0</strong>
 </div>
 
+<!-- ADMIN PANEL -->
+
+<div id="adminPanel" class="admin-card" style="display:none;">
+
+<h3>Admin Profit Withdrawal</h3>
+
+<p>Total Profit</p>
+<strong id="profitBalance">₦0</strong>
+
+<input type="number" id="withdrawAmount" placeholder="Enter Amount">
+<input type="text" id="bankName" placeholder="Bank Name">
+<input type="text" id="accountNumber" placeholder="Account Number">
+
+<button class="admin-withdraw-btn" onclick="adminWithdraw()">
+Withdraw Profit
+</button>
+
+</div>
+
+<!-- POPULAR PLAN -->
+
+<div class="popular-plan">
+
+<h4>🔥 Most Popular Data Plan</h4>
+
+<p>1GB for ₦300</p>
+
+<button onclick="location.href='data.html'">
+Buy Now
+</button>
+
+</div>
+
 <!-- TRANSACTIONS -->
 
-<h3 style="margin-top:20px;">Recent Transactions</h3>
+<h3 style="margin-left:20px;">Recent Transactions</h3>
 
 <div id="transactionHistory"></div>
+
+<!-- SUPPORT -->
+
+<div class="support-box">
+
+<h4>Need Help?</h4>
+
+<button onclick="callSupport()">📞 Call Support</button>
+<button onclick="chatSupport()">💬 Contact Developer</button>
+
+</div>
+
+<!-- FLOATING ACTIONS -->
+
+<div class="quickActions">
+
+<button onclick="location.href='data.html'">
+📶
+<span>Data</span>
+</button>
+
+<button onclick="location.href='airtime.html'">
+📞
+<span>Airtime</span>
+</button>
+
+<button onclick="location.href='fund.html'">
+💳
+<span>Fund</span>
+</button>
+
+</div>
 
 <!-- PROFILE PANEL -->
 
@@ -214,19 +414,12 @@ font-size:11px;
 </div>
 
 <button id="setPinBtn" class="profileBtn" onclick="openPinModal()">🔐 Set Transaction PIN</button>
-
 <button id="changePinBtn" class="profileBtn" style="display:none;">🔑 Change PIN</button>
-
 <button class="profileBtn">🔒 Change Password</button>
-
 <button class="profileBtn" onclick="toggleBiometric()">🧬 Enable Biometric Login/Purchase</button>
-
 <button class="profileBtn" onclick="callSupport()">📞 Call Support</button>
-
 <button class="profileBtn" onclick="chatSupport()">💬 Contact Developer</button>
-
 <button class="profileBtn" onclick="logout()">🚪 Logout</button>
-
 <button class="profileBtn" onclick="toggleProfile()">⬇ Close</button>
 
 </div>
@@ -300,136 +493,17 @@ function chatSupport(){
 window.location.href="https://wa.me/2348117988561"
 }
 
-/* BIOMETRIC */
+/* WELCOME SOUND */
 
-function toggleBiometric(){
+window.addEventListener("load",()=>{
 
-if(localStorage.getItem("biometric")){
-localStorage.removeItem("biometric")
-alert("Biometric Disabled")
-}else{
-localStorage.setItem("biometric","true")
-alert("Biometric Enabled")
-}
-
-}
-
-/* PIN MODAL */
-
-function openPinModal(){
-
-document.getElementById("pinModal").style.display="flex"
-
-document.querySelector(".pinInputs input").focus()
-
-}
-
-/* PIN AUTO MOVE */
-
-function movePin(el,index){
-
-const inputs=document.querySelectorAll(".pinInputs input")
-
-if(el.value && index<3){
-inputs[index+1].focus()
-}
-
-}
-
-/* SAVE PIN */
-
-async function savePin(){
-
-const inputs=document.querySelectorAll(".pinInputs input")
-
-let pin=""
-
-inputs.forEach(i=>pin+=i.value)
-
-if(pin.length!==4){
-alert("Enter 4 digit PIN")
-return
-}
-
-await fetch("https://mayconnect-backend-1.onrender.com/api/set-pin",{
-
-method:"POST",
-headers:{
-"Content-Type":"application/json",
-Authorization:`Bearer ${localStorage.getItem("token")}`
-},
-body:JSON.stringify({pin})
-
-})
-
-localStorage.setItem("pinSet","true")
-
-document.getElementById("pinModal").style.display="none"
-
-document.getElementById("setPinBtn").style.display="none"
-document.getElementById("changePinBtn").style.display="block"
-
-alert("PIN Saved")
-
-}
-
-/* LOAD PROFILE */
-
-async function loadProfile(){
-
-const token = localStorage.getItem("token")
-
-if(!token){
-window.location.href="login.html"
-return
-}
-
-try{
-
-const res = await fetch("https://mayconnect-backend-1.onrender.com/api/me",{
-headers:{
-Authorization:`Bearer ${token}`
-}
-})
-
-if(!res.ok){
-localStorage.removeItem("token")
-window.location.href="login.html"
-return
-}
-
-const user = await res.json()
-
-document.getElementById("profileName").innerText=user.username
-document.getElementById("profileEmail").innerText=user.email
-document.getElementById("avatar").innerText=user.username.charAt(0).toUpperCase()
-
-/* CHECK PIN */
-
-if(localStorage.getItem("pinSet")){
-document.getElementById("setPinBtn").style.display="none"
-document.getElementById("changePinBtn").style.display="block"
-}else{
 setTimeout(()=>{
-openPinModal()
-},800)
-}
 
-/* HIDE DASHBOARD LOADER */
+document.getElementById("welcomeSound").play().catch(()=>{})
 
-document.getElementById("dashboardLoader").style.display="none"
+},1200)
 
-}catch(e){
-
-console.log(e)
-
-window.location.href="login.html"
-
-}
-
-}
-
-window.onload=loadProfile
+})
 
 </script>
 
