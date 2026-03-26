@@ -72,7 +72,7 @@ function renderTransactions() {
     div.className = "transaction-card";
     div.innerHTML = `
       <p><strong>${tx.type}</strong> - ₦${tx.amount}</p>
-      <p>${tx.phone} (${tx.network})</p>
+      <p>${tx.phone || ""} (${tx.network || ""})</p>
       <p>${tx.date}</p>
     `;
     container.appendChild(div);
@@ -110,7 +110,7 @@ function showNetworkLogo(network) {
     "9MOBILE": "images/9mobile.png"
   };
   logo.src = logos[network] || "";
-  logo.style.display = "block";
+  logo.style.display = network ? "block" : "none";
 }
 
 /* PHONE INPUT */
@@ -119,9 +119,8 @@ function handlePhoneInput(input) {
   const phone = input.value;
   if (phone.length < 4) return;
   const network = detectNetwork(phone);
-  if (!network) return;
   showNetworkLogo(network);
-  if (network === lastNetworkLoaded) return;
+  if (!network || network === lastNetworkLoaded) return;
   lastNetworkLoaded = network;
   loadDataPlans(network);
 }
@@ -140,11 +139,12 @@ async function loadDataPlans(network) {
       const name = plan.plan || plan.name || "Data Plan";
       const price = plan.price || plan.amount || 0;
       let validity = plan.validity || plan.validity_days || plan.duration || plan.validity_text || "N/A";
-      if (typeof validity === "number") validity = validity + " Days";
+      if (typeof validity === "number") validity += " Days";
       const id = plan.plan_id || plan.id;
       const card = document.createElement("div");
       card.className = "planCard";
       card.dataset.price = price;
+      card.dataset.planId = id;
       card.onclick = () => {
         document.querySelectorAll(".planCard").forEach(c => c.classList.remove("selected"));
         card.classList.add("selected");
@@ -202,7 +202,10 @@ function openPinModal(plan, type) {
     `;
   } else if (type === "data" || type === "airtime") {
     title.innerText = "Enter Transaction PIN";
-    body.innerHTML = `<input type="password" id="pin" placeholder="PIN" maxlength="4"><button onclick="confirmPurchase()">Confirm</button>`;
+    body.innerHTML = `
+      <input type="password" id="pin" placeholder="PIN" maxlength="4">
+      <button onclick="confirmPurchase()">Confirm</button>
+    `;
   }
 }
 
@@ -213,18 +216,14 @@ function closePinModal() {
 /* PIN FUNCTIONS */
 function savePin() {
   const pin = el("pinInput")?.value;
-  if (!pin || pin.length !== 4) {
-    showToast("Enter 4-digit PIN");
-    return;
-  }
+  if (!pin || pin.length !== 4) return showToast("Enter 4-digit PIN");
   localStorage.setItem("userPin", pin);
   showToast("Transaction PIN set");
   closePinModal();
 }
 
 function verifyPin(pin) {
-  const saved = localStorage.getItem("userPin");
-  return saved === pin;
+  return localStorage.getItem("userPin") === pin;
 }
 
 function changePin() {
@@ -250,10 +249,7 @@ async function changePassword() {
   try {
     const res = await fetch(`${API}/api/change-password`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${getToken()}`
-      },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
       body: JSON.stringify({ current_password: current, new_password: newPass })
     });
     const data = await res.json();
@@ -337,12 +333,12 @@ function confirmPurchase() {
   if (balance < amount) return showToast("Insufficient funds");
 
   if (purchaseType === "airtime") buyAirtime(el("phone")?.value, amount, pin);
-  else if (purchaseType === "data") buyData(selectedPlan || document.querySelector(".planCard.selected")?.dataset.plan, pin);
+  else if (purchaseType === "data") buyData(selectedPlan || document.querySelector(".planCard.selected")?.dataset.planId, pin);
 
   closePinModal();
 }
 
-/* POPULAR PLAN BUY HANDLER */
+/* PLAN BUY HANDLER */
 function purchasePlan(planId) {
   selectedPlan = planId;
   purchaseType = "data";
@@ -378,12 +374,9 @@ async function loadDashboard() {
 
     const adminPanel = el("adminPanel");
     if (user.is_admin || user.username?.trim().toLowerCase() === "admin") {
-      if (adminPanel) adminPanel.classList.remove("hidden");
-      const profitEl = el("profitBalance");
-      if (profitEl) profitEl.innerText = `₦${user.admin_wallet || 0}`;
-    } else {
-      if (adminPanel) adminPanel.classList.add("hidden");
-    }
+      adminPanel?.classList.remove("hidden");
+      el("profitBalance") && (el("profitBalance").innerText = `₦${user.admin_wallet || 0}`);
+    } else adminPanel?.classList.add("hidden");
 
     renderTransactions();
 
@@ -394,8 +387,7 @@ async function loadDashboard() {
     showToast("Failed to load dashboard");
   }
 
-  const loader = el("dashboardLoader");
-  if (loader) loader.remove();
+  el("dashboardLoader")?.remove();
 }
 
 /* LOGOUT */
