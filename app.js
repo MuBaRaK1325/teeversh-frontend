@@ -153,7 +153,7 @@ async function loadDataPlans(network) {
         <h4>${name}</h4>
         <p>₦${price}</p>
         <p>Validity: ${validity}</p>
-        <button onclick="openPinModal('${id}','data')">Buy</button>
+        <button onclick="purchasePlan('${id}')">Buy</button>
       `;
       container.appendChild(card);
     });
@@ -162,11 +162,11 @@ async function loadDataPlans(network) {
   }
 }
 
-/* PURCHASE */
+/* PURCHASE VARIABLES */
 let selectedPlan = null;
 let purchaseType = null;
 
-/* PIN & Modals */
+/* PIN MODAL */
 function openPinModal(plan, type) {
   selectedPlan = plan;
   purchaseType = type;
@@ -200,6 +200,9 @@ function openPinModal(plan, type) {
       <input type="password" id="confirmPassword" placeholder="Confirm Password">
       <button onclick="changePassword()">Change Password</button>
     `;
+  } else if (type === "data" || type === "airtime") {
+    title.innerText = "Enter Transaction PIN";
+    body.innerHTML = `<input type="password" id="pin" placeholder="PIN" maxlength="4"><button onclick="confirmPurchase()">Confirm</button>`;
   }
 }
 
@@ -236,7 +239,7 @@ function changePin() {
   closePinModal();
 }
 
-/* CHANGE PASSWORD */
+/* PASSWORD */
 async function changePassword() {
   const current = el("currentPassword")?.value;
   const newPass = el("newPassword")?.value;
@@ -262,10 +265,9 @@ async function changePassword() {
   }
 }
 
-/* DATA PURCHASE */
+/* PURCHASE ACTIONS */
 async function buyData(planId, pin) {
-  const phone = el("phone")?.value;
-  if (!phone) return showToast("Enter phone number");
+  const phone = el("phone")?.value || "N/A";
   try {
     const res = await fetch(`${API}/api/buy-data`, {
       method: "POST",
@@ -292,7 +294,6 @@ async function buyData(planId, pin) {
   } catch (e) { showToast("Network error"); }
 }
 
-/* AIRTIME PURCHASE */
 async function buyAirtime(phone, amount, pin) {
   try {
     const res = await fetch(`${API}/api/buy-airtime`, {
@@ -327,7 +328,7 @@ function confirmPurchase() {
 
   let amount = 0;
   if (purchaseType === "airtime") amount = parseFloat(el("amount")?.value || 0);
-  else {
+  else if (purchaseType === "data") {
     const selectedCard = document.querySelector(".planCard.selected");
     if (selectedCard) amount = parseFloat(selectedCard.dataset.price || 0);
   }
@@ -336,9 +337,16 @@ function confirmPurchase() {
   if (balance < amount) return showToast("Insufficient funds");
 
   if (purchaseType === "airtime") buyAirtime(el("phone")?.value, amount, pin);
-  else buyData(selectedPlan, pin);
+  else if (purchaseType === "data") buyData(selectedPlan || document.querySelector(".planCard.selected")?.dataset.plan, pin);
 
   closePinModal();
+}
+
+/* POPULAR PLAN BUY HANDLER */
+function purchasePlan(planId) {
+  selectedPlan = planId;
+  purchaseType = "data";
+  openPinModal(planId, "data");
 }
 
 /* BIOMETRIC LOGIN */
