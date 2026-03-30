@@ -2,195 +2,119 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>MAY-Connect | Dashboard</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<link rel="stylesheet" href="styles.css">
+<title>MAY Connect</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
 
 <style>
 
 body{
+margin:0;
 background:#000;
 color:white;
 font-family:Arial;
-margin:0;
-padding-bottom:90px;
 display:none;
+padding-bottom:90px;
 }
 
-/* LOADER */
-
-#dashboardLoader{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:#020b1f;
-display:flex;
-align-items:center;
-justify-content:center;
-flex-direction:column;
-z-index:9999;
-}
-
-.loader{
-width:70px;
-height:70px;
-border:6px solid #0c1a36;
-border-top:6px solid #3b78e7;
-border-radius:50%;
-animation:spin 1s linear infinite;
-}
-
-@keyframes spin{
-0%{transform:rotate(0deg)}
-100%{transform:rotate(360deg)}
-}
-
-/* HEADER */
-
-.header{
+header{
 display:flex;
 justify-content:space-between;
 align-items:center;
 padding:15px;
 }
 
-.logo-circle img{
+.logo img{
 width:80px;
 }
 
-.profileIcon{
-background:#08142c;
-border:1px solid #3b78e7;
-width:40px;
-height:40px;
-border-radius:50%;
-display:flex;
-align-items:center;
-justify-content:center;
-cursor:pointer;
-}
-
-/* WALLET */
-
-.wallet-card{
-background:linear-gradient(135deg,#3b78e7,#274ea3);
+.walletCard{
+margin:20px;
 padding:20px;
 border-radius:16px;
-margin:20px;
 text-align:center;
+background:linear-gradient(135deg,#3b78e7,#274ea3);
 }
 
-.wallet-card strong{
+.walletCard strong{
 font-size:30px;
 }
 
-/* ADMIN PANEL */
-
-.admin-card{
-background:#08142c;
-margin:20px;
-padding:20px;
-border-radius:16px;
+.section{
 display:none;
+padding:20px;
 }
 
-.admin-section{
-margin-top:20px;
-padding:10px;
-background:#050b18;
-border-radius:10px;
+.section.active{
+display:block;
 }
 
-.adminBtn{
+input,select{
 width:100%;
-margin-top:8px;
-padding:10px;
-background:#112c64;
-border:none;
-color:white;
-border-radius:8px;
-cursor:pointer;
-}
-
-/* TRANSACTIONS */
-
-.transaction-card{
-background:#0c1a36;
 padding:12px;
-border-radius:12px;
-margin:10px 20px;
+margin-top:10px;
+border-radius:8px;
+border:none;
 }
 
-/* QUICK ACTIONS */
-
-.quickActions{
-position:fixed;
-bottom:100px;
-right:20px;
-display:flex;
-flex-direction:column;
-gap:14px;
-}
-
-.quickActions button{
+button{
 background:#3b78e7;
 border:none;
-width:65px;
-height:65px;
-border-radius:50%;
+padding:12px;
+border-radius:10px;
 color:white;
-font-size:22px;
-display:flex;
-flex-direction:column;
-align-items:center;
-justify-content:center;
+margin-top:10px;
+width:100%;
 }
 
-/* PROFILE PANEL */
+.transactionCard{
+background:#08142c;
+padding:12px;
+border-radius:10px;
+margin-top:10px;
+}
 
-.profilePanel{
+.bottomNav{
 position:fixed;
 bottom:0;
+width:100%;
+background:#050b18;
+display:flex;
+justify-content:space-around;
+padding:10px 0;
+}
+
+.bottomNav button{
+background:none;
+border:none;
+color:white;
+font-size:14px;
+}
+
+.pinModal{
+position:fixed;
+top:0;
 left:0;
 width:100%;
 height:100%;
-background:#000;
-transform:translateY(100%);
-transition:0.4s;
-z-index:5000;
-padding:20px;
-overflow:auto;
-}
-
-.profilePanel.show{
-transform:translateY(0);
-border-top:2px solid #3b78e7;
-}
-
-.avatar{
-width:80px;
-height:80px;
-border-radius:50%;
-background:#3b78e7;
-display:flex;
+background:rgba(0,0,0,0.9);
+display:none;
 align-items:center;
 justify-content:center;
-font-size:30px;
-margin:auto;
+z-index:5000;
 }
 
-.profileBtn{
-width:100%;
-padding:14px;
-margin-top:12px;
-background:#050b18;
-border:1px solid #3b78e7;
+.pinBox{
+background:#0c1a36;
+padding:20px;
 border-radius:10px;
-color:white;
-text-align:left;
+width:80%;
+}
+
+.adminCard{
+background:#08142c;
+padding:15px;
+border-radius:10px;
+margin-top:10px;
 }
 
 </style>
@@ -198,146 +122,179 @@ text-align:left;
 
 <body>
 
-<!-- LOADER -->
+<header>
 
-<div id="dashboardLoader">
-<div class="loader"></div>
-<p style="margin-top:15px">Loading dashboard...</p>
-</div>
-
-<!-- HEADER -->
-
-<div class="header">
-
-<div class="logo-circle">
+<div class="logo">
 <img src="images/logo.png">
 </div>
 
-<div class="profileIcon" onclick="toggleProfile()">👤</div>
+<div onclick="showSection('profile')">👤</div>
 
+</header>
+
+<!-- HOME -->
+
+<section id="home" class="section active">
+
+<div style="text-align:center">
+<h3 id="usernameDisplay">Hello</h3>
 </div>
 
-<div style="text-align:center;margin-bottom:10px;">
-<h3 id="usernameDisplay">Hello 👋 User</h3>
-</div>
-
-<!-- WALLET -->
-
-<div class="wallet-card">
+<div class="walletCard">
 <p>Wallet Balance</p>
 <strong id="walletBalance">₦0</strong>
 </div>
 
-<!-- ADMIN PANEL -->
-
-<div id="adminPanel" class="admin-card">
-
-<h3>⚙ Admin Control Panel</h3>
-
-<!-- USER MANAGEMENT -->
-
-<div class="admin-section">
-<h4>👥 User Management</h4>
-<button class="adminBtn" onclick="viewUsers()">View All Users</button>
-<button class="adminBtn" onclick="searchUser()">Search User</button>
-<button class="adminBtn" onclick="banUser()">Ban User</button>
-<button class="adminBtn" onclick="deleteUser()">Delete User</button>
-</div>
-
-<!-- WALLET CONTROL -->
-
-<div class="admin-section">
-<h4>💰 Wallet Control</h4>
-<button class="adminBtn" onclick="creditWallet()">Credit Wallet</button>
-<button class="adminBtn" onclick="debitWallet()">Debit Wallet</button>
-</div>
-
-<!-- FINANCE -->
-
-<div class="admin-section">
-<h4>🏦 Finance</h4>
-
-<p>Total Profit</p>
-<strong id="profitBalance">₦0</strong>
-
-<input type="number" id="withdrawAmount" placeholder="Enter Amount">
-
-<input type="text" id="bankName" placeholder="Bank Name">
-
-<input type="text" id="accountNumber" placeholder="Account Number">
-
-<button class="adminBtn" onclick="adminWithdraw()">Withdraw Profit</button>
-
-<button class="adminBtn" onclick="approveDeposits()">Approve Deposits</button>
-</div>
-
-<!-- MONITORING -->
-
-<div class="admin-section">
-<h4>📊 Monitoring</h4>
-<button class="adminBtn" onclick="seeTransactions()">See All Transactions</button>
-<button class="adminBtn" onclick="livePurchases()">See Live Purchases</button>
-</div>
-
-</div>
-
-<!-- POPULAR PLAN -->
-
-<div style="margin:20px;background:#112c64;padding:15px;border-radius:12px;text-align:center">
-
-<h4>🔥 Most Popular Data Plan</h4>
-
-<p id="popularPlanText">1GB for ₦300</p>
-
-<button id="popularPlanBtn">Buy Now</button>
-
-</div>
-
-<!-- TRANSACTIONS -->
-
-<h3 style="margin-left:20px;">Recent Transactions</h3>
+<h3>Recent Transactions</h3>
 
 <div id="transactionHistory"></div>
 
-<!-- QUICK ACTIONS -->
+</section>
 
-<div class="quickActions">
+<!-- DATA -->
 
-<button onclick="location.href='data.html'">📶<span>Data</span></button>
+<section id="data" class="section">
 
-<button onclick="location.href='airtime.html'">📞<span>Airtime</span></button>
+<h2>Buy Data</h2>
 
-<button onclick="location.href='fund.html'">💳<span>Fund</span></button>
+<select id="networkSelect">
+<option value="">Select Network</option>
+<option value="MTN">MTN</option>
+<option value="AIRTEL">Airtel</option>
+<option value="GLO">Glo</option>
+</select>
+
+<input id="dataPhone" placeholder="Phone Number">
+
+<select id="planSelect"></select>
+
+<button onclick="openPinModal('data')">Buy Data</button>
+
+</section>
+
+<!-- AIRTIME -->
+
+<section id="airtime" class="section">
+
+<h2>Airtime</h2>
+
+<div id="airtimeComing">
+
+<p style="text-align:center">
+Airtime service coming soon
+</p>
 
 </div>
 
-<!-- PROFILE PANEL -->
+<div id="airtimeForm" style="display:none">
 
-<div id="profilePanel" class="profilePanel">
+<select id="airtimeNetwork">
 
-<div style="text-align:center">
+<option>MTN</option>
+<option>AIRTEL</option>
+<option>GLO</option>
 
-<div id="avatar" class="avatar">U</div>
+</select>
 
-<h3 id="profileName">User</h3>
+<input id="airtimePhone" placeholder="Phone Number">
 
-<p id="profileEmail">email@email.com</p>
+<input id="airtimeAmount" placeholder="Amount">
+
+<button onclick="openPinModal('airtime')">Buy Airtime</button>
 
 </div>
 
-<button class="profileBtn" onclick="changePin()">🔑 Change Transaction PIN</button>
+</section>
 
-<button class="profileBtn" onclick="changePassword()">🔒 Change Password</button>
+<!-- FUND -->
 
-<button class="profileBtn" onclick="toggleBiometric()">🧬 Enable Biometric</button>
+<section id="fund" class="section">
 
-<button class="profileBtn" onclick="callSupport()">📞 Call Support</button>
+<h2>Fund Wallet</h2>
 
-<button class="profileBtn" onclick="contactDeveloper()">💬 Contact Developer</button>
+<p>Virtual account will appear here once payment gateway is enabled.</p>
 
-<button class="profileBtn" onclick="logout()">🚪 Logout</button>
+<div class="adminCard">
 
-<button class="profileBtn" onclick="toggleProfile()">⬇ Close</button>
+<p><b>Supported Gateway</b></p>
+
+<p>Paystack (Coming Soon)</p>
+
+</div>
+
+</section>
+
+<!-- TRANSACTIONS -->
+
+<section id="transactions" class="section">
+
+<h2>All Transactions</h2>
+
+<div id="allTransactions"></div>
+
+</section>
+
+<!-- PROFILE -->
+
+<section id="profile" class="section">
+
+<h2>Account</h2>
+
+<button onclick="changePassword()">Change Password</button>
+
+<button onclick="changePin()">Change PIN</button>
+
+<button onclick="toggleBiometric()">Toggle Biometrics</button>
+
+<button onclick="logout()">Logout</button>
+
+</section>
+
+<!-- ADMIN -->
+
+<section id="admin" class="section">
+
+<h2>Admin Panel</h2>
+
+<input id="searchUser" placeholder="Search user">
+
+<button onclick="searchUser()">Search</button>
+
+<div id="adminUsers"></div>
+
+</section>
+
+<!-- PIN MODAL -->
+
+<div id="pinModal" class="pinModal">
+
+<div class="pinBox">
+
+<h3>Enter Transaction PIN</h3>
+
+<input id="pinInput" type="password">
+
+<button onclick="confirmPurchase()">Confirm</button>
+
+<button onclick="closePinModal()">Cancel</button>
+
+</div>
+
+</div>
+
+<!-- NAVIGATION -->
+
+<div class="bottomNav">
+
+<button onclick="showSection('home')">Home</button>
+
+<button onclick="showSection('data')">Data</button>
+
+<button onclick="showSection('airtime')">Airtime</button>
+
+<button onclick="showSection('fund')">Fund</button>
+
+<button onclick="showSection('transactions')">History</button>
 
 </div>
 
@@ -345,34 +302,51 @@ text-align:left;
 
 <script>
 
-/* PROFILE PANEL */
+let purchaseType=""
 
-function toggleProfile(){
-document.getElementById("profilePanel").classList.toggle("show");
+function showSection(id){
+
+document.querySelectorAll(".section").forEach(s=>{
+s.classList.remove("active")
+})
+
+document.getElementById(id).classList.add("active")
+
+if(id==="transactions"){
+loadAllTransactions()
 }
 
-/* SUPPORT */
-
-function callSupport(){
-window.location.href="tel:08117988561";
 }
 
-function contactDeveloper(){
-window.location.href="https://wa.me/2348117988561";
+function openPinModal(type){
+
+purchaseType=type
+
+document.getElementById("pinModal").style.display="flex"
+
 }
 
-/* POPULAR PLAN */
+function closePinModal(){
 
-document.getElementById("popularPlanBtn").onclick=()=>{
-purchasePlan("popular-plan");
+document.getElementById("pinModal").style.display="none"
+
 }
 
-/* EMERGENCY LOADER */
+function confirmPurchase(){
 
-setTimeout(()=>{
-document.getElementById("dashboardLoader").style.display="none";
-document.body.style.display="block";
-},6000);
+const pin=document.getElementById("pinInput").value
+
+if(purchaseType==="data"){
+buyData(pin)
+}
+
+if(purchaseType==="airtime"){
+buyAirtime(pin)
+}
+
+closePinModal()
+
+}
 
 </script>
 

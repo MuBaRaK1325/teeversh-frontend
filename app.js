@@ -1,626 +1,566 @@
-const API = "https://mayconnect-backend-1.onrender.com";
+const API="https://mayconnect-backend-1.onrender.com"
 
-/* TOKEN */
+const welcomeSound=new Audio("sounds/welcome.mp3")
+const successSound=new Audio("sounds/success.mp3")
+
+let cachedPlans=[]
+
 function getToken(){
-  return localStorage.getItem("token");
+return localStorage.getItem("token")
 }
 
-/* ELEMENT */
 function el(id){
-  return document.getElementById(id);
+return document.getElementById(id)
 }
 
-/* LOADER CONTROL */
-function hideLoader(){
-  const loader = el("dashboardLoader");
-  if(loader){
-    loader.style.display="none";
-  }
-}
-
-/* SAFE FETCH */
-async function safeFetch(url, options={}, timeout=10000){
-
-  const controller = new AbortController();
-  const id = setTimeout(()=>controller.abort(), timeout);
-
-  try{
-
-    const res = await fetch(url,{
-      ...options,
-      signal:controller.signal
-    });
-
-    clearTimeout(id);
-    return res;
-
-  }catch(e){
-
-    clearTimeout(id);
-    console.log("Fetch error:",url);
-    throw e;
-
-  }
-}
-
-/* SUCCESS SOUND */
-const successSound = new Audio("sounds/success.mp3");
-
-/* TOAST */
 function showToast(msg){
 
-  const t = document.createElement("div");
-  t.innerText = msg;
+const t=document.createElement("div")
 
-  Object.assign(t.style,{
-    position:"fixed",
-    bottom:"30px",
-    left:"50%",
-    transform:"translateX(-50%)",
-    background:"#000",
-    padding:"12px 20px",
-    borderRadius:"8px",
-    color:"#fff",
-    zIndex:"9999"
-  });
+t.innerText=msg
 
-  document.body.appendChild(t);
-  setTimeout(()=>t.remove(),3000);
+Object.assign(t.style,{
+position:"fixed",
+bottom:"30px",
+left:"50%",
+transform:"translateX(-50%)",
+background:"#000",
+padding:"12px 20px",
+borderRadius:"8px",
+color:"#fff",
+zIndex:"9999"
+})
+
+document.body.appendChild(t)
+
+setTimeout(()=>t.remove(),3000)
+
 }
 
-/* WALLET */
 function animateWallet(balance){
-  const wallet = el("walletBalance");
-  if(wallet){
-    wallet.innerText = `₦${balance}`;
-  }
+
+const wallet=el("walletBalance")
+
+if(wallet){
+wallet.innerText="₦"+balance
 }
-
-/* TRANSACTIONS */
-function renderTransactions(transactions){
-
-  const container = el("transactionHistory");
-  if(!container) return;
-
-  container.innerHTML="";
-
-  transactions.slice(0,5).forEach(tx=>{
-
-    const div=document.createElement("div");
-    div.className="transaction-card";
-
-    div.innerHTML=`
-    <p><strong>${tx.type}</strong> - ₦${tx.amount}</p>
-    <p>${tx.phone||""} ${tx.network?`(${tx.network})`:''}</p>
-    <p>${tx.date||""}</p>
-    `;
-
-    container.appendChild(div);
-
-  });
 
 }
 
-/* FETCH USER TRANSACTIONS */
-async function fetchTransactions(){
+/* ================= BIOMETRIC AUTH ================= */
 
-  try{
+async function biometricAuth(){
 
-    const res = await safeFetch(`${API}/api/transactions`,{
-      headers:{Authorization:`Bearer ${getToken()}`}
-    });
+if(localStorage.getItem("biometric")!=="true") return true
 
-    if(!res.ok) return;
+if(!window.PublicKeyCredential){
+showToast("Biometric not supported on this device")
+return true
+}
 
-    const data = await res.json();
-    renderTransactions(data);
+try{
 
-  }catch(e){
+const challenge=new Uint8Array(32)
+window.crypto.getRandomValues(challenge)
 
-    console.log("transactions error",e);
+await navigator.credentials.get({
+publicKey:{
+challenge:challenge,
+timeout:60000,
+userVerification:"preferred"
+}
+})
 
-  }
+return true
+
+}catch(e){
+
+showToast("Biometric verification failed")
+
+return false
 
 }
 
-/* ============================
-NETWORK DETECTION (IMPROVED)
-============================ */
-
-const NETWORK_PREFIX={
-MTN:["0803","0806","0703","0706","0813","0816","0810","0814","0903","0906","0913","0916"],
-AIRTEL:["0802","0808","0701","0708","0812","0901","0902","0907","0911","0912"],
-GLO:["0805","0807","0705","0811","0815","0905","0915"],
-"9MOBILE":["0809","0817","0818","0908","0909"]
-};
-
-function detectNetwork(phone){
-
-  phone=phone.replace(/\D/g,"");
-
-  if(phone.startsWith("234")){
-    phone="0"+phone.slice(3);
-  }
-
-  const prefix=phone.substring(0,4);
-
-  for(const net in NETWORK_PREFIX){
-    if(NETWORK_PREFIX[net].includes(prefix)){
-      return net;
-    }
-  }
-
-  return null;
-}
-/* ============================
-NETWORK LOGO DISPLAY
-============================ */
-
-const NETWORK_LOGOS={
-  MTN:"images/Mtn.png",
-  AIRTEL:"images/Airtel.png",
-  GLO:"images/Glo.png",
-  "9MOBILE":"images/9mobile.png"
-};
-
-function handlePhoneInput(input){
-
-  const phone=input.value;
-
-  const network=detectNetwork(phone);
-
-  const logo=el("networkLogo");
-  const name=el("networkName");
-
-  if(!logo || !name) return;
-
-  if(network){
-
-    logo.src=NETWORK_LOGOS[network] || "";
-    logo.style.display="block";
-
-    name.innerText=network;
-    name.style.display="inline-block";
-
-  }else{
-
-    logo.style.display="none";
-    name.style.display="none";
-
-  }
-
-}
-/* ============================
-BIOMETRIC
-============================ */
-
-function biometricEnabled(){
-  return localStorage.getItem("biometric")==="true";
 }
 
-function confirmBiometric(){
-
-  if(!biometricEnabled()){
-    showToast("Biometric not enabled");
-    return;
-  }
-
-  confirmPurchase(true);
-}
-
-/* ============================
-PIN MODAL
-============================ */
-
-let selectedPlan=null;
-let purchaseType="data";
-
-function openPinModal(type){
-
-  const modal=el("pinModal");
-  if(!modal) return;
-
-  modal.style.display="flex";
-
-}
-
-function closePinModal(){
-  el("pinModal").style.display="none";
-}
-
-/* ============================
-FIRST TIME PIN SETUP
-============================ */
-
-function openFirstPinSetup(){
-
-  const modal = document.createElement("div");
-
-  modal.innerHTML=`
-  <div style="
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,0.8);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  z-index:9999">
-
-  <div style="
-  background:#08142c;
-  padding:25px;
-  border-radius:12px;
-  width:90%;
-  max-width:350px">
-
-  <h3>Create Transaction PIN</h3>
-
-  <input id="firstPin" placeholder="Enter 4 digit PIN">
-
-  <input id="confirmFirstPin" placeholder="Confirm PIN">
-
-  <button onclick="saveFirstPin()">Save PIN</button>
-
-  </div>
-  </div>
-  `;
-
-  document.body.appendChild(modal);
-}
-
-function saveFirstPin(){
-
-  const p1 = el("firstPin").value;
-  const p2 = el("confirmFirstPin").value;
-
-  if(p1.length!==4){
-    showToast("PIN must be 4 digits");
-    return;
-  }
-
-  if(p1!==p2){
-    showToast("PIN mismatch");
-    return;
-  }
-
-  localStorage.setItem("userPin",p1);
-
-  showToast("Transaction PIN created");
-
-  location.reload();
-}
-
-/* ============================
-PURCHASE PLAN
-============================ */
-
-function purchasePlan(planId,type="data"){
-
-  selectedPlan = planId;
-  purchaseType = type;
-
-  if(!localStorage.getItem("userPin")){
-    openFirstPinSetup();
-  }else{
-    openPinModal();
-  }
-
-}
-
-/* ============================
-CONFIRM PURCHASE
-============================ */
-
-async function confirmPurchase(biometric=false){
-
-  const pin = el("pin")?.value;
-  const phone = el("phone")?.value;
-
-  if(!biometric){
-
-    if(!pin){
-      showToast("Enter PIN");
-      return;
-    }
-
-  }
-
-  if(!phone){
-    showToast("Enter phone number");
-    return;
-  }
-
-  const endpoint =
-    purchaseType==="airtime"
-    ? "/api/buy-airtime"
-    : "/api/buy-data";
-
-  try{
-
-    const res = await safeFetch(`${API}${endpoint}`,{
-
-      method:"POST",
-
-      headers:{
-        "Content-Type":"application/json",
-        Authorization:`Bearer ${getToken()}`
-      },
-
-      body:JSON.stringify({
-        plan_id:selectedPlan,
-        phone,
-        pin
-      })
-
-    });
-
-    const data = await res.json();
-
-    if(res.ok){
-
-      showToast("Purchase successful");
-
-      successSound.play();
-
-      animateWallet(data.wallet_balance);
-
-      fetchTransactions();
-
-    }else{
-
-      showToast(data.error || "Purchase failed");
-
-    }
-
-  }catch(e){
-
-    showToast("Purchase error");
-
-  }
-
-  closePinModal();
-
-}
-
-/* ============================
-CHANGE PASSWORD
-============================ */
-
-async function changePassword(){
-
-  const current = prompt("Enter current password");
-  const newPass = prompt("Enter new password");
-  const confirm = prompt("Confirm new password");
-
-  if(newPass!==confirm){
-    showToast("Password mismatch");
-    return;
-  }
-
-  try{
-
-    const res = await safeFetch(`${API}/api/change-password`,{
-
-      method:"POST",
-
-      headers:{
-        "Content-Type":"application/json",
-        Authorization:`Bearer ${getToken()}`
-      },
-
-      body:JSON.stringify({
-        currentPassword:current,
-        newPassword:newPass
-      })
-
-    });
-
-    const data = await res.json();
-
-    showToast(data.message);
-
-  }catch(e){
-
-    showToast("Password change failed");
-
-  }
-
-}
-
-/* ============================
-CHANGE PIN
-============================ */
-
-function changePin(){
-
-  const current = prompt("Current PIN");
-  const newPin = prompt("New PIN");
-  const confirm = prompt("Confirm PIN");
-
-  if(newPin!==confirm){
-    showToast("PIN mismatch");
-    return;
-  }
-
-  const savedPin = localStorage.getItem("userPin");
-
-  if(current!==savedPin){
-    showToast("Wrong current PIN");
-    return;
-  }
-
-  localStorage.setItem("userPin",newPin);
-
-  showToast("PIN updated");
-
-}
-
-/* ============================
-ADMIN TRANSACTIONS
-============================ */
-
-async function loadAdminTransactions(){
-
-  try{
-
-    const res = await safeFetch(`${API}/api/admin/transactions`,{
-      headers:{Authorization:`Bearer ${getToken()}`}
-    });
-
-    if(!res.ok) return;
-
-    const txs = await res.json();
-
-    const container = el("transactionHistoryAdmin");
-    if(!container) return;
-
-    container.innerHTML="";
-
-    let profit = 0;
-
-    txs.slice(0,10).forEach(tx=>{
-
-      profit += Number(tx.profit || 0);
-
-      const div = document.createElement("div");
-
-      div.className="transaction-card";
-
-      div.innerHTML=`
-      <p><strong>${tx.type}</strong> - ₦${tx.amount}</p>
-      <p>${tx.username||""}</p>
-      <p>${tx.phone||""}</p>
-      <p>${tx.date||""}</p>
-      `;
-
-      container.appendChild(div);
-
-    });
-
-    const profitEl = el("profitBalance");
-
-    if(profitEl){
-      profitEl.innerText=`₦${profit}`;
-    }
-
-  }catch(e){
-
-    showToast("Admin transactions failed");
-
-  }
-
-}
-
-/* ============================
-DASHBOARD
-============================ */
+/* ================= DASHBOARD ================= */
 
 async function loadDashboard(){
 
-  const token = getToken();
+const token=getToken()
 
-  if(!token){
-    window.location="login.html";
-    return;
-  }
+if(!token){
+window.location="login.html"
+return
+}
 
-  try{
+try{
 
-    const userReq = safeFetch(`${API}/api/me`,{
-      headers:{Authorization:`Bearer ${token}`}
-    });
+const res=await fetch(API+"/api/me",{
+headers:{Authorization:"Bearer "+token}
+})
 
-    const txReq = fetchTransactions();
+const user=await res.json()
 
-    const [userRes] = await Promise.all([userReq, txReq]);
+el("usernameDisplay").innerText="Hello "+user.username
 
-    if(!userRes.ok){
-      window.location="login.html";
-      return;
-    }
+animateWallet(user.wallet_balance)
 
-    const user = await userRes.json();
+welcomeSound.play()
 
-    if(el("usernameDisplay")){
-      el("usernameDisplay").innerText=`Hello ${user.username}`;
-    }
+fetchTransactions()
 
-    if(el("walletBalance")){
-      el("walletBalance").innerText=`₦${user.wallet_balance}`;
-    }
+loadPlans()
 
-    if(user.is_admin){
+connectWalletWebSocket()
 
-      const adminPanel = el("adminPanel");
+loadAdminProfit()
 
-      if(adminPanel){
-        adminPanel.style.display="block";
-      }
+}catch{
 
-      loadAdminTransactions();
+showToast("Session expired")
 
-    }
-
-    if(!localStorage.getItem("userPin")){
-      setTimeout(()=>openFirstPinSetup(),1200);
-    }
-
-    connectWalletWebSocket();
-
-  }catch(e){
-
-    console.log("Dashboard error:",e);
-
-    showToast("Dashboard loading failed");
-
-  }
-
-  setTimeout(hideLoader,500);
+window.location="login.html"
 
 }
 
-/* WEBSOCKET */
-
-let ws;
-
-function connectWalletWebSocket(){
-
-  if(ws) ws.close();
-
-  ws = new WebSocket(`${API.replace(/^http/,"ws")}`);
-
-  ws.onmessage = (msg)=>{
-
-    const data = JSON.parse(msg.data);
-
-    if(data.type==="wallet_update"){
-
-      animateWallet(data.balance);
-
-      fetchTransactions();
-
-    }
-
-  };
-
-  ws.onclose = ()=>{
-    setTimeout(connectWalletWebSocket,5000);
-  };
+document.body.style.display="block"
 
 }
 
-/* LOGOUT */
+/* ================= TRANSACTIONS ================= */
+
+async function fetchTransactions(){
+
+const res=await fetch(API+"/api/transactions",{
+headers:{Authorization:"Bearer "+getToken()}
+})
+
+const tx=await res.json()
+
+const container=el("transactionHistory")
+
+if(!container)return
+
+container.innerHTML=""
+
+tx.slice(0,5).forEach(t=>{
+
+const div=document.createElement("div")
+
+div.className="transactionCard"
+
+div.innerHTML=`
+<strong>${t.type}</strong> ₦${t.amount}<br>
+${t.phone||""}<br>
+${t.status}<br>
+<button onclick='showReceipt(${JSON.stringify(t)})'>Receipt</button>
+`
+
+container.appendChild(div)
+
+})
+
+}
+
+async function loadAllTransactions(){
+
+const res=await fetch(API+"/api/transactions",{
+headers:{Authorization:"Bearer "+getToken()}
+})
+
+const tx=await res.json()
+
+const container=el("allTransactions")
+
+if(!container)return
+
+container.innerHTML=""
+
+tx.forEach(t=>{
+
+const div=document.createElement("div")
+
+div.className="transactionCard"
+
+div.innerHTML=`
+<strong>${t.type}</strong> ₦${t.amount}<br>
+${t.phone||""}<br>
+${t.status}<br>
+${new Date(t.created_at).toLocaleString()}<br>
+<button onclick='showReceipt(${JSON.stringify(t)})'>Receipt</button>
+`
+
+container.appendChild(div)
+
+})
+
+}
+
+/* ================= DATA PLANS ================= */
+
+async function loadPlans(){
+
+const res=await fetch(API+"/api/plans")
+
+const plans=await res.json()
+
+cachedPlans=plans
+
+updatePlans()
+
+}
+
+function updatePlans(){
+
+const network=el("networkSelect")?.value
+const select=el("planSelect")
+
+if(!select)return
+
+select.innerHTML=""
+
+cachedPlans
+.filter(p=>!network || p.network===network)
+.forEach(plan=>{
+
+const opt=document.createElement("option")
+
+opt.value=plan.plan_id
+opt.textContent=`${plan.name} - ₦${plan.price}`
+
+select.appendChild(opt)
+
+})
+
+}
+
+/* ================= BUY DATA ================= */
+
+async function buyData(pin){
+
+const phone=el("dataPhone").value
+const planId=el("planSelect").value
+
+if(!phone||!planId){
+showToast("Fill all fields")
+return
+}
+
+/* BIOMETRIC CHECK */
+
+const bio=await biometricAuth()
+
+if(!bio) return
+
+try{
+
+const res=await fetch(API+"/api/buy-data",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json",
+Authorization:"Bearer "+getToken()
+},
+
+body:JSON.stringify({
+phone,
+plan_id:planId,
+pin
+})
+
+})
+
+const data=await res.json()
+
+if(data.success){
+
+successSound.play()
+
+showToast("Purchase successful")
+
+fetchTransactions()
+
+loadAdminProfit()
+
+}else{
+
+showToast(data.message||"Purchase failed")
+
+}
+
+}catch{
+
+showToast("Network error")
+
+}
+
+}
+
+/* ================= BUY AIRTIME ================= */
+
+async function buyAirtime(pin){
+
+const phone=el("airtimePhone").value
+const amount=el("airtimeAmount").value
+
+if(!phone || !amount){
+showToast("Fill all fields")
+return
+}
+
+/* BIOMETRIC CHECK */
+
+const bio=await biometricAuth()
+
+if(!bio) return
+
+try{
+
+const res=await fetch(API+"/api/buy-airtime",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json",
+Authorization:"Bearer "+getToken()
+},
+
+body:JSON.stringify({
+phone,
+amount,
+pin
+})
+
+})
+
+const data=await res.json()
+
+if(data.success){
+
+successSound.play()
+
+showToast("Airtime sent successfully")
+
+fetchTransactions()
+
+loadAdminProfit()
+
+}else{
+
+showToast(data.message||"Purchase failed")
+
+}
+
+}catch{
+
+showToast("Network error")
+
+}
+
+}
+
+/* ================= RECEIPT ================= */
+
+function showReceipt(t){
+
+const text=`
+📄 MAY CONNECT RECEIPT
+
+Type: ${t.type}
+Amount: ₦${t.amount}
+Phone: ${t.phone||"-"}
+Status: ${t.status}
+Reference: ${t.reference||"-"}
+Date: ${new Date(t.created_at).toLocaleString()}
+
+Thank you for using MAY CONNECT
+`
+
+const share=encodeURIComponent(text)
+
+const box=document.createElement("div")
+
+Object.assign(box.style,{
+position:"fixed",
+top:"0",
+left:"0",
+width:"100%",
+height:"100%",
+background:"rgba(0,0,0,0.9)",
+display:"flex",
+alignItems:"center",
+justifyContent:"center",
+zIndex:"9999"
+})
+
+box.innerHTML=`
+
+<div style="background:#08142c;padding:20px;border-radius:12px;width:90%;max-width:400px">
+
+<h3>Transaction Receipt</h3>
+
+<pre style="white-space:pre-wrap">${text}</pre>
+
+<button onclick="window.open('https://wa.me/?text=${share}')">Share on WhatsApp</button>
+
+<button onclick="navigator.clipboard.writeText('${t.reference||""}')">Copy Reference</button>
+
+<button onclick="this.parentElement.parentElement.remove()">Close</button>
+
+</div>
+`
+
+document.body.appendChild(box)
+
+}
+
+/* ================= BIOMETRIC TOGGLE ================= */
+
+function toggleBiometric(){
+
+const enabled=localStorage.getItem("biometric")==="true"
+
+localStorage.setItem("biometric",!enabled)
+
+showToast(!enabled?"Biometric enabled":"Biometric disabled")
+
+}
+
+/* ================= LOGOUT ================= */
 
 function logout(){
 
-  localStorage.removeItem("token");
+localStorage.removeItem("token")
 
-  window.location="login.html";
+window.location="login.html"
 
 }
 
-/* EVENTS */
+/* ================= WEBSOCKET ================= */
 
-document.addEventListener("DOMContentLoaded",loadDashboard);
+let ws
 
-el("refreshProfit")?.addEventListener("click",loadAdminTransactions);
+function connectWalletWebSocket(){
+
+const token=getToken()
+
+ws=new WebSocket(API.replace(/^http/,"ws")+"?token="+token)
+
+ws.onmessage=(msg)=>{
+
+const data=JSON.parse(msg.data)
+
+if(data.type==="wallet_update"){
+
+animateWallet(data.balance)
+
+fetchTransactions()
+
+}
+
+}
+
+}
+
+/* ================= ADMIN PROFIT ================= */
+
+async function loadAdminProfit(){
+
+if(!el("adminTotalProfit")) return
+
+try{
+
+const res=await fetch(API+"/api/admin/profits",{
+headers:{Authorization:"Bearer "+getToken()}
+})
+
+const data=await res.json()
+
+if(el("adminTotalProfit"))
+el("adminTotalProfit").innerText="₦"+data.total_profit
+
+}catch{
+
+console.log("Profit API not ready")
+
+}
+
+}
+
+setInterval(loadAdminProfit,30000)
+
+/* ================= PASSWORD ================= */
+
+function changePassword(){
+
+const current=prompt("Current password")
+const newPass=prompt("New password")
+const confirm=prompt("Confirm new password")
+
+if(newPass!==confirm){
+showToast("Passwords do not match")
+return
+}
+
+fetch(API+"/api/change-password",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json",
+Authorization:"Bearer "+getToken()
+},
+
+body:JSON.stringify({
+currentPassword:current,
+newPassword:newPass
+})
+
+}).then(r=>r.json()).then(d=>showToast(d.message))
+
+}
+
+/* ================= PIN ================= */
+
+function changePin(){
+
+const current=prompt("Current PIN")
+const newPin=prompt("New PIN")
+const confirm=prompt("Confirm new PIN")
+
+if(newPin!==confirm){
+showToast("PIN mismatch")
+return
+}
+
+fetch(API+"/api/change-pin",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json",
+Authorization:"Bearer "+getToken()
+},
+
+body:JSON.stringify({
+currentPin:current,
+newPin:newPin
+})
+
+}).then(r=>r.json()).then(d=>showToast(d.message))
+
+}
+
+/* ================= START ================= */
+
+document.addEventListener("DOMContentLoaded",()=>{
+
+loadDashboard()
+
+if(el("networkSelect")){
+el("networkSelect").addEventListener("change",updatePlans)
+}
+
+})
