@@ -196,9 +196,9 @@ Create Account
 
 /* AUTO LOGIN IF TOKEN EXISTS */
 
-window.onload = function(){
+window.onload=function(){
 
-const token = localStorage.getItem("token")
+const token=localStorage.getItem("token")
 
 if(token){
 
@@ -236,18 +236,15 @@ const password=document.getElementById("loginPassword").value.trim()
 if(!username || !password){
 
 alert("Enter username and password")
-
 return
 
 }
-
-/* SHOW LOADER */
 
 document.getElementById("loginLoader").style.display="flex"
 
 try{
 
-const res = await fetch("https://mayconnect-backend-1.onrender.com/api/login",{
+const res=await fetch("https://mayconnect-backend-1.onrender.com/api/login",{
 
 method:"POST",
 
@@ -262,17 +259,13 @@ password
 
 })
 
-const data = await res.json()
+const data=await res.json()
 
 if(data.token){
 
 /* SAVE TOKEN */
 
 localStorage.setItem("token",data.token)
-
-/* ENABLE BIOMETRIC FOR DEVICE */
-
-localStorage.setItem("biometric","true")
 
 /* REDIRECT */
 
@@ -298,25 +291,48 @@ alert("Network error")
 
 /* BIOMETRIC LOGIN */
 
-function biometricLogin(){
+async function biometricLogin(){
 
-const biometric = localStorage.getItem("biometric")
+const biometricEnabled=localStorage.getItem("biometric")
+const token=localStorage.getItem("token")
 
-const token = localStorage.getItem("token")
+if(biometricEnabled!=="true"){
 
-if(biometric === "true" && token){
+alert("Biometric login not enabled. Enable it inside your profile first.")
+return
+
+}
+
+if(!token){
+
+alert("Login normally first before using biometric.")
+return
+
+}
+
+try{
+
+/* Trigger device biometric */
+
+await navigator.credentials.get({
+publicKey:{
+challenge:new Uint8Array(32),
+timeout:60000,
+userVerification:"preferred"
+}
+})
+
+/* success */
 
 document.getElementById("loginLoader").style.display="flex"
 
 setTimeout(()=>{
-
 window.location.href="dashboard.html"
+},800)
 
-},1200)
+}catch(err){
 
-}else{
-
-alert("Biometric login not enabled yet. Please login first.")
+alert("Biometric verification failed")
 
 }
 
