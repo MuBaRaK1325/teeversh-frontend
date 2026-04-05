@@ -19,6 +19,14 @@ function el(id){
 return document.getElementById(id)
 }
 
+function showLoader(){
+if(el("loader")) el("loader").style.display="flex"
+}
+
+function hideLoader(){
+if(el("loader")) el("loader").style.display="none"
+}
+
 function showToast(msg){
 const t=document.createElement("div")
 t.innerText=msg
@@ -39,63 +47,55 @@ document.body.appendChild(t)
 setTimeout(()=>t.remove(),3000)
 }
 
-/* ================= AUTH CHECK ================= */
+/* ================= AUTH ================= */
 
-(function(){
+function checkAuth(){
 const token=getToken()
 if(!token){
-window.location.replace("index.html")
+window.location.href="index.html"
+return false
 }
-})()
+return true
+}
 
 /* ================= DASHBOARD ================= */
 
 async function loadDashboard(){
 
+if(!checkAuth()) return
+
+showLoader()
+
+try{
+
 const token=getToken()
-if(!token){
-logout()
-return
-}
-
-try{
-
-/* SAFE TOKEN */
-let payload
-try{
-payload = JSON.parse(atob(token.split(".")[1]))
-}catch{
-throw new Error("Invalid token")
-}
+const payload = JSON.parse(atob(token.split(".")[1]))
 
 currentUser = payload
 
-/* ✅ SHOW UI IMMEDIATELY (FIX STUCK SCREEN) */
+/* SHOW UI */
 document.body.style.display="block"
 
 /* USER */
-if(el("usernameDisplay")){
 el("usernameDisplay").innerText="Hello "+payload.username
-}
 
 /* ADMIN */
 if(payload.is_admin && el("admin")){
 el("admin").style.display="block"
 }
 
-/* ✅ SOUND ONLY ONCE */
+/* SOUND ONCE */
 if(!hasPlayedWelcome){
 welcomeSound.play().catch(()=>{})
 hasPlayedWelcome=true
 }
 
-/* LOAD DATA (SAFE NON-BLOCKING) */
-fetchTransactions()
-loadPlans()
-loadAdminProfit()
+/* LOAD */
+await fetchTransactions()
+await loadPlans()
+await loadAdminProfit()
 
-/* DELAYED WS (PREVENT FREEZE) */
-setTimeout(connectWebSocket,1500)
+setTimeout(connectWebSocket,1000)
 
 }catch(err){
 
@@ -105,16 +105,14 @@ logout()
 
 }
 
+hideLoader()
 }
 
 /* ================= WALLET ================= */
 
 function animateWallet(balance){
 currentBalance=Number(balance||0)
-
-if(el("walletBalance")){
 el("walletBalance").innerText="₦"+currentBalance.toLocaleString()
-}
 }
 
 /* ================= TRANSACTIONS ================= */
@@ -131,72 +129,75 @@ if(!res.ok) return
 
 const tx=await res.json()
 
-if(tx.length && tx[0].wallet_balance !== undefined){
-animateWallet(tx[0].wallet_balance)
+if(tx.length){
+animateWallet(tx[0].wallet_balance || 0)
 }
 
-/* HOME */
 const home=el("transactionHistory")
+const all=el("allTransactions")
+
 if(home){
 home.innerHTML=""
-
-tx.slice(0,5).forEach(t=>{
-const div=document.createElement("div")
-div.className="transactionCard"
-div.innerHTML=`
-<strong>${t.type}</strong> ₦${t.amount}<br>
-${t.phone||""}<br>
-<span>${t.status}</span>
-`
-home.appendChild(div)
-})
+tx.slice(0,5).forEach(t=>home.appendChild(txCard(t)))
 }
 
-/* ALL */
-const all=el("allTransactions")
 if(all){
 all.innerHTML=""
-
-tx.forEach(t=>{
-const div=document.createElement("div")
-div.className="transactionCard"
-div.innerHTML=`
-<strong>${t.type}</strong> ₦${t.amount}<br>
-${t.phone||""}<br>
-<span>${t.status}</span>
-`
-all.appendChild(div)
-})
+tx.forEach(t=>all.appendChild(txCard(t)))
 }
 
 }catch(err){
-console.log("TX error", err)
+console.log(err)
 }
 
+}
+
+function txCard(t){
+
+const div=document.createElement("div")
+div.className="transactionCard"
+
+div.innerHTML=`
+<strong>${t.type}</strong> ₦${t.amount}<br>
+${t.phone||""}<br>
+<span>${t.status}</span><br>
+<button onclick='showReceipt(${JSON.stringify(t)})'>Receipt</button>
+`
+
+return div
+}
+
+/* ================= RECEIPT ================= */
+
+function showReceipt(t){
+
+el("receiptContent").innerHTML=`
+<p><b>Type:</b> ${t.type}</p>
+<p><b>Amount:</b> ₦${t.amount}</p>
+<p><b>Phone:</b> ${t.phone||"-"}</p>
+<p><b>Status:</b> ${t.status}</p>
+`
+
+el("receiptModal").style.display="flex"
+}
+
+function closeReceipt(){
+el("receiptModal").style.display="none"
 }
 
 /* ================= PLANS ================= */
 
 async function loadPlans(){
 
-try{
-
 const res=await fetch(API+"/api/plans",{
 headers:{Authorization:"Bearer "+getToken()}
 })
 
-if(!res.ok) return
-
 const plans=await res.json()
 
-cachedPlans = plans.filter(p=>p.company===currentUser.company)
+cachedPlans=plans.filter(p=>p.company===currentUser.company)
 
 updatePlans()
-
-}catch(err){
-console.log("Plans error", err)
-}
-
 }
 
 function updatePlans(){
@@ -219,36 +220,7 @@ select.appendChild(opt)
 
 }
 
-/* ================= NETWORK ================= */
-
-const logos={
-MTN:"images/mtn.png",
-Airtel:"images/airtel.png",
-Glo:"images/glo.png"
-}
-
-function handlePhoneInput(input,select,logo){
-
-const phone=el(input)?.value
-if(!phone || phone.length<4) return
-
-const prefix=phone.substring(0,4)
-
-let net=null
-
-if(["0803","0806","0703","0706"].includes(prefix)) net="MTN"
-if(["0802","0808","0708","0812"].includes(prefix)) net="Airtel"
-if(["0805","0705","0815"].includes(prefix)) net="Glo"
-
-if(net){
-if(el(select)) el(select).value=net
-if(el(logo)) el(logo).src=logos[net]
-updatePlans()
-}
-
-}
-
-/* ================= BUY DATA ================= */
+/* ================= BUY ================= */
 
 async function buyData(pin){
 
@@ -259,8 +231,6 @@ if(!phone || !planId){
 showToast("Fill all fields")
 return
 }
-
-try{
 
 const res=await fetch(API+"/api/buy-data",{
 method:"POST",
@@ -273,19 +243,12 @@ body:JSON.stringify({phone,plan_id:planId,pin})
 
 const data=await res.json()
 
-if(res.ok && data.success){
-
+if(res.ok){
 successSound.play()
-showToast("Data successful")
+showToast("Success")
 fetchTransactions()
-
 }else{
-showToast(data.message||"Failed")
-}
-
-}catch(err){
-console.log(err)
-showToast("Network error")
+showToast(data.message)
 }
 
 }
@@ -296,73 +259,39 @@ async function loadAdminProfit(){
 
 if(!el("adminTotalProfit")) return
 
-try{
-
 const res=await fetch(API+"/api/admin/profits",{
 headers:{Authorization:"Bearer "+getToken()}
 })
 
-if(!res.ok) return
-
 const data=await res.json()
 el("adminTotalProfit").innerText="₦"+(data.total_profit||0)
-
-}catch(err){
-console.log(err)
-}
-
-}
-
-/* ADMIN ACTIONS */
-
-function changePassword(){
-const newPass=prompt("Enter new password")
-if(!newPass) return
-showToast("Password update coming soon")
-}
-
-function changePin(){
-const newPin=prompt("Enter new 4-digit PIN")
-if(!newPin) return
-showToast("PIN update coming soon")
 }
 
 function toggleBiometric(){
-const current=localStorage.getItem("biometric")==="true"
-localStorage.setItem("biometric",(!current).toString())
-showToast("Biometric "+(!current?"Enabled":"Disabled"))
+const val=localStorage.getItem("biometric")==="true"
+localStorage.setItem("biometric",(!val))
+showToast("Biometric "+(!val?"Enabled":"Disabled"))
 }
 
-/* ================= WEBSOCKET ================= */
+/* ================= WS ================= */
 
 function connectWebSocket(){
 
-if(ws){
-try{ws.close()}catch{}
-}
-
 try{
 
-const wsURL=API.replace("https","wss").replace("http","ws")
+const wsURL=API.replace("https","wss")
 
 ws=new WebSocket(wsURL+"?token="+getToken())
 
 ws.onmessage=(msg)=>{
 const data=JSON.parse(msg.data)
-
 if(data.type==="wallet_update"){
 animateWallet(data.balance)
 fetchTransactions()
 }
 }
 
-ws.onclose=()=>{
-setTimeout(connectWebSocket,5000)
-}
-
-}catch(err){
-console.log("WS error", err)
-}
+}catch{}
 
 }
 
@@ -370,17 +299,16 @@ console.log("WS error", err)
 
 function logout(){
 
-try{
-if(ws) ws.close()
-}catch{}
+try{ if(ws) ws.close() }catch{}
 
 localStorage.clear()
 
-/* ✅ HARD FIX (NO MORE STUCK) */
 window.location.href="index.html"
+
+/* HARD FIX */
 setTimeout(()=>{
-window.location.reload()
-},100)
+window.location.replace("index.html")
+},50)
 
 }
 
@@ -392,10 +320,6 @@ loadDashboard()
 
 if(el("networkSelect")){
 el("networkSelect").addEventListener("change",updatePlans)
-}
-
-if(el("dataPhone")){
-el("dataPhone").addEventListener("input",()=>handlePhoneInput("dataPhone","networkSelect","networkLogo"))
 }
 
 })
