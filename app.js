@@ -38,7 +38,7 @@ document.body.appendChild(t)
 setTimeout(()=>t.remove(),3000)
 }
 
-/* ================= REDIRECT (WELCOME PAGE) ================= */
+/* ================= AUTH CHECK ================= */
 
 if(!location.pathname.includes("index.html")){
 if(!getToken()){
@@ -50,8 +50,10 @@ location.href="index.html"
 
 function animateWallet(balance){
 currentBalance=Number(balance||0)
-if(el("walletBalance"))
+
+if(el("walletBalance")){
 el("walletBalance").innerText="₦"+currentBalance.toLocaleString()
+}
 }
 
 /* ================= DASHBOARD ================= */
@@ -67,32 +69,29 @@ return
 
 try{
 
-const res=await fetch(API+"/api/me",{
-headers:{Authorization:"Bearer "+token}
-})
+/* ✅ DECODE TOKEN INSTEAD OF /api/me */
+const payload = JSON.parse(atob(token.split(".")[1]))
+currentUser = payload
 
-if(!res.ok) throw new Error()
+el("usernameDisplay").innerText="Hello "+payload.username
 
-const user=await res.json()
-currentUser=user
+/* ⚠️ balance will be fetched later */
+animateWallet(0)
 
-el("usernameDisplay").innerText="Hello "+user.username
-
-animateWallet(user.wallet_balance)
-
-if(user.is_admin && el("admin")){
+if(payload.is_admin && el("admin")){
 el("admin").style.display="block"
 }
 
 try{welcomeSound.play()}catch{}
 
-fetchTransactions()
-loadPlans()
+await fetchTransactions()
+await loadPlans()
 connectWalletWebSocket()
 loadAdminProfit()
 
-}catch{
+}catch(err){
 
+console.log(err)
 showToast("Session expired")
 logout()
 
@@ -111,7 +110,14 @@ const res=await fetch(API+"/api/transactions",{
 headers:{Authorization:"Bearer "+getToken()}
 })
 
+if(!res.ok) return
+
 const tx=await res.json()
+
+/* UPDATE WALLET FROM LAST TX (fallback) */
+if(tx.length){
+animateWallet(tx[0].wallet_balance || currentBalance)
+}
 
 const container=el("transactionHistory")
 if(!container) return
@@ -126,15 +132,17 @@ div.className="transactionCard"
 div.innerHTML=`
 <strong>${t.type}</strong> ₦${t.amount}<br>
 ${t.phone||""}<br>
-<span>${t.status}</span><br>
-<button onclick='showReceipt(${JSON.stringify(t)})'>Receipt</button>
+<span>${t.status}</span>
 `
 
 container.appendChild(div)
 
 })
 
-}catch{}
+}catch{
+console.log("Transactions load failed")
+}
+
 }
 
 /* ================= LOAD PLANS ================= */
@@ -143,11 +151,15 @@ async function loadPlans(){
 
 try{
 
-const res=await fetch(API+"/api/plans")
+const res=await fetch(API+"/api/plans",{
+headers:{Authorization:"Bearer "+getToken()}
+})
+
+if(!res.ok) throw new Error()
+
 const allPlans=await res.json()
 
-/* ✅ FILTER BY COMPANY */
-cachedPlans = allPlans.filter(p=>p.company === currentUser.company)
+cachedPlans = allPlans
 
 updatePlans()
 
@@ -172,12 +184,9 @@ cachedPlans
 .filter(p=>!network || p.network===network)
 .forEach(plan=>{
 
-/* ✅ TOP USER PRICE */
-const price = currentUser.top_user ? plan.cost : plan.price
-
 const opt=document.createElement("option")
 opt.value=plan.id
-opt.textContent=`${plan.name} - ₦${price}`
+opt.textContent=`${plan.name} - ₦${plan.price}`
 
 select.appendChild(opt)
 
@@ -240,17 +249,6 @@ showToast("Fill all fields")
 return
 }
 
-const plan=cachedPlans.find(p=>p.id==planId)
-const price = currentUser.top_user ? plan.cost : plan.price
-
-if(currentBalance < price){
-showToast("Insufficient balance")
-return
-}
-
-const bio=await biometricAuth()
-if(!bio) return
-
 try{
 
 const res=await fetch(API+"/api/buy-data",{
@@ -267,59 +265,7 @@ const data=await res.json()
 if(res.ok && data.success){
 
 successSound.play()
-animateWallet(currentBalance-price)
 showToast("Data successful")
-
-fetchTransactions()
-
-}else{
-showToast(data.message||"Failed")
-}
-
-}catch{
-showToast("Network error")
-}
-
-}
-
-/* ================= BUY AIRTIME ================= */
-
-async function buyAirtime(pin){
-
-const phone=el("airtimePhone").value
-const amount=Number(el("airtimeAmount").value)
-
-if(!phone || !amount){
-showToast("Fill all fields")
-return
-}
-
-if(currentBalance<amount){
-showToast("Insufficient balance")
-return
-}
-
-const bio=await biometricAuth()
-if(!bio) return
-
-try{
-
-const res=await fetch(API+"/api/buy-airtime",{
-method:"POST",
-headers:{
-"Content-Type":"application/json",
-Authorization:"Bearer "+getToken()
-},
-body:JSON.stringify({phone,amount,pin})
-})
-
-const data=await res.json()
-
-if(res.ok && data.success){
-
-successSound.play()
-animateWallet(currentBalance-amount)
-showToast("Airtime sent")
 
 fetchTransactions()
 
@@ -407,6 +353,8 @@ const res=await fetch(API+"/api/admin/profits",{
 headers:{Authorization:"Bearer "+getToken()}
 })
 
+if(!res.ok) return
+
 const data=await res.json()
 el("adminTotalProfit").innerText="₦"+(data.total_profit||0)
 
@@ -432,10 +380,6 @@ el("networkSelect").addEventListener("change",updatePlans)
 
 if(el("dataPhone")){
 el("dataPhone").addEventListener("input",()=>handlePhoneInput("dataPhone","networkSelect","networkLogo"))
-}
-
-if(el("airtimePhone")){
-el("airtimePhone").addEventListener("input",()=>handlePhoneInput("airtimePhone","airtimeNetwork","airtimeLogo"))
 }
 
 })
