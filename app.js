@@ -52,7 +52,7 @@ setTimeout(()=>t.remove(),3000)
 function checkAuth(){
 const token=getToken()
 if(!token){
-window.location.href="index.html"
+window.location.replace("index.html")
 return false
 }
 return true
@@ -60,24 +60,30 @@ return true
 
 /* ================= DASHBOARD ================= */
 
-async function loadDashboard(){
+function loadDashboard(){
 
 if(!checkAuth()) return
 
 showLoader()
 
-try{
+let payload
 
-const token=getToken()
-const payload = JSON.parse(atob(token.split(".")[1]))
+try{
+payload = JSON.parse(atob(getToken().split(".")[1]))
+}catch{
+logout()
+return
+}
 
 currentUser = payload
 
-/* SHOW UI */
+/* SHOW UI IMMEDIATELY (NO MORE STUCK SCREEN) */
 document.body.style.display="block"
 
 /* USER */
+if(el("usernameDisplay")){
 el("usernameDisplay").innerText="Hello "+payload.username
+}
 
 /* ADMIN */
 if(payload.is_admin && el("admin")){
@@ -90,29 +96,27 @@ welcomeSound.play().catch(()=>{})
 hasPlayedWelcome=true
 }
 
-/* LOAD */
-await fetchTransactions()
-await loadPlans()
-await loadAdminProfit()
+/* 🔥 IMPORTANT: DO NOT AWAIT */
+fetchTransactions()
+loadPlans()
+loadAdminProfit()
 
+/* WS */
 setTimeout(connectWebSocket,1000)
 
-}catch(err){
+/* HIDE LOADER FAST */
+setTimeout(hideLoader,500)
 
-console.log(err)
-showToast("Session expired")
-logout()
-
-}
-
-hideLoader()
 }
 
 /* ================= WALLET ================= */
 
 function animateWallet(balance){
 currentBalance=Number(balance||0)
+
+if(el("walletBalance")){
 el("walletBalance").innerText="₦"+currentBalance.toLocaleString()
+}
 }
 
 /* ================= TRANSACTIONS ================= */
@@ -147,7 +151,7 @@ tx.forEach(t=>all.appendChild(txCard(t)))
 }
 
 }catch(err){
-console.log(err)
+console.log("TX ERROR:", err)
 }
 
 }
@@ -171,6 +175,8 @@ return div
 
 function showReceipt(t){
 
+if(!el("receiptContent")) return
+
 el("receiptContent").innerHTML=`
 <p><b>Type:</b> ${t.type}</p>
 <p><b>Amount:</b> ₦${t.amount}</p>
@@ -182,22 +188,31 @@ el("receiptModal").style.display="flex"
 }
 
 function closeReceipt(){
-el("receiptModal").style.display="none"
+if(el("receiptModal")) el("receiptModal").style.display="none"
 }
 
 /* ================= PLANS ================= */
 
 async function loadPlans(){
 
+try{
+
 const res=await fetch(API+"/api/plans",{
 headers:{Authorization:"Bearer "+getToken()}
 })
+
+if(!res.ok) return
 
 const plans=await res.json()
 
 cachedPlans=plans.filter(p=>p.company===currentUser.company)
 
 updatePlans()
+
+}catch(err){
+console.log("PLANS ERROR:", err)
+}
+
 }
 
 function updatePlans(){
@@ -232,6 +247,8 @@ showToast("Fill all fields")
 return
 }
 
+try{
+
 const res=await fetch(API+"/api/buy-data",{
 method:"POST",
 headers:{
@@ -248,7 +265,11 @@ successSound.play()
 showToast("Success")
 fetchTransactions()
 }else{
-showToast(data.message)
+showToast(data.message||"Failed")
+}
+
+}catch{
+showToast("Network error")
 }
 
 }
@@ -259,12 +280,22 @@ async function loadAdminProfit(){
 
 if(!el("adminTotalProfit")) return
 
+try{
+
 const res=await fetch(API+"/api/admin/profits",{
 headers:{Authorization:"Bearer "+getToken()}
 })
 
+if(!res.ok) return
+
 const data=await res.json()
+
 el("adminTotalProfit").innerText="₦"+(data.total_profit||0)
+
+}catch(err){
+console.log("ADMIN ERROR:", err)
+}
+
 }
 
 function toggleBiometric(){
@@ -277,6 +308,10 @@ showToast("Biometric "+(!val?"Enabled":"Disabled"))
 
 function connectWebSocket(){
 
+if(ws){
+try{ws.close()}catch{}
+}
+
 try{
 
 const wsURL=API.replace("https","wss")
@@ -285,13 +320,20 @@ ws=new WebSocket(wsURL+"?token="+getToken())
 
 ws.onmessage=(msg)=>{
 const data=JSON.parse(msg.data)
+
 if(data.type==="wallet_update"){
 animateWallet(data.balance)
 fetchTransactions()
 }
 }
 
-}catch{}
+ws.onclose=()=>{
+setTimeout(connectWebSocket,5000)
+}
+
+}catch(err){
+console.log("WS ERROR:", err)
+}
 
 }
 
@@ -299,16 +341,14 @@ fetchTransactions()
 
 function logout(){
 
-try{ if(ws) ws.close() }catch{}
+try{
+if(ws) ws.close()
+}catch{}
 
 localStorage.clear()
 
-window.location.href="index.html"
-
-/* HARD FIX */
-setTimeout(()=>{
+/* 🔥 FINAL FIX */
 window.location.replace("index.html")
-},50)
 
 }
 
