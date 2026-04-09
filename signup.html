@@ -5,19 +5,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<<<<<<< HEAD
 <title>TEEVERSH DATA PLUG - Signup</title>
+=======
+<title>SADEEQ DATA HUB - Signup</title>
+>>>>>>> f8d4371e40675b70a75270ac03b6707170c698e0
 
 <style>
 
-*{
-margin:0;
-padding:0;
-box-sizing:border-box;
-font-family:Arial, Helvetica, sans-serif;
-}
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial;}
 
 body{
+<<<<<<< HEAD
 background:#0a0618;
+=======
+background:#031a0f;
+>>>>>>> f8d4371e40675b70a75270ac03b6707170c698e0
 color:white;
 display:flex;
 justify-content:center;
@@ -31,43 +34,71 @@ flex-direction:column;
 width:110px;
 height:110px;
 border-radius:50%;
+<<<<<<< HEAD
 border:4px solid #8b5cf6;
 padding:8px;
 margin-bottom:40px;
 box-shadow:0 0 20px #8b5cf6;
+=======
+border:4px solid #22c55e;
+padding:8px;
+margin-bottom:40px;
+box-shadow:0 0 20px #22c55e;
+>>>>>>> f8d4371e40675b70a75270ac03b6707170c698e0
 }
 
 /* CARD */
 .card{
+<<<<<<< HEAD
 background:#140a2e;
+=======
+background:#052e1c;
+>>>>>>> f8d4371e40675b70a75270ac03b6707170c698e0
 padding:30px;
 border-radius:20px;
 width:90%;
 max-width:380px;
+<<<<<<< HEAD
 box-shadow:0 0 30px rgba(139,92,246,0.2);
+=======
+box-shadow:0 0 30px rgba(34,197,94,0.2);
+>>>>>>> f8d4371e40675b70a75270ac03b6707170c698e0
 }
 
-.title{
-text-align:center;
-font-size:26px;
-margin-bottom:25px;
-}
+.title{text-align:center;font-size:26px;margin-bottom:25px;}
 
+<<<<<<< HEAD
 /* INPUT */
 .inputBox{
 margin-bottom:18px;
 position:relative;
 }
+=======
+.inputBox{margin-bottom:18px;position:relative;}
+>>>>>>> f8d4371e40675b70a75270ac03b6707170c698e0
 
 input{
 width:100%;
 padding:14px;
 border-radius:12px;
 border:none;
+<<<<<<< HEAD
 background:#05051a;
+=======
+background:#02140c;
+>>>>>>> f8d4371e40675b70a75270ac03b6707170c698e0
 color:white;
-font-size:16px;
-outline:none;
+}
+
+.showBtn{
+position:absolute;
+right:12px;
+top:50%;
+transform:translateY(-50%);
+background:none;
+border:none;
+color:#4ade80;
+cursor:pointer;
 }
 
 /* SHOW BUTTON */
@@ -88,52 +119,47 @@ width:100%;
 padding:14px;
 border:none;
 border-radius:12px;
+<<<<<<< HEAD
 background:#8b5cf6;
+=======
+background:#22c55e;
+>>>>>>> f8d4371e40675b70a75270ac03b6707170c698e0
 color:white;
-font-size:17px;
 margin-top:10px;
-cursor:pointer;
-}
-
-.signupBtn:disabled{
-opacity:0.6;
-cursor:not-allowed;
 }
 
 /* LINK */
 .loginLink{
 margin-top:16px;
+<<<<<<< HEAD
 border:2px solid #8b5cf6;
+=======
+border:2px solid #22c55e;
+>>>>>>> f8d4371e40675b70a75270ac03b6707170c698e0
 padding:14px;
 border-radius:12px;
 text-align:center;
 }
 
-a{
-color:white;
-text-decoration:none;
-display:block;
-}
+a{color:white;text-decoration:none;}
 
 </style>
-
 </head>
 
 <body>
 
+<<<<<<< HEAD
 <img src="images/TEEVERSH.png" class="logo">
+=======
+<img src="images/SADEEQ.png" class="logo">
+>>>>>>> f8d4371e40675b70a75270ac03b6707170c698e0
 
 <div class="card">
 
 <div class="title">Create Account</div>
 
-<div class="inputBox">
-<input id="username" placeholder="Username">
-</div>
-
-<div class="inputBox">
-<input id="email" placeholder="Email">
-</div>
+<div class="inputBox"><input id="username" placeholder="Username"></div>
+<div class="inputBox"><input id="email" placeholder="Email"></div>
 
 <div class="inputBox">
 <input id="password" type="password" placeholder="Password">
@@ -141,17 +167,17 @@ display:block;
 </div>
 
 <div class="inputBox">
+<<<<<<< HEAD
 <input id="pin" type="password" placeholder="Transaction PIN (4 digits)" maxlength="4">
+=======
+<input id="pin" type="password" placeholder="PIN" maxlength="4">
+>>>>>>> f8d4371e40675b70a75270ac03b6707170c698e0
 <button class="showBtn" onclick="toggleField('pin',this)">Show</button>
 </div>
 
 <button id="signupBtn" class="signupBtn">Create Account</button>
 
-<a href="login.html">
-<div class="loginLink">
-Already have account
-</div>
-</a>
+<a href="login.html"><div class="loginLink">Already have account</div></a>
 
 </div>
 
@@ -159,6 +185,7 @@ Already have account
 
 <script>
 function toggleField(id,btn){
+<<<<<<< HEAD
 const input=document.getElementById(id)
 if(input.type==="password"){
 input.type="text"
@@ -167,6 +194,11 @@ btn.innerText="Hide"
 input.type="password"
 btn.innerText="Show"
 }
+=======
+const i=document.getElementById(id)
+if(i.type==="password"){i.type="text";btn.innerText="Hide"}
+else{i.type="password";btn.innerText="Show"}
+>>>>>>> f8d4371e40675b70a75270ac03b6707170c698e0
 }
 </script>
 

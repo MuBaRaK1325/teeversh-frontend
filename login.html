@@ -1,304 +1,212 @@
-const API="https://mayconnect-backend-1.onrender.com"
+<!DOCTYPE html>
+<html lang="en">
+<head>
 
-let cachedPlans=[]
-let currentBalance=0
-let currentUser=null
-let ws=null
-let purchaseType=""
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-/* HELPERS */
-function getToken(){return localStorage.getItem("token")}
-function el(id){return document.getElementById(id)}
+<title>TEEVERSH DATA PLUG - Login</title>
 
-function showToast(msg){
-const t=document.createElement("div")
-t.innerText=msg
-Object.assign(t.style,{
-position:"fixed",
-bottom:"30px",
-left:"50%",
-transform:"translateX(-50%)",
-background:"#000",
-padding:"12px 20px",
-borderRadius:"8px",
-color:"#fff",
-zIndex:"9999"
-})
-document.body.appendChild(t)
-setTimeout(()=>t.remove(),3000)
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial, Helvetica, sans-serif;
 }
 
-/* AUTH */
-function checkAuth(){
-if(!getToken()){
-window.location.href="login.html"
-return false
-}
-return true
-}
-
-/* DASHBOARD */
-function loadDashboard(){
-
-if(!checkAuth()) return
-
-try{
-currentUser = JSON.parse(atob(getToken().split(".")[1]))
-}catch{
-logout(); return
+body{
+background:#0a0618;
+color:white;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+flex-direction:column;
 }
 
-document.body.style.display="block"
-
-if(el("usernameDisplay")){
-el("usernameDisplay").innerText="Hello "+currentUser.username
+/* LOADER */
+#loginLoader{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:#0a0618;
+display:none;
+align-items:center;
+justify-content:center;
+z-index:9999;
+flex-direction:column;
 }
 
-if(currentUser.is_admin){
-el("admin").style.display="block"
+.loaderRing{
+width:70px;
+height:70px;
+border:6px solid #1a1333;
+border-top:6px solid #8b5cf6;
+border-radius:50%;
+animation:spin 1s linear infinite;
 }
 
-fetchTransactions()
-loadPlans()
-loadAdminProfit()
-loadAccount()
-
-setTimeout(connectWebSocket,1000)
+@keyframes spin{
+0%{transform:rotate(0deg)}
+100%{transform:rotate(360deg)}
 }
 
-/* WALLET */
-function animateWallet(balance){
-currentBalance=Number(balance||0)
-if(el("walletBalance")){
-el("walletBalance").innerText="₦"+currentBalance.toLocaleString()
-}
-}
-
-/* TRANSACTIONS */
-async function fetchTransactions(){
-try{
-const res=await fetch(API+"/api/transactions",{headers:{Authorization:"Bearer "+getToken()}})
-const tx=await res.json()
-
-if(tx.length){
-animateWallet(tx[0].wallet_balance)
+/* LOGO */
+.logo{
+width:110px;
+height:110px;
+border-radius:50%;
+border:4px solid #8b5cf6;
+padding:8px;
+margin-bottom:40px;
+box-shadow:0 0 20px #8b5cf6;
 }
 
-const home=el("transactionHistory")
-const all=el("allTransactions")
-
-if(home){
-home.innerHTML=""
-tx.slice(0,5).forEach(t=>home.appendChild(txCard(t)))
+/* CARD */
+.card{
+background:#140a2e;
+padding:30px;
+border-radius:20px;
+width:90%;
+max-width:380px;
+box-shadow:0 0 30px rgba(139,92,246,0.2);
 }
 
-if(all){
-all.innerHTML=""
-tx.forEach(t=>all.appendChild(txCard(t)))
-}
-}catch{}
-}
-
-function txCard(t){
-const div=document.createElement("div")
-div.className="transactionCard"
-div.innerHTML=`
-<strong>${t.type}</strong> ₦${t.amount}<br>
-${t.phone||""}<br>
-<span>${t.status}</span>
-`
-return div
+.title{
+text-align:center;
+font-size:26px;
+margin-bottom:25px;
 }
 
-/* PLANS */
-async function loadPlans(){
-const res=await fetch(API+"/api/plans",{headers:{Authorization:"Bearer "+getToken()}})
-cachedPlans=await res.json()
-renderPlans()
+/* INPUT */
+.inputBox{
+margin-bottom:18px;
+position:relative;
 }
 
-function renderPlans(){
-const list=el("planList")
-if(!list) return
-
-list.innerHTML=""
-
-cachedPlans.forEach(p=>{
-const div=document.createElement("div")
-div.className="planItem"
-div.innerHTML=`
-<strong>${p.name}</strong><br>
-${p.validity}<br>
-₦${p.price}
-`
-div.onclick=()=>selectPlan(p.id)
-list.appendChild(div)
-})
+input{
+width:100%;
+padding:14px;
+border-radius:12px;
+border:none;
+background:#05051a;
+color:white;
+font-size:16px;
+outline:none;
 }
 
-let selectedPlan=null
-function selectPlan(id){
-selectedPlan=id
-showToast("Plan Selected")
+/* SHOW BUTTON */
+.showBtn{
+position:absolute;
+right:12px;
+top:50%;
+transform:translateY(-50%);
+background:none;
+border:none;
+color:#a78bfa;
+cursor:pointer;
 }
 
-/* BUY DATA */
-async function buyData(pin){
-
-const phone=el("dataPhone").value
-
-if(!phone || !selectedPlan){
-showToast("Fill all fields")
-return
+/* BUTTON */
+.loginBtn{
+width:100%;
+padding:14px;
+border:none;
+border-radius:12px;
+background:#8b5cf6;
+color:white;
+font-size:17px;
+margin-top:10px;
+cursor:pointer;
 }
 
-const res=await fetch(API+"/api/buy-data",{
-method:"POST",
-headers:{
-"Content-Type":"application/json",
-Authorization:"Bearer "+getToken()
-},
-body:JSON.stringify({phone,plan_id:selectedPlan,pin})
-})
-
-const data=await res.json()
-
-if(res.ok){
-showToast("Data Sent ✅")
-showReceipt("DATA", data.amount || "—", phone)
-fetchTransactions()
-}else{
-showToast(data.message)
-}
+.loginBtn:disabled{
+opacity:0.6;
 }
 
 /* BIOMETRIC */
-async function confirmBiometric(){
-
-if(localStorage.getItem("biometric")!=="true"){
-showToast("Enable biometric first")
-return
+.biometric{
+margin-top:16px;
+border:2px dashed #8b5cf6;
+padding:16px;
+border-radius:12px;
+text-align:center;
+cursor:pointer;
 }
 
-try{
-await navigator.credentials.get({
-publicKey:{challenge:new Uint8Array(32),timeout:60000}
-})
-}catch{}
-
-if(purchaseType==="data") buyData("biometric")
+/* SIGNUP */
+.signup{
+margin-top:15px;
+border:2px solid #8b5cf6;
+padding:14px;
+border-radius:12px;
+text-align:center;
 }
 
-/* TOGGLE BIOMETRIC */
-function toggleBiometric(){
-let state=localStorage.getItem("biometric")
-localStorage.setItem("biometric", state==="true"?"false":"true")
-showToast(state==="true"?"Disabled":"Enabled")
+a{
+color:white;
+text-decoration:none;
+display:block;
 }
 
-/* MODALS */
-function openModal(id){el(id).style.display="flex"}
-function closeModal(id){el(id).style.display="none"}
+</style>
 
-/* PASSWORD */
-async function submitPassword(){
-const oldPass=el("oldPassword").value
-const newPass=el("newPassword").value
+</head>
 
-if(!oldPass||!newPass) return showToast("Fill fields")
+<body>
 
-const res=await fetch(API+"/api/change-password",{
-method:"POST",
-headers:{
-"Content-Type":"application/json",
-Authorization:"Bearer "+getToken()
-},
-body:JSON.stringify({oldPass,newPass})
-})
+<div id="loginLoader">
+<div class="loaderRing"></div>
+<p style="margin-top:15px">Logging in...</p>
+</div>
 
-const data=await res.json()
-showToast(data.message)
-closeModal("passwordModal")
-}
+<img src="images/TEEVERSH.png" class="logo">
 
-/* PIN */
-async function submitPin(){
-const oldPin=el("oldPin").value
-const newPin=el("newPin").value
+<div class="card">
 
-if(!oldPin||!newPin) return showToast("Fill fields")
+<div class="title">Welcome Back</div>
 
-const res=await fetch(API+"/api/change-pin",{
-method:"POST",
-headers:{
-"Content-Type":"application/json",
-Authorization:"Bearer "+getToken()
-},
-body:JSON.stringify({oldPin,newPin})
-})
+<div class="inputBox">
+<input id="loginUsername" placeholder="Username">
+</div>
 
-const data=await res.json()
-showToast(data.message)
-closeModal("pinModalBox")
-}
+<div class="inputBox">
+<input id="loginPassword" type="password" placeholder="Password">
+<button class="showBtn" onclick="togglePassword()">Show</button>
+</div>
 
-/* RECEIPT */
-function showReceipt(type,amount,phone){
-el("receiptContent").innerHTML=`
-<h3>🧾 Receipt</h3>
-<p>${type}</p>
-<p>₦${amount}</p>
-<p>${phone}</p>
-<button onclick="closeModal('receiptModal')">Close</button>
-`
-openModal("receiptModal")
-}
+<button id="loginBtn" class="loginBtn">Login</button>
 
-/* FUND ACCOUNT */
-async function loadAccount(){
-try{
-const res=await fetch(API+"/api/login",{headers:{Authorization:"Bearer "+getToken()}})
-const user=await res.json()
+<div class="biometric" onclick="biometricLogin()">
+🔐 Login with Fingerprint / Face ID
+</div>
 
-el("bankName").innerText=user.bank_name||"N/A"
-el("accountNumber").innerText=user.account_number||"N/A"
-}catch{}
-}
+<a href="signup.html">
+<div class="signup">Create Account</div>
+</a>
 
-function copyAccount(){
-navigator.clipboard.writeText(el("accountNumber").innerText)
-showToast("Copied")
-}
+</div>
 
-/* ADMIN */
-async function loadAdminProfit(){
-try{
-const res=await fetch(API+"/api/admin/profits",{headers:{Authorization:"Bearer "+getToken()}})
-if(!res.ok) return
-const data=await res.json()
-el("adminTotalProfit").innerText="₦"+data.total_profit
-}catch{}
-}
+<script src="login.js"></script>
 
-/* WS */
-function connectWebSocket(){
-const wsURL=API.replace("https","wss")
-ws=new WebSocket(wsURL+"?token="+getToken())
+<script>
+function togglePassword(){
+const input=document.getElementById("loginPassword")
+const btn=document.querySelector(".showBtn")
 
-ws.onmessage=(msg)=>{
-const data=JSON.parse(msg.data)
-if(data.type==="wallet_update"){
-animateWallet(data.balance)
+if(input.type==="password"){
+input.type="text"
+btn.innerText="Hide"
+}else{
+input.type="password"
+btn.innerText="Show"
 }
 }
-}
+</script>
 
-/* LOGOUT */
-function logout(){
-try{if(ws) ws.close()}catch{}
-localStorage.clear()
-window.location.href="login.html"
-}
-
-/* START */
-document.addEventListener("DOMContentLoaded",loadDashboard)
+</body>
+</html>
