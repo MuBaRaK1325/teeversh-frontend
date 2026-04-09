@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Create Account</title>
+<title>TEEVERSH DATA PLUG - Signup</title>
 
 <style>
 
@@ -17,7 +17,7 @@ font-family:Arial, Helvetica, sans-serif;
 }
 
 body{
-background:#020b1f;
+background:#0a0618;
 color:white;
 display:flex;
 justify-content:center;
@@ -26,22 +26,25 @@ height:100vh;
 flex-direction:column;
 }
 
+/* LOGO */
 .logo{
 width:110px;
 height:110px;
 border-radius:50%;
-border:4px solid #2b6cff;
+border:4px solid #8b5cf6;
 padding:8px;
 margin-bottom:40px;
+box-shadow:0 0 20px #8b5cf6;
 }
 
+/* CARD */
 .card{
-background:#08142c;
+background:#140a2e;
 padding:30px;
 border-radius:20px;
 width:90%;
 max-width:380px;
-box-shadow:0 0 30px rgba(0,0,0,0.4);
+box-shadow:0 0 30px rgba(139,92,246,0.2);
 }
 
 .title{
@@ -50,6 +53,7 @@ font-size:26px;
 margin-bottom:25px;
 }
 
+/* INPUT */
 .inputBox{
 margin-bottom:18px;
 position:relative;
@@ -60,18 +64,31 @@ width:100%;
 padding:14px;
 border-radius:12px;
 border:none;
-background:#020b1f;
+background:#05051a;
 color:white;
 font-size:16px;
 outline:none;
 }
 
+/* SHOW BUTTON */
+.showBtn{
+position:absolute;
+right:12px;
+top:50%;
+transform:translateY(-50%);
+background:none;
+border:none;
+color:#a78bfa;
+cursor:pointer;
+}
+
+/* BUTTON */
 .signupBtn{
 width:100%;
 padding:14px;
 border:none;
 border-radius:12px;
-background:#3b78e7;
+background:#8b5cf6;
 color:white;
 font-size:17px;
 margin-top:10px;
@@ -83,9 +100,10 @@ opacity:0.6;
 cursor:not-allowed;
 }
 
+/* LINK */
 .loginLink{
 margin-top:16px;
-border:2px solid #3b78e7;
+border:2px solid #8b5cf6;
 padding:14px;
 border-radius:12px;
 text-align:center;
@@ -103,7 +121,7 @@ display:block;
 
 <body>
 
-<img src="images/logo.png" class="logo">
+<img src="images/TEEVERSH.png" class="logo">
 
 <div class="card">
 
@@ -119,10 +137,12 @@ display:block;
 
 <div class="inputBox">
 <input id="password" type="password" placeholder="Password">
+<button class="showBtn" onclick="toggleField('password',this)">Show</button>
 </div>
 
 <div class="inputBox">
 <input id="pin" type="password" placeholder="Transaction PIN (4 digits)" maxlength="4">
+<button class="showBtn" onclick="toggleField('pin',this)">Show</button>
 </div>
 
 <button id="signupBtn" class="signupBtn">Create Account</button>
@@ -136,6 +156,19 @@ Already have account
 </div>
 
 <script src="signup.js"></script>
+
+<script>
+function toggleField(id,btn){
+const input=document.getElementById(id)
+if(input.type==="password"){
+input.type="text"
+btn.innerText="Hide"
+}else{
+input.type="password"
+btn.innerText="Show"
+}
+}
+</script>
 
 </body>
 </html>
