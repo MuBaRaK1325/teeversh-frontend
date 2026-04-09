@@ -2,117 +2,223 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>MAY Connect</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-
-<!-- ✅ PWA -->
-<link rel="manifest" href="manifest.json">
+<title>Dashboard</title>
 
 <style>
+
+/* ================= THEMES ================= */
+:root{
+--primary:#6c5ce7;
+--bg:#050510;
+--card:#0b0b2a;
+--accent:#341f97;
+}
+
+body.teeversh{--primary:#6c5ce7;--bg:#050510;--card:#0b0b2a;}
+body.bnhabeeb{--primary:gold;--bg:#1a1403;--card:#2c2105;}
+body.sadeeq{--primary:#00c853;--bg:#02140a;--card:#063d1d;}
+
 body{
 margin:0;
-background:#000;
+background:var(--bg);
 color:white;
 font-family:Arial;
 display:none;
 padding-bottom:120px;
+animation:fadeIn 0.4s ease;
 }
 
+@keyframes fadeIn{
+from{opacity:0;transform:translateY(10px)}
+to{opacity:1;transform:translateY(0)}
+}
+
+/* HEADER */
 header{
 display:flex;
 justify-content:space-between;
+align-items:center;
 padding:15px;
+background:var(--card);
 }
 
 .logo img{
-width:80px;
+width:65px;
 border-radius:50%;
-border:3px solid #3b78e7;
-padding:4px;
+border:2px solid var(--primary);
+cursor:pointer;
 }
 
+/* WALLET */
 .walletCard{
 margin:20px;
-padding:20px;
+padding:25px;
+border-radius:20px;
+text-align:center;
+background:linear-gradient(135deg,var(--primary),var(--accent));
+box-shadow:0 0 25px rgba(0,0,0,0.4);
+}
+
+/* QUICK */
+.quickActions{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:12px;
+margin:20px;
+}
+
+.quickCard{
+background:var(--card);
+padding:18px;
 border-radius:16px;
 text-align:center;
-background:linear-gradient(135deg,#3b78e7,#274ea3);
+cursor:pointer;
+transition:0.3s;
+}
+.quickCard:hover{
+transform:scale(1.05);
 }
 
-.section{display:none;padding:20px;}
-.section.active{display:block;}
+/* CARD */
+.card{
+background:var(--card);
+padding:15px;
+border-radius:14px;
+margin-top:12px;
+}
 
-input,select{
+/* INPUT */
+input{
 width:100%;
-padding:12px;
+padding:14px;
+border-radius:12px;
+border:none;
 margin-top:10px;
-border-radius:8px;
-border:none;
-}
-
-button{
-background:#3b78e7;
-border:none;
-padding:12px;
-border-radius:10px;
+background:#00000040;
 color:white;
-margin-top:10px;
-width:100%;
 }
 
+/* BUTTON */
+button{
+background:var(--primary);
+border:none;
+padding:14px;
+border-radius:14px;
+color:white;
+margin-top:12px;
+width:100%;
+font-weight:bold;
+}
+
+/* PLAN GRID */
+.planGrid{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:10px;
+margin-top:15px;
+}
+
+.planItem{
+background:var(--card);
+padding:12px;
+border-radius:12px;
+text-align:center;
+cursor:pointer;
+border:2px solid transparent;
+transition:0.2s;
+}
+.planItem:hover{
+transform:scale(1.03);
+}
+.planItem.active{
+border:2px solid var(--primary);
+}
+
+/* TRANSACTION */
 .transactionCard{
-background:#08142c;
+background:var(--card);
 padding:12px;
 border-radius:10px;
 margin-top:10px;
 }
 
-.bottomNav{
-position:fixed;
-bottom:0;
-width:100%;
-background:#050b18;
-display:flex;
-justify-content:space-around;
-}
-
-.logoSmall{width:40px;margin-top:10px;}
-
-.pinModal{
+/* MODAL */
+.modal{
 position:fixed;
 top:0;left:0;width:100%;height:100%;
 background:rgba(0,0,0,0.9);
 display:none;
 align-items:center;
 justify-content:center;
+z-index:9999;
 }
 
-.pinBox{
-background:#0c1a36;
+.modalBox{
+background:var(--card);
 padding:20px;
-border-radius:10px;
+border-radius:14px;
 width:85%;
+animation:fadeIn 0.3s ease;
 }
 
-/* 🔥 ADMIN UI */
-.userCard{
-background:#08142c;
-padding:12px;
-border-radius:10px;
-margin-top:10px;
+/* LOADER */
+.loader{
+width:60px;
+height:60px;
+border:6px solid #222;
+border-top:6px solid var(--primary);
+border-radius:50%;
+animation:spin 1s linear infinite;
+margin:auto;
 }
+
+@keyframes spin{
+to{transform:rotate(360deg)}
+}
+
+/* SUCCESS */
+.successIcon{
+font-size:60px;
+color:var(--primary);
+text-align:center;
+animation:pop 0.3s ease;
+}
+@keyframes pop{
+0%{transform:scale(0)}
+100%{transform:scale(1)}
+}
+
+/* NAV */
+.bottomNav{
+position:fixed;
+bottom:0;
+width:100%;
+background:var(--card);
+display:flex;
+justify-content:space-around;
+}
+
+.bottomNav button{
+background:none;
+color:white;
+}
+
 </style>
 </head>
 
 <body>
 
 <header>
-<div class="logo"><img src="images/logo.png"></div>
+<div class="logo" onclick="openModal('planModal')">
+<img id="companyLogo">
+</div>
+<h3 id="companyName"></h3>
 <div onclick="showSection('profile')">👤</div>
 </header>
 
-<!-- ================= HOME ================= -->
-<section id="home" class="section active">
+<!-- HOME -->
+<section id="home">
 <h3 id="usernameDisplay"></h3>
 
 <div class="walletCard">
@@ -120,168 +226,126 @@ margin-top:10px;
 <strong id="walletBalance">₦0</strong>
 </div>
 
+<div class="quickActions">
+<div class="quickCard" onclick="showSection('fund')">💰 Fund</div>
+<div class="quickCard" onclick="showSection('data')">📶 Data</div>
+</div>
+
 <div id="transactionHistory"></div>
 </section>
 
-<!-- ================= DATA ================= -->
-<section id="data" class="section">
-<select id="networkSelect"></select>
-<img id="networkLogo" class="logoSmall">
+<!-- FUND -->
+<section id="fund" style="display:none">
+<div class="card">
+<p>Bank Name</p>
+<strong id="bankName"></strong>
+<p>Account Number</p>
+<strong id="accountNumber"></strong>
+<button onclick="copyAccount()">Copy</button>
+</div>
+</section>
 
+<!-- DATA -->
+<section id="data" style="display:none">
 <input id="dataPhone" placeholder="Phone Number">
-<select id="planSelect"></select>
-
+<div id="planList" class="planGrid"></div>
 <button onclick="openPinModal('data')">Buy Data</button>
 <button onclick="confirmBiometric()">Use Fingerprint</button>
 </section>
 
-<!-- ================= AIRTIME ================= -->
-<section id="airtime" class="section">
-<input id="airtimePhone" placeholder="Phone">
-<input id="airtimeAmount" placeholder="Amount">
-
-<button onclick="openPinModal('airtime')">Buy Airtime</button>
-<button onclick="confirmBiometric()">Use Fingerprint</button>
-</section>
-
-<!-- ================= TRANSACTIONS ================= -->
-<section id="transactions" class="section">
-<div id="allTransactions"></div>
-</section>
-
-<!-- ================= PROFILE ================= -->
-<section id="profile" class="section">
-<button onclick="changePassword()">Change Password</button>
-<button onclick="changePin()">Change PIN</button>
+<!-- PROFILE -->
+<section id="profile" style="display:none">
+<button onclick="openModal('passwordModal')">Change Password</button>
+<button onclick="openModal('pinModalBox')">Change PIN</button>
 <button onclick="toggleBiometric()">Toggle Biometric</button>
 <button onclick="logout()">Logout</button>
 </section>
 
-<!-- ================= ADMIN PANEL ================= -->
-<section id="admin" class="section" style="display:none">
-
-<h3>Admin Panel</h3>
-
-<p>Total Profit</p>
-<strong id="adminTotalProfit">₦0</strong>
-
-<hr>
-
-<h4>Search Users</h4>
-<input id="searchUserInput" placeholder="Enter username or email">
-<button onclick="searchUsers()">Search</button>
-
-<div id="userResults"></div>
-
-</section>
-
-<!-- ================= PIN MODAL ================= -->
-<div id="pinModal" class="pinModal">
-<div class="pinBox">
-<input id="pinInput" placeholder="PIN">
-<button onclick="confirmPurchase()">Confirm</button>
-<button onclick="closePinModal()">Cancel</button>
+<!-- PLAN MODAL -->
+<div id="planModal" class="modal">
+<div class="modalBox">
+<h3>Select Plan</h3>
+<div id="planListModal" class="planGrid"></div>
+<button onclick="closeModal('planModal')">Close</button>
 </div>
 </div>
 
-<!-- ================= NAV ================= -->
-<div class="bottomNav">
-<button onclick="showSection('home')">Home</button>
-<button onclick="showSection('data')">Data</button>
-<button onclick="showSection('airtime')">Airtime</button>
-<button onclick="showSection('transactions')">History</button>
-<button onclick="showSection('admin')">Admin</button>
+<!-- PIN -->
+<div id="pinModal" class="modal">
+<div class="modalBox">
+<input id="pinInput" placeholder="Enter PIN">
+<button onclick="startProcessing()">Confirm</button>
+</div>
+</div>
+
+<!-- LOADING -->
+<div id="loadingModal" class="modal">
+<div class="modalBox">
+<div class="loader"></div>
+<p style="text-align:center;margin-top:10px;">Processing...</p>
+</div>
+</div>
+
+<!-- SUCCESS -->
+<div id="successModal" class="modal">
+<div class="modalBox">
+<div class="successIcon">✔</div>
+<h3 style="text-align:center;">Success</h3>
+<button onclick="closeModal('successModal')">Done</button>
+</div>
+</div>
+
+<!-- RECEIPT -->
+<div id="receiptModal" class="modal">
+<div class="modalBox" id="receiptContent"></div>
 </div>
 
 <script src="app.js"></script>
 
 <script>
 
-/* ================= PWA ================= */
-if("serviceWorker" in navigator){
-navigator.serviceWorker.register("service-worker.js")
-}
+/* THEME */
+const payload=JSON.parse(atob(localStorage.getItem("token").split(".")[1]))
+document.body.classList.add(payload.company)
 
-/* ================= NAV ================= */
+companyName.innerText={
+teeversh:"TEEVERSH DATA PLUG",
+bnhabeeb:"BN HABEEB DATA HUB",
+sadeeq:"SADEEQ DATA HUB"
+}[payload.company]
 
-let purchaseType=""
+companyLogo.src="images/"+payload.company.toUpperCase()+".png"
 
+/* NAV */
 function showSection(id){
-document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"))
-document.getElementById(id).classList.add("active")
+document.querySelectorAll("section").forEach(s=>s.style.display="none")
+document.getElementById(id).style.display="block"
 }
 
-/* ================= PIN ================= */
+/* MODAL */
+function openModal(id){document.getElementById(id).style.display="flex"}
+function closeModal(id){document.getElementById(id).style.display="none"}
 
+/* PIN */
 function openPinModal(type){
 purchaseType=type
-pinModal.style.display="flex"
+openModal("pinModal")
 }
 
-function closePinModal(){
-pinModal.style.display="none"
-pinInput.value=""
-}
-
-function confirmPurchase(){
+/* PROCESS FLOW */
+function startProcessing(){
 const pin=pinInput.value
 if(!pin) return alert("Enter PIN")
 
-if(purchaseType==="data") buyData(pin)
-if(purchaseType==="airtime") buyAirtime(pin)
+closeModal("pinModal")
+openModal("loadingModal")
 
-closePinModal()
-}
+setTimeout(async()=>{
+if(purchaseType==="data") await buyData(pin)
 
-/* ================= 🔥 ADMIN SEARCH ================= */
-
-async function searchUsers(){
-
-const query = document.getElementById("searchUserInput").value
-
-if(!query) return alert("Enter search")
-
-const res = await fetch(API+"/api/admin/search-users?q="+query,{
-headers:{Authorization:"Bearer "+localStorage.getItem("token")}
-})
-
-const users = await res.json()
-
-const container = document.getElementById("userResults")
-container.innerHTML=""
-
-users.forEach(u=>{
-const div=document.createElement("div")
-div.className="userCard"
-
-div.innerHTML=`
-<strong>${u.username}</strong><br>
-${u.email}<br>
-Balance: ₦${u.wallet_balance}<br>
-
-<input placeholder="Amount" id="amt-${u.id}">
-<button onclick="creditUser(${u.id})">Credit</button>
-`
-
-container.appendChild(div)
-})
-
-}
-
-async function creditUser(userId){
-
-const amount = document.getElementById("amt-"+userId).value
-
-await fetch(API+"/api/admin/credit",{
-method:"POST",
-headers:{
-"Content-Type":"application/json",
-Authorization:"Bearer "+localStorage.getItem("token")
-},
-body:JSON.stringify({user_id:userId,amount})
-})
-
-alert("User credited")
+closeModal("loadingModal")
+openModal("successModal")
+},1500)
 }
 
 </script>

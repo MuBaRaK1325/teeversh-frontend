@@ -1,28 +1,18 @@
 const API="https://mayconnect-backend-1.onrender.com"
 
-const welcomeSound=new Audio("sounds/welcome.mp3")
-const successSound=new Audio("sounds/success.mp3")
-
 let cachedPlans=[]
 let currentBalance=0
 let currentUser=null
 let ws=null
-let hasPlayedWelcome=false
+let purchaseType=""
 
-/* ================= HELPERS ================= */
-
-function getToken(){
-return localStorage.getItem("token")
-}
-
-function el(id){
-return document.getElementById(id)
-}
+/* HELPERS */
+function getToken(){return localStorage.getItem("token")}
+function el(id){return document.getElementById(id)}
 
 function showToast(msg){
 const t=document.createElement("div")
 t.innerText=msg
-
 Object.assign(t.style,{
 position:"fixed",
 bottom:"30px",
@@ -34,86 +24,49 @@ borderRadius:"8px",
 color:"#fff",
 zIndex:"9999"
 })
-
 document.body.appendChild(t)
 setTimeout(()=>t.remove(),3000)
 }
 
-/* ================= AUTH ================= */
-
+/* AUTH */
 function checkAuth(){
-const token=getToken()
-if(!token){
-window.location.replace("login.html")
+if(!getToken()){
+window.location.href="login.html"
 return false
 }
 return true
 }
 
-/* ================= DASHBOARD ================= */
-
+/* DASHBOARD */
 function loadDashboard(){
 
 if(!checkAuth()) return
 
-let payload
-
 try{
-payload = JSON.parse(atob(getToken().split(".")[1]))
+currentUser = JSON.parse(atob(getToken().split(".")[1]))
 }catch{
-logout()
-return
+logout(); return
 }
 
-currentUser = payload
 document.body.style.display="block"
 
-/* USER */
 if(el("usernameDisplay")){
-el("usernameDisplay").innerText="Hello "+payload.username
+el("usernameDisplay").innerText="Hello "+currentUser.username
 }
 
-/* ADMIN */
-if(payload.is_admin){
-if(el("admin")) el("admin").style.display="block"
+if(currentUser.is_admin){
+el("admin").style.display="block"
 }
 
-/* LOAD */
 fetchTransactions()
 loadPlans()
 loadAdminProfit()
+loadAccount()
 
 setTimeout(connectWebSocket,1000)
-
-/* SOUND */
-if(!hasPlayedWelcome){
-welcomeSound.play().catch(()=>{})
-hasPlayedWelcome=true
 }
 
-/* PUSH */
-initPush()
-
-}
-
-/* ================= PUSH ================= */
-
-async function initPush(){
-if(!("Notification" in window)) return
-
-if(Notification.permission !== "granted"){
-await Notification.requestPermission()
-}
-}
-
-function pushNotify(title,body){
-if(Notification.permission==="granted"){
-new Notification(title,{body})
-}
-}
-
-/* ================= WALLET ================= */
-
+/* WALLET */
 function animateWallet(balance){
 currentBalance=Number(balance||0)
 if(el("walletBalance")){
@@ -121,21 +74,14 @@ el("walletBalance").innerText="₦"+currentBalance.toLocaleString()
 }
 }
 
-/* ================= TRANSACTIONS ================= */
-
+/* TRANSACTIONS */
 async function fetchTransactions(){
-
 try{
-
-const res=await fetch(API+"/api/transactions",{
-headers:{Authorization:"Bearer "+getToken()}
-})
-
+const res=await fetch(API+"/api/transactions",{headers:{Authorization:"Bearer "+getToken()}})
 const tx=await res.json()
 
 if(tx.length){
 animateWallet(tx[0].wallet_balance)
-pushNotify("Wallet Updated","Balance: ₦"+tx[0].wallet_balance)
 }
 
 const home=el("transactionHistory")
@@ -150,14 +96,12 @@ if(all){
 all.innerHTML=""
 tx.forEach(t=>all.appendChild(txCard(t)))
 }
-
 }catch{}
 }
 
 function txCard(t){
 const div=document.createElement("div")
 div.className="transactionCard"
-
 div.innerHTML=`
 <strong>${t.type}</strong> ₦${t.amount}<br>
 ${t.phone||""}<br>
@@ -166,66 +110,44 @@ ${t.phone||""}<br>
 return div
 }
 
-/* ================= PLANS ================= */
-
+/* PLANS */
 async function loadPlans(){
+const res=await fetch(API+"/api/plans",{headers:{Authorization:"Bearer "+getToken()}})
+cachedPlans=await res.json()
+renderPlans()
+}
 
-const res=await fetch(API+"/api/plans",{
-headers:{Authorization:"Bearer "+getToken()}
+function renderPlans(){
+const list=el("planList")
+if(!list) return
+
+list.innerHTML=""
+
+cachedPlans.forEach(p=>{
+const div=document.createElement("div")
+div.className="planItem"
+div.innerHTML=`
+<strong>${p.name}</strong><br>
+${p.validity}<br>
+₦${p.price}
+`
+div.onclick=()=>selectPlan(p.id)
+list.appendChild(div)
 })
-
-const plans=await res.json()
-
-cachedPlans=plans
-updatePlans()
 }
 
-function updatePlans(){
-
-const network=el("networkSelect")?.value
-const select=el("planSelect")
-
-if(!select) return
-
-select.innerHTML=""
-
-cachedPlans
-.filter(p=>!network || p.network===network)
-.forEach(plan=>{
-const opt=document.createElement("option")
-opt.value=plan.id
-opt.textContent=`${plan.name} (${plan.validity}) - ₦${plan.price}`
-select.appendChild(opt)
-})
-
+let selectedPlan=null
+function selectPlan(id){
+selectedPlan=id
+showToast("Plan Selected")
 }
 
-/* ================= NETWORK DETECT ================= */
-
-function detectNetwork(phone){
-
-if(!phone) return
-
-let logo=""
-
-if(/^0803|0703|0903/.test(phone)) logo="MTN.png"
-if(/^0805|0705|0905/.test(phone)) logo="Glo.png"
-if(/^0802|0702|0902/.test(phone)) logo="Airtel.png"
-
-if(el("networkLogo")){
-el("networkLogo").src="images/"+logo
-}
-
-}
-
-/* ================= BUY DATA ================= */
-
+/* BUY DATA */
 async function buyData(pin){
 
 const phone=el("dataPhone").value
-const planId=el("planSelect").value
 
-if(!phone || !planId){
+if(!phone || !selectedPlan){
 showToast("Fill all fields")
 return
 }
@@ -236,51 +158,21 @@ headers:{
 "Content-Type":"application/json",
 Authorization:"Bearer "+getToken()
 },
-body:JSON.stringify({phone,plan_id:planId,pin})
+body:JSON.stringify({phone,plan_id:selectedPlan,pin})
 })
 
 const data=await res.json()
 
 if(res.ok){
-successSound.play()
-showToast("Data Sent")
+showToast("Data Sent ✅")
+showReceipt("DATA", data.amount || "—", phone)
 fetchTransactions()
 }else{
 showToast(data.message)
 }
-
 }
 
-/* ================= BUY AIRTIME ================= */
-
-async function buyAirtime(pin){
-
-const phone=el("airtimePhone").value
-const amount=el("airtimeAmount").value
-
-const res=await fetch(API+"/api/buy-airtime",{
-method:"POST",
-headers:{
-"Content-Type":"application/json",
-Authorization:"Bearer "+getToken()
-},
-body:JSON.stringify({phone,amount,pin})
-})
-
-const data=await res.json()
-
-if(res.ok){
-successSound.play()
-showToast("Airtime Sent")
-fetchTransactions()
-}else{
-showToast(data.message)
-}
-
-}
-
-/* ================= 🔥 BIOMETRIC FIX ================= */
-
+/* BIOMETRIC */
 async function confirmBiometric(){
 
 if(localStorage.getItem("biometric")!=="true"){
@@ -290,45 +182,30 @@ return
 
 try{
 await navigator.credentials.get({
-publicKey:{
-challenge:new Uint8Array(32),
-timeout:60000
-}
+publicKey:{challenge:new Uint8Array(32),timeout:60000}
 })
 }catch{}
 
-/* CONTINUE */
 if(purchaseType==="data") buyData("biometric")
-if(purchaseType==="airtime") buyAirtime("biometric")
-
 }
 
-/* ================= ADMIN ================= */
-
-async function loadAdminProfit(){
-
-try{
-const res=await fetch(API+"/api/admin/profits",{
-headers:{Authorization:"Bearer "+getToken()}
-})
-
-if(!res.ok) return
-
-const data=await res.json()
-if(el("adminTotalProfit")){
-el("adminTotalProfit").innerText="₦"+data.total_profit
-}
-}catch{}
+/* TOGGLE BIOMETRIC */
+function toggleBiometric(){
+let state=localStorage.getItem("biometric")
+localStorage.setItem("biometric", state==="true"?"false":"true")
+showToast(state==="true"?"Disabled":"Enabled")
 }
 
-/* ================= PROFILE ================= */
+/* MODALS */
+function openModal(id){el(id).style.display="flex"}
+function closeModal(id){el(id).style.display="none"}
 
-async function changePassword(){
+/* PASSWORD */
+async function submitPassword(){
+const oldPass=el("oldPassword").value
+const newPass=el("newPassword").value
 
-const oldPass=prompt("Old password")
-const newPass=prompt("New password")
-
-if(!oldPass || !newPass) return
+if(!oldPass||!newPass) return showToast("Fill fields")
 
 const res=await fetch(API+"/api/change-password",{
 method:"POST",
@@ -341,14 +218,15 @@ body:JSON.stringify({oldPass,newPass})
 
 const data=await res.json()
 showToast(data.message)
+closeModal("passwordModal")
 }
 
-async function changePin(){
+/* PIN */
+async function submitPin(){
+const oldPin=el("oldPin").value
+const newPin=el("newPin").value
 
-const oldPin=prompt("Old PIN")
-const newPin=prompt("New PIN")
-
-if(!oldPin || !newPin) return
+if(!oldPin||!newPin) return showToast("Fill fields")
 
 const res=await fetch(API+"/api/change-pin",{
 method:"POST",
@@ -361,46 +239,66 @@ body:JSON.stringify({oldPin,newPin})
 
 const data=await res.json()
 showToast(data.message)
+closeModal("pinModalBox")
 }
 
-/* ================= WS ================= */
+/* RECEIPT */
+function showReceipt(type,amount,phone){
+el("receiptContent").innerHTML=`
+<h3>🧾 Receipt</h3>
+<p>${type}</p>
+<p>₦${amount}</p>
+<p>${phone}</p>
+<button onclick="closeModal('receiptModal')">Close</button>
+`
+openModal("receiptModal")
+}
 
+/* FUND ACCOUNT */
+async function loadAccount(){
+try{
+const res=await fetch(API+"/api/login",{headers:{Authorization:"Bearer "+getToken()}})
+const user=await res.json()
+
+el("bankName").innerText=user.bank_name||"N/A"
+el("accountNumber").innerText=user.account_number||"N/A"
+}catch{}
+}
+
+function copyAccount(){
+navigator.clipboard.writeText(el("accountNumber").innerText)
+showToast("Copied")
+}
+
+/* ADMIN */
+async function loadAdminProfit(){
+try{
+const res=await fetch(API+"/api/admin/profits",{headers:{Authorization:"Bearer "+getToken()}})
+if(!res.ok) return
+const data=await res.json()
+el("adminTotalProfit").innerText="₦"+data.total_profit
+}catch{}
+}
+
+/* WS */
 function connectWebSocket(){
-
 const wsURL=API.replace("https","wss")
 ws=new WebSocket(wsURL+"?token="+getToken())
 
 ws.onmessage=(msg)=>{
 const data=JSON.parse(msg.data)
-
 if(data.type==="wallet_update"){
 animateWallet(data.balance)
-pushNotify("Wallet Update","₦"+data.balance)
 }
 }
-
 }
 
-/* ================= 🔥 LOGOUT FIX ================= */
-
+/* LOGOUT */
 function logout(){
-try{ if(ws) ws.close() }catch{}
+try{if(ws) ws.close()}catch{}
 localStorage.clear()
 window.location.href="login.html"
 }
 
-/* ================= START ================= */
-
-document.addEventListener("DOMContentLoaded",()=>{
-
-loadDashboard()
-
-if(el("networkSelect")){
-el("networkSelect").addEventListener("change",updatePlans)
-}
-
-if(el("dataPhone")){
-el("dataPhone").addEventListener("input",(e)=>detectNetwork(e.target.value))
-}
-
-})
+/* START */
+document.addEventListener("DOMContentLoaded",loadDashboard)
