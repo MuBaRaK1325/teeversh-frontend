@@ -2,20 +2,44 @@ const API="https://mayconnect-backend-1.onrender.com"
 
 let cachedPlans=[]
 let currentUser=null
-let selectedPlan=null
-let selectedNetwork=null
 let ws=null
 
-/* HELPERS */
-function getToken(){return localStorage.getItem("token")}
-function el(id){return document.getElementById(id)}
+let selectedNetwork=null
+let selectedPlan=null
+let purchaseType=""
 
-function showMsg(msg){
-el("msgBox").innerText=msg
-openModal("msgModal")
+/* ================= HELPERS ================= */
+
+function getToken(){
+return localStorage.getItem("token")
 }
 
-/* AUTH */
+function el(id){
+return document.getElementById(id)
+}
+
+function showToast(msg){
+const t=document.createElement("div")
+t.innerText=msg
+
+Object.assign(t.style,{
+position:"fixed",
+bottom:"30px",
+left:"50%",
+transform:"translateX(-50%)",
+background:"#000",
+padding:"12px 20px",
+borderRadius:"8px",
+color:"#fff",
+zIndex:"9999"
+})
+
+document.body.appendChild(t)
+setTimeout(()=>t.remove(),3000)
+}
+
+/* ================= AUTH ================= */
+
 function checkAuth(){
 if(!getToken()){
 window.location.href="login.html"
@@ -24,118 +48,189 @@ return false
 return true
 }
 
-/* LOAD DASHBOARD */
-async function loadDashboard(){
+/* ================= LOAD DASHBOARD ================= */
+
+function loadDashboard(){
 
 if(!checkAuth()) return
 
 try{
 currentUser = JSON.parse(atob(getToken().split(".")[1]))
 }catch{
-logout(); return
+logout()
+return
 }
 
 document.body.style.display="block"
-el("usernameDisplay").innerText="Hello "+currentUser.username
 
-await loadAccount()
-await loadPlans()
+if(el("usernameDisplay")){
+el("usernameDisplay").innerText="Hello "+currentUser.username
+}
+
 fetchTransactions()
+loadPlans()
 
 setTimeout(connectWebSocket,1000)
 }
 
-/* WALLET */
+/* ================= WALLET ================= */
+
 function updateWallet(balance){
-el("walletBalance").innerText="₦"+Number(balance||0).toLocaleString()
+if(el("walletBalance")){
+el("walletBalance").innerText="₦"+Number(balance).toLocaleString()
+}
 }
 
-/* TRANSACTIONS */
+/* ================= TRANSACTIONS ================= */
+
 async function fetchTransactions(){
-try{
-const res=await fetch(API+"/api/transactions",{headers:{Authorization:"Bearer "+getToken()}})
+
+const res=await fetch(API+"/api/transactions",{
+headers:{Authorization:"Bearer "+getToken()}
+})
+
 const tx=await res.json()
 
-if(tx.length) updateWallet(tx[0].wallet_balance)
+if(tx.length){
+updateWallet(tx[0].wallet_balance)
+}
 
 const home=el("transactionHistory")
 const all=el("allTransactions")
 
+if(home){
 home.innerHTML=""
-all.innerHTML=""
-
 tx.slice(0,5).forEach(t=>home.appendChild(txCard(t)))
-tx.forEach(t=>all.appendChild(txCard(t)))
+}
 
-}catch{}
+if(all){
+all.innerHTML=""
+tx.forEach(t=>all.appendChild(txCard(t)))
+}
 }
 
 function txCard(t){
 const div=document.createElement("div")
 div.className="transactionCard"
+
 div.innerHTML=`
 <strong>${t.type}</strong> ₦${t.amount}<br>
 ${t.phone||""}<br>
 <span>${t.status}</span>
 `
+
 return div
 }
 
-/* LOAD PLANS */
+/* ================= LOAD PLANS ================= */
+
 async function loadPlans(){
-const res=await fetch(API+"/api/plans",{headers:{Authorization:"Bearer "+getToken()}})
-cachedPlans=await res.json()
+
+const res=await fetch(API+"/api/plans",{
+headers:{Authorization:"Bearer "+getToken()}
+})
+
+const allPlans=await res.json()
+
+/* ✅ FILTER BY USER TYPE */
+cachedPlans = allPlans.filter(p=>{
+if(currentUser.is_top_user){
+return true
+}else{
+return p.is_top !== true
+}
+})
 }
 
-/* SELECT NETWORK */
+/* ================= NETWORK CLICK ================= */
+
 function selectNetwork(network){
-selectedNetwork=network
+
+selectedNetwork = network
+selectedPlan = null
+
 renderPlans()
 }
 
-/* RENDER PLANS */
+/* ================= RENDER PLANS ================= */
+
 function renderPlans(){
 
 const list=el("planList")
+if(!list) return
+
 list.innerHTML=""
 
 const filtered = cachedPlans.filter(p=>p.network===selectedNetwork)
 
 filtered.forEach(p=>{
 
-const price = currentUser.is_top_user && p.top_price ? p.top_price : p.price
-
 const div=document.createElement("div")
 div.className="planItem"
+
 div.innerHTML=`
 <strong>${p.name}</strong><br>
 ${p.validity}<br>
-₦${price}
+₦${p.price}
 `
 
 div.onclick=()=>{
-selectedPlan=p
-highlightPlan(div)
-openModal("confirmModal")
+selectedPlan = p
+openConfirmModal(p)
 }
 
 list.appendChild(div)
+
 })
 }
 
-/* HIGHLIGHT */
-function highlightPlan(elm){
-document.querySelectorAll(".planItem").forEach(p=>p.classList.remove("active"))
-elm.classList.add("active")
+/* ================= CONFIRM MODAL ================= */
+
+function openConfirmModal(plan){
+
+purchaseType="data"
+
+const box=el("msgBox")
+
+box.innerHTML=`
+<h3>Confirm Purchase</h3>
+<p>${plan.name}</p>
+<p>${plan.validity}</p>
+<p>₦${plan.price}</p>
+
+<button onclick="openPinModal()">Enter PIN</button>
+<button onclick="confirmBiometric()">Use Fingerprint</button>
+<button onclick="closeModal('msgModal')">Cancel</button>
+`
+
+openModal("msgModal")
 }
 
-/* BUY DATA */
+/* ================= PIN FLOW ================= */
+
+function openPinModal(){
+closeModal("msgModal")
+openModal("pinModal")
+}
+
+function confirmPurchase(){
+
+const pin=el("pinInput").value
+if(!pin) return showToast("Enter PIN")
+
+closeModal("pinModal")
+
+if(purchaseType==="data") buyData(pin)
+}
+
+/* ================= BUY DATA ================= */
+
 async function buyData(pin){
 
 const phone=el("dataPhone").value
 
 if(!phone || !selectedPlan){
-showMsg("Select plan and enter phone")
+showToast("Select plan & enter phone")
 return
 }
 
@@ -155,42 +250,106 @@ pin
 const data=await res.json()
 
 if(res.ok){
-showReceipt("DATA", selectedPlan.price, phone)
+
+showToast("Success ✅")
+
+showReceipt(
+"DATA",
+selectedPlan.price,
+phone
+)
+
 fetchTransactions()
+
 }else{
-showMsg(data.message)
+showError(data.message)
 }
 }
 
-/* BIOMETRIC (REAL FLOW READY) */
+/* ================= ERROR MODAL ================= */
+
+function showError(msg){
+
+const box=el("msgBox")
+
+box.innerHTML=`
+<h3>❌ Failed</h3>
+<p>${msg}</p>
+<button onclick="closeModal('msgModal')">Close</button>
+`
+
+openModal("msgModal")
+}
+
+/* ================= RECEIPT ================= */
+
+function showReceipt(type,amount,phone){
+
+const box=el("receiptContent")
+
+box.innerHTML=`
+<h3>🧾 Receipt</h3>
+<p>${type}</p>
+<p>₦${amount}</p>
+<p>${phone}</p>
+<p>Status: SUCCESS</p>
+<button onclick="closeModal('receiptModal')">Close</button>
+`
+
+openModal("receiptModal")
+}
+
+/* ================= BIOMETRIC ================= */
+
 async function confirmBiometric(){
 
-try{
-const challenge = new Uint8Array(32)
-crypto.getRandomValues(challenge)
+if(localStorage.getItem("biometric")!=="true"){
+showToast("Enable biometric first")
+return
+}
 
+try{
 await navigator.credentials.get({
 publicKey:{
-challenge,
-timeout:60000,
-userVerification:"required"
+challenge:new Uint8Array(32),
+timeout:60000
 }
 })
 
-await buyData("biometric")
+closeModal("msgModal")
+
+if(purchaseType==="data"){
+buyData("biometric")
+}
 
 }catch{
-showMsg("Biometric failed")
+showToast("Biometric failed")
 }
 }
 
-/* PASSWORD */
+/* ================= TOGGLE BIOMETRIC ================= */
+
+function toggleBiometric(){
+
+const state=localStorage.getItem("biometric")
+
+if(state==="true"){
+localStorage.setItem("biometric","false")
+showToast("Biometric Disabled")
+}else{
+localStorage.setItem("biometric","true")
+showToast("Biometric Enabled")
+}
+}
+
+/* ================= CHANGE PASSWORD ================= */
+
 async function submitPassword(){
 
 const oldPass=el("oldPassword").value
 const newPass=el("newPassword").value
 
-if(!oldPass||!newPass) return showMsg("Fill fields")
+if(!oldPass||!newPass) return showToast("Fill fields")
 
 const res=await fetch(API+"/api/change-password",{
 method:"POST",
@@ -202,17 +361,19 @@ body:JSON.stringify({oldPass,newPass})
 })
 
 const data=await res.json()
-showMsg(data.message)
+showToast(data.message)
+
 closeModal("passwordModal")
 }
 
-/* PIN */
+/* ================= CHANGE PIN ================= */
+
 async function submitPin(){
 
 const oldPin=el("oldPin").value
 const newPin=el("newPin").value
 
-if(!oldPin||!newPin) return showMsg("Fill fields")
+if(!oldPin||!newPin) return showToast("Fill fields")
 
 const res=await fetch(API+"/api/change-pin",{
 method:"POST",
@@ -224,53 +385,35 @@ body:JSON.stringify({oldPin,newPin})
 })
 
 const data=await res.json()
-showMsg(data.message)
+showToast(data.message)
+
 closeModal("pinModalBox")
 }
 
-/* RECEIPT */
-function showReceipt(type,amount,phone){
+/* ================= WEBSOCKET ================= */
 
-el("receiptContent").innerHTML=`
-<h3>🧾 Receipt</h3>
-<p>${type}</p>
-<p>₦${amount}</p>
-<p>${phone}</p>
-<p>SUCCESS</p>
-<button onclick="closeModal('receiptModal')">Close</button>
-`
-
-openModal("receiptModal")
-}
-
-/* ACCOUNT */
-async function loadAccount(){
-const res=await fetch(API+"/api/me",{headers:{Authorization:"Bearer "+getToken()}})
-const user=await res.json()
-
-el("bankName").innerText=user.bank_name||"N/A"
-el("accountNumber").innerText=user.account_number||"N/A"
-}
-
-/* WS */
 function connectWebSocket(){
+
 const wsURL=API.replace("https","wss")
 ws=new WebSocket(wsURL+"?token="+getToken())
 
 ws.onmessage=(msg)=>{
 const data=JSON.parse(msg.data)
+
 if(data.type==="wallet_update"){
 updateWallet(data.balance)
 }
 }
 }
 
-/* LOGOUT */
+/* ================= LOGOUT ================= */
+
 function logout(){
-try{if(ws) ws.close()}catch{}
+try{ if(ws) ws.close() }catch{}
 localStorage.clear()
 window.location.href="login.html"
 }
 
-/* INIT */
+/* ================= START ================= */
+
 document.addEventListener("DOMContentLoaded",loadDashboard)
