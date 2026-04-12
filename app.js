@@ -10,32 +10,17 @@ let purchaseType=""
 
 /* ================= HELPERS ================= */
 
-function getToken(){
-return localStorage.getItem("token")
-}
+function getToken(){ return localStorage.getItem("token") }
+function el(id){ return document.getElementById(id) }
 
-function el(id){
-return document.getElementById(id)
-}
+function showMsg(msg){
+if(!el("msgBox")) return alert(msg)
 
-function showToast(msg){
-const t=document.createElement("div")
-t.innerText=msg
-
-Object.assign(t.style,{
-position:"fixed",
-bottom:"30px",
-left:"50%",
-transform:"translateX(-50%)",
-background:"#000",
-padding:"12px 20px",
-borderRadius:"8px",
-color:"#fff",
-zIndex:"9999"
-})
-
-document.body.appendChild(t)
-setTimeout(()=>t.remove(),3000)
+el("msgBox").innerHTML=`
+<p>${msg}</p>
+<button onclick="closeModal('msgModal')">Close</button>
+`
+openModal("msgModal")
 }
 
 /* ================= AUTH ================= */
@@ -50,7 +35,7 @@ return true
 
 /* ================= LOAD DASHBOARD ================= */
 
-function loadDashboard(){
+async function loadDashboard(){
 
 if(!checkAuth()) return
 
@@ -67,8 +52,9 @@ if(el("usernameDisplay")){
 el("usernameDisplay").innerText="Hello "+currentUser.username
 }
 
+await loadAccount()
+await loadPlans()
 fetchTransactions()
-loadPlans()
 
 setTimeout(connectWebSocket,1000)
 }
@@ -85,28 +71,26 @@ el("walletBalance").innerText="₦"+Number(balance).toLocaleString()
 
 async function fetchTransactions(){
 
+try{
 const res=await fetch(API+"/api/transactions",{
 headers:{Authorization:"Bearer "+getToken()}
 })
 
 const tx=await res.json()
 
-if(tx.length){
-updateWallet(tx[0].wallet_balance)
+if(tx.length) updateWallet(tx[0].wallet_balance)
+
+if(el("transactionHistory")){
+el("transactionHistory").innerHTML=""
+tx.slice(0,5).forEach(t=>el("transactionHistory").appendChild(txCard(t)))
 }
 
-const home=el("transactionHistory")
-const all=el("allTransactions")
-
-if(home){
-home.innerHTML=""
-tx.slice(0,5).forEach(t=>home.appendChild(txCard(t)))
+if(el("allTransactions")){
+el("allTransactions").innerHTML=""
+tx.forEach(t=>el("allTransactions").appendChild(txCard(t)))
 }
 
-if(all){
-all.innerHTML=""
-tx.forEach(t=>all.appendChild(txCard(t)))
-}
+}catch{}
 }
 
 function txCard(t){
@@ -132,7 +116,6 @@ headers:{Authorization:"Bearer "+getToken()}
 
 const allPlans=await res.json()
 
-/* ✅ FILTER BY USER TYPE */
 cachedPlans = allPlans.filter(p=>{
 if(currentUser.is_top_user){
 return true
@@ -142,13 +125,11 @@ return p.is_top !== true
 })
 }
 
-/* ================= NETWORK CLICK ================= */
+/* ================= NETWORK ================= */
 
 function selectNetwork(network){
-
 selectedNetwork = network
 selectedPlan = null
-
 renderPlans()
 }
 
@@ -184,15 +165,13 @@ list.appendChild(div)
 })
 }
 
-/* ================= CONFIRM MODAL ================= */
+/* ================= CONFIRM ================= */
 
 function openConfirmModal(plan){
 
 purchaseType="data"
 
-const box=el("msgBox")
-
-box.innerHTML=`
+el("msgBox").innerHTML=`
 <h3>Confirm Purchase</h3>
 <p>${plan.name}</p>
 <p>${plan.validity}</p>
@@ -206,7 +185,7 @@ box.innerHTML=`
 openModal("msgModal")
 }
 
-/* ================= PIN FLOW ================= */
+/* ================= PIN ================= */
 
 function openPinModal(){
 closeModal("msgModal")
@@ -216,7 +195,7 @@ openModal("pinModal")
 function confirmPurchase(){
 
 const pin=el("pinInput").value
-if(!pin) return showToast("Enter PIN")
+if(!pin) return showMsg("Enter PIN")
 
 closeModal("pinModal")
 
@@ -230,7 +209,7 @@ async function buyData(pin){
 const phone=el("dataPhone").value
 
 if(!phone || !selectedPlan){
-showToast("Select plan & enter phone")
+showMsg("Select plan and enter phone")
 return
 }
 
@@ -251,52 +230,12 @@ const data=await res.json()
 
 if(res.ok){
 
-showToast("Success ✅")
-
-showReceipt(
-"DATA",
-selectedPlan.price,
-phone
-)
-
+showReceipt("DATA", selectedPlan.price, phone)
 fetchTransactions()
 
 }else{
-showError(data.message)
+showMsg(data.message)
 }
-}
-
-/* ================= ERROR MODAL ================= */
-
-function showError(msg){
-
-const box=el("msgBox")
-
-box.innerHTML=`
-<h3>❌ Failed</h3>
-<p>${msg}</p>
-<button onclick="closeModal('msgModal')">Close</button>
-`
-
-openModal("msgModal")
-}
-
-/* ================= RECEIPT ================= */
-
-function showReceipt(type,amount,phone){
-
-const box=el("receiptContent")
-
-box.innerHTML=`
-<h3>🧾 Receipt</h3>
-<p>${type}</p>
-<p>₦${amount}</p>
-<p>${phone}</p>
-<p>Status: SUCCESS</p>
-<button onclick="closeModal('receiptModal')">Close</button>
-`
-
-openModal("receiptModal")
 }
 
 /* ================= BIOMETRIC ================= */
@@ -304,11 +243,12 @@ openModal("receiptModal")
 async function confirmBiometric(){
 
 if(localStorage.getItem("biometric")!=="true"){
-showToast("Enable biometric first")
+showMsg("Enable biometric first")
 return
 }
 
 try{
+
 await navigator.credentials.get({
 publicKey:{
 challenge:new Uint8Array(32),
@@ -323,22 +263,7 @@ buyData("biometric")
 }
 
 }catch{
-showToast("Biometric failed")
-}
-}
-
-/* ================= TOGGLE BIOMETRIC ================= */
-
-function toggleBiometric(){
-
-const state=localStorage.getItem("biometric")
-
-if(state==="true"){
-localStorage.setItem("biometric","false")
-showToast("Biometric Disabled")
-}else{
-localStorage.setItem("biometric","true")
-showToast("Biometric Enabled")
+showMsg("Biometric failed")
 }
 }
 
@@ -349,7 +274,7 @@ async function submitPassword(){
 const oldPass=el("oldPassword").value
 const newPass=el("newPassword").value
 
-if(!oldPass||!newPass) return showToast("Fill fields")
+if(!oldPass||!newPass) return showMsg("Fill fields")
 
 const res=await fetch(API+"/api/change-password",{
 method:"POST",
@@ -361,7 +286,7 @@ body:JSON.stringify({oldPass,newPass})
 })
 
 const data=await res.json()
-showToast(data.message)
+showMsg(data.message)
 
 closeModal("passwordModal")
 }
@@ -373,7 +298,7 @@ async function submitPin(){
 const oldPin=el("oldPin").value
 const newPin=el("newPin").value
 
-if(!oldPin||!newPin) return showToast("Fill fields")
+if(!oldPin||!newPin) return showMsg("Fill fields")
 
 const res=await fetch(API+"/api/change-pin",{
 method:"POST",
@@ -385,9 +310,48 @@ body:JSON.stringify({oldPin,newPin})
 })
 
 const data=await res.json()
-showToast(data.message)
+showMsg(data.message)
 
 closeModal("pinModalBox")
+}
+
+/* ================= ACCOUNT ================= */
+
+async function loadAccount(){
+
+try{
+const res=await fetch(API+"/api/me",{
+headers:{Authorization:"Bearer "+getToken()}
+})
+
+const user=await res.json()
+
+if(el("bankName")) el("bankName").innerText=user.bank_name||"N/A"
+if(el("accountNumber")) el("accountNumber").innerText=user.account_number||"N/A"
+
+}catch{}
+}
+
+function copyAccount(){
+navigator.clipboard.writeText(el("accountNumber").innerText)
+showMsg("Copied")
+}
+
+/* ================= MODALS ================= */
+
+function openModal(id){
+if(el(id)) el(id).style.display="flex"
+}
+
+function closeModal(id){
+if(el(id)) el(id).style.display="none"
+}
+
+/* ================= NAVIGATION FIX ================= */
+
+function showSection(id){
+document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"))
+if(el(id)) el(id).classList.add("active")
 }
 
 /* ================= WEBSOCKET ================= */
@@ -399,7 +363,6 @@ ws=new WebSocket(wsURL+"?token="+getToken())
 
 ws.onmessage=(msg)=>{
 const data=JSON.parse(msg.data)
-
 if(data.type==="wallet_update"){
 updateWallet(data.balance)
 }
