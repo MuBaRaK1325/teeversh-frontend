@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>TEEVERSH Dashboard</title>
 
@@ -17,79 +18,150 @@ margin:0;
 background:var(--bg);
 color:white;
 font-family:Arial;
-display:none;
+padding-bottom:140px;
 }
 
-/* header */
+/* HEADER */
 header{
 display:flex;
 justify-content:space-between;
+align-items:center;
 padding:15px;
 background:var(--card);
 }
 
 .logo img{
-width:60px;
+width:70px;
+height:70px;
 border-radius:50%;
-border:2px solid var(--primary);
+border:3px solid #6c5ce7;
+box-shadow:0 0 15px #6c5ce7;
 }
 
-/* wallet */
-.wallet{
+/* WALLET */
+.walletCard{
 margin:20px;
 padding:20px;
-border-radius:20px;
-background:linear-gradient(135deg,var(--primary),var(--accent));
+border-radius:16px;
 text-align:center;
+background:linear-gradient(135deg,var(--primary),var(--accent));
 }
 
-/* networks */
-.networks{
-display:flex;
-justify-content:space-around;
-margin:15px;
+/* QUICK */
+.quickActions{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:10px;
+margin:20px;
 }
 
-.networks img{
-width:60px;
-cursor:pointer;
-}
-
-/* plans */
-.plan{
+.quickCard{
 background:var(--card);
-margin:10px;
-padding:10px;
-border-radius:10px;
+padding:15px;
+border-radius:12px;
+text-align:center;
 cursor:pointer;
 }
 
-/* nav */
-.nav{
+/* SECTION */
+.section{display:none;padding:20px;}
+.section.active{display:block;}
+
+input{
+width:100%;
+padding:12px;
+margin-top:10px;
+border-radius:8px;
+border:none;
+}
+
+/* BUTTON */
+button{
+background:var(--primary);
+border:none;
+padding:12px;
+border-radius:10px;
+color:white;
+margin-top:10px;
+width:100%;
+}
+
+/* NETWORK */
+.networkGrid{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:12px;
+margin-top:15px;
+}
+
+.networkItem{
+background:var(--card);
+padding:10px;
+border-radius:12px;
+text-align:center;
+cursor:pointer;
+}
+
+.networkItem img{
+width:45px;
+}
+
+/* PLAN */
+.planItem{
+background:var(--card);
+padding:12px;
+border-radius:10px;
+margin-top:10px;
+cursor:pointer;
+}
+
+/* TRANSACTION */
+.transactionCard{
+background:var(--card);
+padding:12px;
+border-radius:10px;
+margin-top:10px;
+}
+
+/* NAV */
+.bottomNav{
 position:fixed;
 bottom:0;
 width:100%;
+background:var(--card);
 display:flex;
 justify-content:space-around;
-background:var(--card);
 }
 
-/* modal */
+.bottomNav button{
+background:none;
+color:white;
+}
+
+/* MODAL */
 .modal{
 position:fixed;
-top:0;left:0;
-width:100%;height:100%;
-background:#000000cc;
+top:0;left:0;width:100%;height:100%;
+background:rgba(0,0,0,0.9);
 display:none;
-justify-content:center;
 align-items:center;
+justify-content:center;
 }
 
-.box{
+.modalBox{
 background:var(--card);
 padding:20px;
 border-radius:10px;
 width:85%;
+text-align:center;
+}
+
+/* FOOTER */
+.footer{
+text-align:center;
+font-size:13px;
+margin-top:30px;
+opacity:0.8;
 }
 </style>
 </head>
@@ -97,116 +169,183 @@ width:85%;
 <body>
 
 <header>
+<div class="logo">
 <img src="images/TEEVERSH.png">
-<h3>TEEVERSH</h3>
-<div onclick="show('profile')">👤</div>
+</div>
+<h3>TEEVERSH DATA PLUG</h3>
+<div onclick="showSection('profile')">👤</div>
 </header>
 
-<section id="home">
-<div class="wallet">
-<h3 id="balance">₦0</h3>
+<!-- HOME -->
+<section id="home" class="section active">
+
+<h3 id="usernameDisplay"></h3>
+
+<div class="walletCard">
+<p>Wallet Balance</p>
+<strong id="walletBalance">₦0</strong>
 </div>
 
-<div class="networks">
-<img src="images/mtn.png" onclick="selectNetwork('MTN')">
-<img src="images/airtel.png" onclick="selectNetwork('AIRTEL')">
-<img src="images/glo.png" onclick="selectNetwork('GLO')">
+<div class="quickActions">
+<div class="quickCard" onclick="showSection('data')">📶 Buy Data</div>
+<div class="quickCard" onclick="comingSoon()">📞 Airtime</div>
 </div>
 
-<div id="plans"></div>
+<div id="transactionHistory"></div>
+
 </section>
 
-<!-- FUND -->
-<section id="fund" style="display:none">
-<button onclick="show('home')">Back</button>
-<div id="bank"></div>
+<!-- DATA -->
+<section id="data" class="section">
+
+<h3>Select Network</h3>
+
+<div class="networkGrid">
+<div class="networkItem" onclick="selectNetwork('MTN')">
+<img src="images/mtn.png">
+<p>MTN</p>
+</div>
+
+<div class="networkItem" onclick="selectNetwork('GLO')">
+<img src="images/glo.png">
+<p>GLO</p>
+</div>
+
+<div class="networkItem" onclick="selectNetwork('AIRTEL')">
+<img src="images/airtel.png">
+<p>AIRTEL</p>
+</div>
+</div>
+
+<input id="dataPhone" placeholder="Phone Number">
+
+<div id="planList"></div>
+
+<button onclick="openPinModal('data')">Buy Data</button>
+<button onclick="confirmBiometric()">Use Fingerprint</button>
+
+</section>
+
+<!-- HISTORY -->
+<section id="transactions" class="section">
+<div id="allTransactions"></div>
 </section>
 
 <!-- PROFILE -->
-<section id="profile" style="display:none">
-<button onclick="openModal('password')">Change Password</button>
-<button onclick="openModal('pin')">Change PIN</button>
-<button onclick="toggleBiometric()">Toggle Biometrics</button>
+<section id="profile" class="section">
+
+<button onclick="openModal('passwordModal')">Change Password</button>
+<button onclick="openModal('pinModalBox')">Change PIN</button>
+<button onclick="toggleBiometric()">Toggle Biometric</button>
 <button onclick="logout()">Logout</button>
+
+<div class="footer">
+<p>Contact Developer: WhatsApp 08117988561</p>
+<p>Support: WhatsApp 07047457735</p>
+<p>© TEEVERSH GLOBAL RESOURCES NIG LTD</p>
+<p>Developed by Mayconnect</p>
+</div>
+
 </section>
 
-<!-- PIN MODAL -->
-<div class="modal" id="pinModal">
-<div class="box">
+<!-- PIN -->
+<div id="pinModal" class="modal">
+<div class="modalBox">
 <input id="pinInput" placeholder="Enter PIN">
-<button onclick="buy()">Confirm</button>
+<button onclick="confirmPurchase()">Confirm</button>
+<button onclick="closeModal('pinModal')">Cancel</button>
+</div>
+</div>
+
+<!-- PASSWORD -->
+<div id="passwordModal" class="modal">
+<div class="modalBox">
+<input id="oldPassword" placeholder="Old Password">
+<input id="newPassword" placeholder="New Password">
+<button onclick="submitPassword()">Update</button>
+<button onclick="closeModal('passwordModal')">Cancel</button>
+</div>
+</div>
+
+<!-- PIN CHANGE -->
+<div id="pinModalBox" class="modal">
+<div class="modalBox">
+<input id="oldPin" placeholder="Old PIN">
+<input id="newPin" placeholder="New PIN">
+<button onclick="submitPin()">Update</button>
+<button onclick="closeModal('pinModalBox')">Cancel</button>
 </div>
 </div>
 
 <!-- MESSAGE MODAL -->
-<div class="modal" id="msgModal">
-<div class="box" id="msgBox"></div>
+<div id="msgModal" class="modal">
+<div class="modalBox" id="msgBox"></div>
+</div>
+
+<!-- RECEIPT -->
+<div id="receiptModal" class="modal">
+<div class="modalBox" id="receiptContent"></div>
+</div>
+
+<!-- NAV -->
+<div class="bottomNav">
+<button onclick="showSection('home')">Home</button>
+<button onclick="showSection('data')">Data</button>
+<button onclick="showSection('transactions')">History</button>
+<button onclick="showSection('profile')">Profile</button>
 </div>
 
 <script src="app.js"></script>
 
 <script>
-let selectedNetwork=null
-let selectedPlan=null
+let purchaseType=""
 
-function show(id){
-document.querySelectorAll("section").forEach(s=>s.style.display="none")
-document.getElementById(id).style.display="block"
-}
-
-/* NETWORK SELECT */
-function selectNetwork(net){
-selectedNetwork=net
-renderPlans()
-}
-
-/* RENDER PLANS */
-function renderPlans(){
-const list=document.getElementById("plans")
-list.innerHTML=""
-
-cachedPlans
-.filter(p=>p.network===selectedNetwork)
-.forEach(p=>{
-const div=document.createElement("div")
-div.className="plan"
-div.innerHTML=`${p.name} - ₦${p.price}`
-div.onclick=()=>{selectedPlan=p.id;openModal('pinModal')}
-list.appendChild(div)
-})
-}
-
-/* BUY */
-async function buy(){
-const pin=document.getElementById("pinInput").value
-
-const res=await fetch(API+"/api/buy-data",{
-method:"POST",
-headers:{
-"Content-Type":"application/json",
-Authorization:"Bearer "+localStorage.getItem("token")
-},
-body:JSON.stringify({
-plan_id:selectedPlan,
-phone:"08000000000",
-pin
-})
-})
-
-const data=await res.json()
-
-if(res.ok){
-showMsg("✅ Success")
-}else{
-showMsg(data.message)
-}
+/* NAV */
+function showSection(id){
+document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"))
+document.getElementById(id).classList.add("active")
 }
 
 /* MODAL */
 function openModal(id){document.getElementById(id).style.display="flex"}
+function closeModal(id){document.getElementById(id).style.display="none"}
+
+/* COMING SOON */
+function comingSoon(){
+showMsg("Airtime coming soon 🚀")
+}
+
+/* PIN */
+function openPinModal(type){
+purchaseType=type
+openModal("pinModal")
+}
+
+function confirmPurchase(){
+const pin=pinInput.value
+if(!pin) return showMsg("Enter PIN")
+
+if(purchaseType==="data") buyData(pin)
+
+closeModal("pinModal")
+}
+
+/* MESSAGE */
 function showMsg(msg){
 document.getElementById("msgBox").innerText=msg
 openModal("msgModal")
+}
+
+/* RECEIPT */
+function showReceipt(type,amount,phone){
+receiptContent.innerHTML=`
+<h3>🧾 Receipt</h3>
+<p>${type}</p>
+<p>₦${amount}</p>
+<p>${phone}</p>
+<button onclick="closeModal('receiptModal')">Close</button>
+`
+openModal("receiptModal")
 }
 </script>
 
