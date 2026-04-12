@@ -6,7 +6,6 @@ let ws=null
 
 let selectedNetwork=null
 let selectedPlan=null
-let purchaseType=""
 
 /* ================= HELPERS ================= */
 
@@ -19,8 +18,13 @@ function showMsg(msg){
 if(!el("msgBox")) return alert(msg)
 
 el("msgBox").innerHTML=`
+<div style="text-align:center">
 <p>${msg}</p>
-<button onclick="closeModal('msgModal')">Close</button>
+<button onclick="closeModal('msgModal')" 
+style="background:#6c5ce7;padding:12px;border:none;border-radius:10px;color:#fff;width:100%">
+OK
+</button>
+</div>
 `
 openModal("msgModal")
 }
@@ -72,7 +76,6 @@ el("walletBalance").innerText="₦"+Number(balance).toLocaleString()
 /* ================= TRANSACTIONS ================= */
 
 async function fetchTransactions(){
-
 try{
 const res=await fetch(API+"/api/transactions",{
 headers:{Authorization:"Bearer "+getToken()}
@@ -98,7 +101,6 @@ tx.forEach(t=>el("allTransactions").appendChild(txCard(t)))
 function txCard(t){
 const div=document.createElement("div")
 div.className="transactionCard"
-
 div.innerHTML=`
 <strong>${t.type}</strong> ₦${t.amount}<br>
 ${t.phone||""}<br>
@@ -110,27 +112,25 @@ return div
 /* ================= PLANS ================= */
 
 async function loadPlans(){
-
 const res=await fetch(API+"/api/plans",{
 headers:{Authorization:"Bearer "+getToken()}
 })
-
 cachedPlans = await res.json()
 }
 
-/* ================= NETWORK SELECT ================= */
+/* ================= NETWORK ================= */
 
-function selectNetwork(network){
+function selectNetwork(network, element){
 
 selectedNetwork = network
 selectedPlan = null
 
-/* 🔥 Highlight selected logo */
 document.querySelectorAll(".networkItem").forEach(n=>{
 n.style.border="2px solid transparent"
 })
 
-event.currentTarget.style.border="2px solid #6c5ce7"
+element.style.border="3px solid #6c5ce7"
+element.style.borderRadius="50%"
 
 renderPlans()
 }
@@ -145,6 +145,11 @@ if(!list) return
 list.innerHTML=""
 
 const filtered = cachedPlans.filter(p=>p.network===selectedNetwork)
+
+if(!filtered.length){
+list.innerHTML="<p>No plans available</p>"
+return
+}
 
 filtered.forEach(p=>{
 
@@ -171,8 +176,6 @@ list.appendChild(div)
 
 function openConfirmModal(plan){
 
-purchaseType="data"
-
 el("msgBox").innerHTML=`
 <h3>Confirm Purchase</h3>
 <p>${plan.name}</p>
@@ -197,11 +200,11 @@ openModal("pinModal")
 function confirmPurchase(){
 
 const pin=el("pinInput").value
+
 if(!pin) return showMsg("Enter PIN")
 
 closeModal("pinModal")
-
-if(purchaseType==="data") buyData(pin)
+buyData(pin)
 }
 
 /* ================= BUY DATA ================= */
@@ -238,38 +241,31 @@ showMsg(data.message)
 }
 }
 
-/* ================= BIOMETRIC ================= */
+/* ================= BIOMETRIC (NO PASSKEY) ================= */
 
-async function confirmBiometric(){
+function confirmBiometric(){
 
 if(localStorage.getItem("biometric")!=="true"){
 showMsg("Enable biometric first")
 return
 }
 
-try{
+/* clean UI simulation */
+el("msgBox").innerHTML=`
+<h3>🔒 Biometric Authentication</h3>
+<p>Touch your fingerprint sensor</p>
+<button onclick="finishBiometric()">Continue</button>
+`
 
-/* ✅ This triggers fingerprint / face / device auth */
-await navigator.credentials.get({
-publicKey:{
-challenge:new Uint8Array(32),
-timeout:60000,
-userVerification:"preferred"
+openModal("msgModal")
 }
-})
 
+function finishBiometric(){
 closeModal("msgModal")
-
-if(purchaseType==="data"){
 buyData("biometric")
 }
 
-}catch{
-showMsg("Biometric cancelled or failed")
-}
-}
-
-/* ================= TOGGLE BIOMETRIC ================= */
+/* ================= TOGGLE ================= */
 
 async function toggleBiometric(){
 
@@ -279,15 +275,15 @@ if(state==="true"){
 localStorage.setItem("biometric","false")
 showMsg("Biometric Disabled")
 }else{
+
 localStorage.setItem("biometric","true")
 
-/* enable on server */
 await fetch(API+"/api/biometric/enable",{
 method:"POST",
 headers:{Authorization:"Bearer "+getToken()}
 })
 
-showMsg("Biometric Enabled")
+showMsg("Biometric Enabled ✅")
 }
 }
 
@@ -311,7 +307,6 @@ body:JSON.stringify({oldPass,newPass})
 
 const data=await res.json()
 showMsg(data.message)
-
 closeModal("passwordModal")
 }
 
@@ -335,7 +330,6 @@ body:JSON.stringify({oldPin,newPin})
 
 const data=await res.json()
 showMsg(data.message)
-
 closeModal("pinModalBox")
 }
 
@@ -355,8 +349,6 @@ if(el("accountNumber")) el("accountNumber").innerText=user.account_number||"N/A"
 
 }catch{}
 }
-
-/* ================= COPY ================= */
 
 function copyAccount(){
 navigator.clipboard.writeText(el("accountNumber").innerText)
