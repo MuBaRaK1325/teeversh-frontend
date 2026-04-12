@@ -1,33 +1,18 @@
 const API="https://mayconnect-backend-1.onrender.com"
 
 let cachedPlans=[]
-let filteredPlans=[]
-let selectedNetwork=null
-let selectedPlan=null
 let currentUser=null
+let selectedPlan=null
+let selectedNetwork=null
 let ws=null
-let purchaseType=""
 
 /* HELPERS */
 function getToken(){return localStorage.getItem("token")}
 function el(id){return document.getElementById(id)}
 
-function showToast(msg){
-const t=document.createElement("div")
-t.innerText=msg
-Object.assign(t.style,{
-position:"fixed",
-bottom:"30px",
-left:"50%",
-transform:"translateX(-50%)",
-background:"#000",
-padding:"12px 20px",
-borderRadius:"8px",
-color:"#fff",
-zIndex:"9999"
-})
-document.body.appendChild(t)
-setTimeout(()=>t.remove(),3000)
+function showMsg(msg){
+el("msgBox").innerText=msg
+openModal("msgModal")
 }
 
 /* AUTH */
@@ -39,8 +24,8 @@ return false
 return true
 }
 
-/* DASHBOARD */
-function loadDashboard(){
+/* LOAD DASHBOARD */
+async function loadDashboard(){
 
 if(!checkAuth()) return
 
@@ -50,28 +35,18 @@ currentUser = JSON.parse(atob(getToken().split(".")[1]))
 logout(); return
 }
 
-/* 🔥 FIX COMPANY THEME */
-document.body.classList.remove("teeversh","bnhabeeb","sadeeq")
-document.body.classList.add(currentUser.company)
-
 document.body.style.display="block"
-
 el("usernameDisplay").innerText="Hello "+currentUser.username
 
-/* ADMIN SHOW */
-if(currentUser.is_admin && el("adminSection")){
-el("adminSection").style.display="block"
-}
-
+await loadAccount()
+await loadPlans()
 fetchTransactions()
-loadPlans()
-loadAccount()
 
 setTimeout(connectWebSocket,1000)
 }
 
 /* WALLET */
-function animateWallet(balance){
+function updateWallet(balance){
 el("walletBalance").innerText="₦"+Number(balance||0).toLocaleString()
 }
 
@@ -81,69 +56,77 @@ try{
 const res=await fetch(API+"/api/transactions",{headers:{Authorization:"Bearer "+getToken()}})
 const tx=await res.json()
 
-if(tx.length) animateWallet(tx[0].wallet_balance)
+if(tx.length) updateWallet(tx[0].wallet_balance)
 
 const home=el("transactionHistory")
-home.innerHTML=""
+const all=el("allTransactions")
 
-tx.slice(0,5).forEach(t=>{
-const div=document.createElement("div")
-div.className="transactionCard"
-div.innerHTML=`${t.type} - ₦${t.amount}`
-home.appendChild(div)
-})
+home.innerHTML=""
+all.innerHTML=""
+
+tx.slice(0,5).forEach(t=>home.appendChild(txCard(t)))
+tx.forEach(t=>all.appendChild(txCard(t)))
+
 }catch{}
 }
 
-/* PLANS */
+function txCard(t){
+const div=document.createElement("div")
+div.className="transactionCard"
+div.innerHTML=`
+<strong>${t.type}</strong> ₦${t.amount}<br>
+${t.phone||""}<br>
+<span>${t.status}</span>
+`
+return div
+}
+
+/* LOAD PLANS */
 async function loadPlans(){
 const res=await fetch(API+"/api/plans",{headers:{Authorization:"Bearer "+getToken()}})
 cachedPlans=await res.json()
-
-/* 🔥 COMPANY FILTER */
-cachedPlans=cachedPlans.filter(p=>p.company===currentUser.company)
-
-renderNetworks()
 }
 
-/* NETWORK LOGOS */
-function renderNetworks(){
-const box=el("networkList")
-box.innerHTML=""
-
-const networks=["MTN","AIRTEL","GLO"]
-
-networks.forEach(n=>{
-const img=document.createElement("img")
-img.src="images/"+n.toLowerCase()+".png"
-img.style.width="60px"
-img.onclick=()=>selectNetwork(n)
-box.appendChild(img)
-})
-}
-
-function selectNetwork(net){
-selectedNetwork=net
-filteredPlans=cachedPlans.filter(p=>p.network===net)
+/* SELECT NETWORK */
+function selectNetwork(network){
+selectedNetwork=network
 renderPlans()
 }
 
 /* RENDER PLANS */
 function renderPlans(){
+
 const list=el("planList")
 list.innerHTML=""
 
-filteredPlans.forEach(p=>{
+const filtered = cachedPlans.filter(p=>p.network===selectedNetwork)
+
+filtered.forEach(p=>{
+
+const price = currentUser.is_top_user && p.top_price ? p.top_price : p.price
+
 const div=document.createElement("div")
 div.className="planItem"
-div.innerHTML=`${p.name}<br>₦${p.price}`
+div.innerHTML=`
+<strong>${p.name}</strong><br>
+${p.validity}<br>
+₦${price}
+`
+
 div.onclick=()=>{
-selectedPlan=p.id
-document.querySelectorAll(".planItem").forEach(i=>i.classList.remove("active"))
-div.classList.add("active")
+selectedPlan=p
+highlightPlan(div)
+openModal("confirmModal")
 }
+
 list.appendChild(div)
 })
+}
+
+/* HIGHLIGHT */
+function highlightPlan(elm){
+document.querySelectorAll(".planItem").forEach(p=>p.classList.remove("active"))
+elm.classList.add("active")
 }
 
 /* BUY DATA */
@@ -152,7 +135,8 @@ async function buyData(pin){
 const phone=el("dataPhone").value
 
 if(!phone || !selectedPlan){
-return showToast("Fill all fields")
+showMsg("Select plan and enter phone")
+return
 }
 
 const res=await fetch(API+"/api/buy-data",{
@@ -161,58 +145,111 @@ headers:{
 "Content-Type":"application/json",
 Authorization:"Bearer "+getToken()
 },
-body:JSON.stringify({phone,plan_id:selectedPlan,pin})
+body:JSON.stringify({
+phone,
+plan_id:selectedPlan.id,
+pin
+})
 })
 
 const data=await res.json()
 
 if(res.ok){
-showToast("Success ✅")
+showReceipt("DATA", selectedPlan.price, phone)
 fetchTransactions()
 }else{
-showToast(data.message)
+showMsg(data.message)
 }
 }
 
-/* 🔥 SIMPLE BIOMETRIC (NO PASSKEY) */
+/* BIOMETRIC (REAL FLOW READY) */
 async function confirmBiometric(){
 
-if(localStorage.getItem("biometric")!=="true"){
-return showToast("Enable biometric first")
+try{
+const challenge = new Uint8Array(32)
+crypto.getRandomValues(challenge)
+
+await navigator.credentials.get({
+publicKey:{
+challenge,
+timeout:60000,
+userVerification:"required"
+}
+})
+
+await buyData("biometric")
+
+}catch{
+showMsg("Biometric failed")
+}
 }
 
-/* simulate success (device unlock only) */
-if(purchaseType==="data") buyData("0000")
+/* PASSWORD */
+async function submitPassword(){
+
+const oldPass=el("oldPassword").value
+const newPass=el("newPassword").value
+
+if(!oldPass||!newPass) return showMsg("Fill fields")
+
+const res=await fetch(API+"/api/change-password",{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+Authorization:"Bearer "+getToken()
+},
+body:JSON.stringify({oldPass,newPass})
+})
+
+const data=await res.json()
+showMsg(data.message)
+closeModal("passwordModal")
 }
 
-/* TOGGLE */
-function toggleBiometric(){
-let state=localStorage.getItem("biometric")
-localStorage.setItem("biometric", state==="true"?"false":"true")
-showToast("Biometric "+(state==="true"?"Disabled":"Enabled"))
+/* PIN */
+async function submitPin(){
+
+const oldPin=el("oldPin").value
+const newPin=el("newPin").value
+
+if(!oldPin||!newPin) return showMsg("Fill fields")
+
+const res=await fetch(API+"/api/change-pin",{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+Authorization:"Bearer "+getToken()
+},
+body:JSON.stringify({oldPin,newPin})
+})
+
+const data=await res.json()
+showMsg(data.message)
+closeModal("pinModalBox")
+}
+
+/* RECEIPT */
+function showReceipt(type,amount,phone){
+
+el("receiptContent").innerHTML=`
+<h3>🧾 Receipt</h3>
+<p>${type}</p>
+<p>₦${amount}</p>
+<p>${phone}</p>
+<p>SUCCESS</p>
+<button onclick="closeModal('receiptModal')">Close</button>
+`
+
+openModal("receiptModal")
 }
 
 /* ACCOUNT */
 async function loadAccount(){
-try{
 const res=await fetch(API+"/api/me",{headers:{Authorization:"Bearer "+getToken()}})
 const user=await res.json()
 
 el("bankName").innerText=user.bank_name||"N/A"
 el("accountNumber").innerText=user.account_number||"N/A"
-}catch{}
-}
-
-/* NAVIGATION */
-function showSection(id){
-document.querySelectorAll("section").forEach(s=>s.style.display="none")
-el(id).style.display="block"
-}
-
-/* LOGOUT */
-function logout(){
-localStorage.clear()
-window.location.href="login.html"
 }
 
 /* WS */
@@ -223,9 +260,17 @@ ws=new WebSocket(wsURL+"?token="+getToken())
 ws.onmessage=(msg)=>{
 const data=JSON.parse(msg.data)
 if(data.type==="wallet_update"){
-animateWallet(data.balance)
+updateWallet(data.balance)
 }
 }
 }
 
+/* LOGOUT */
+function logout(){
+try{if(ws) ws.close()}catch{}
+localStorage.clear()
+window.location.href="login.html"
+}
+
+/* INIT */
 document.addEventListener("DOMContentLoaded",loadDashboard)
