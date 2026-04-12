@@ -6,13 +6,14 @@ let ws=null
 
 let selectedNetwork=null
 let selectedPlan=null
+let purchaseType="data"
 
 /* ================= HELPERS ================= */
 
 function getToken(){ return localStorage.getItem("token") }
 function el(id){ return document.getElementById(id) }
 
-/* ================= MESSAGE ================= */
+/* ================= MESSAGE MODAL ================= */
 
 function showMsg(msg){
 if(!el("msgBox")) return alert(msg)
@@ -21,7 +22,7 @@ el("msgBox").innerHTML=`
 <div style="text-align:center">
 <p>${msg}</p>
 <button onclick="closeModal('msgModal')" 
-style="background:#6c5ce7;padding:12px;border:none;border-radius:10px;color:#fff;width:100%">
+style="background:#6c5ce7;padding:10px;border:none;border-radius:8px;color:#fff;width:100%">
 OK
 </button>
 </div>
@@ -118,18 +119,19 @@ headers:{Authorization:"Bearer "+getToken()}
 cachedPlans = await res.json()
 }
 
-/* ================= NETWORK ================= */
+/* ================= NETWORK SELECT ================= */
 
 function selectNetwork(network, element){
 
 selectedNetwork = network
 selectedPlan = null
 
+/* highlight selected */
 document.querySelectorAll(".networkItem").forEach(n=>{
 n.style.border="2px solid transparent"
 })
 
-element.style.border="3px solid #6c5ce7"
+element.style.border="2px solid #6c5ce7"
 element.style.borderRadius="50%"
 
 renderPlans()
@@ -172,7 +174,7 @@ list.appendChild(div)
 })
 }
 
-/* ================= CONFIRM ================= */
+/* ================= CONFIRM MODAL ================= */
 
 function openConfirmModal(plan){
 
@@ -241,31 +243,29 @@ showMsg(data.message)
 }
 }
 
-/* ================= BIOMETRIC (NO PASSKEY) ================= */
+/* ================= BIOMETRIC (FIXED) ================= */
 
-function confirmBiometric(){
+async function confirmBiometric(){
 
 if(localStorage.getItem("biometric")!=="true"){
 showMsg("Enable biometric first")
 return
 }
 
-/* clean UI simulation */
-el("msgBox").innerHTML=`
-<h3>🔒 Biometric Authentication</h3>
-<p>Touch your fingerprint sensor</p>
-<button onclick="finishBiometric()">Continue</button>
-`
+/* ✅ simulate device auth (no passkey popup) */
+const confirmUse = confirm("Authenticate with fingerprint?")
 
-openModal("msgModal")
+if(!confirmUse){
+showMsg("Authentication cancelled")
+return
 }
 
-function finishBiometric(){
 closeModal("msgModal")
+
 buyData("biometric")
 }
 
-/* ================= TOGGLE ================= */
+/* ================= TOGGLE BIOMETRIC ================= */
 
 async function toggleBiometric(){
 
