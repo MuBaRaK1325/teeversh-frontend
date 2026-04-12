@@ -58,11 +58,46 @@ if(el("usernameDisplay")){
 el("usernameDisplay").innerText="Hello "+currentUser.username
 }
 
+/* 🔥 FIX: FORCE NAV WORK */
+initNavigation()
+
 await loadAccount()
 await loadPlans()
 fetchTransactions()
 
 setTimeout(connectWebSocket,1000)
+}
+
+/* ================= NAVIGATION FIX ================= */
+
+function initNavigation(){
+
+/* hide all sections first */
+document.querySelectorAll(".section").forEach(s=>{
+s.style.display="none"
+})
+
+/* show home by default */
+if(el("home")) el("home").style.display="block"
+
+/* 🔥 auto bind buttons (NO HTML DEPENDENCY) */
+document.querySelectorAll("[data-section]").forEach(btn=>{
+btn.onclick = () => {
+showSection(btn.dataset.section)
+}
+})
+
+}
+
+function showSection(id){
+
+document.querySelectorAll(".section").forEach(s=>{
+s.style.display="none"
+})
+
+if(el(id)){
+el(id).style.display="block"
+}
 }
 
 /* ================= WALLET ================= */
@@ -152,7 +187,6 @@ if(!list) return
 
 list.innerHTML=""
 
-/* FIX: case insensitive */
 const filtered = cachedPlans.filter(p=>
 (p.network || "").toLowerCase() === selectedNetwork
 )
@@ -202,12 +236,8 @@ Enter PIN
 Use Fingerprint
 </button>
 
-<button onclick="closeModal('msgModal')" style="margin-top:10px;padding:12px;width:100%">
-Cancel
-</button>
 </div>
 `
-
 openModal("msgModal")
 }
 
@@ -215,7 +245,6 @@ openModal("msgModal")
 
 function openPinModal(){
 closeModal("msgModal")
-
 if(el("pinModal")){
 el("pinModal").style.display="flex"
 }else{
@@ -266,7 +295,7 @@ fetchTransactions()
 }else{
 showMsg(data.message)
 }
-}catch(e){
+}catch{
 showMsg("Network error")
 }
 }
@@ -284,14 +313,12 @@ el("msgBox").innerHTML=`
 <div style="text-align:center;color:white">
 <h3>🔒 Biometric</h3>
 <p>Touch fingerprint sensor</p>
-
 <button onclick="finishBiometric()" 
 style="background:#6c5ce7;padding:12px;border:none;border-radius:10px;color:#fff;width:100%">
 Continue
 </button>
 </div>
 `
-
 openModal("msgModal")
 }
 
@@ -310,64 +337,15 @@ if(state==="true"){
 localStorage.setItem("biometric","false")
 showMsg("Biometric Disabled ❌")
 }else{
-
 localStorage.setItem("biometric","true")
 
-try{
 await fetch(API+"/api/biometric/enable",{
 method:"POST",
 headers:{Authorization:"Bearer "+getToken()}
 })
-}catch{}
 
 showMsg("Biometric Enabled ✅")
 }
-}
-
-/* ================= PASSWORD ================= */
-
-async function submitPassword(){
-
-const oldPass=el("oldPassword")?.value
-const newPass=el("newPassword")?.value
-
-if(!oldPass||!newPass) return showMsg("Fill fields")
-
-const res=await fetch(API+"/api/change-password",{
-method:"POST",
-headers:{
-"Content-Type":"application/json",
-Authorization:"Bearer "+getToken()
-},
-body:JSON.stringify({oldPass,newPass})
-})
-
-const data=await res.json()
-showMsg(data.message)
-closeModal("passwordModal")
-}
-
-/* ================= PIN ================= */
-
-async function submitPin(){
-
-const oldPin=el("oldPin")?.value
-const newPin=el("newPin")?.value
-
-if(!oldPin||!newPin) return showMsg("Fill fields")
-
-const res=await fetch(API+"/api/change-pin",{
-method:"POST",
-headers:{
-"Content-Type":"application/json",
-Authorization:"Bearer "+getToken()
-},
-body:JSON.stringify({oldPin,newPin})
-})
-
-const data=await res.json()
-showMsg(data.message)
-closeModal("pinModalBox")
 }
 
 /* ================= ACCOUNT ================= */
@@ -387,22 +365,14 @@ if(el("accountNumber")) el("accountNumber").innerText=user.account_number||"N/A"
 }catch{}
 }
 
-function copyAccount(){
-navigator.clipboard.writeText(el("accountNumber").innerText)
-showMsg("Copied")
+/* ================= MODALS ================= */
+
+function openModal(id){
+if(el(id)) el(id).style.display="flex"
 }
 
-/* ================= NAVIGATION FIX ================= */
-
-function showSection(id){
-
-document.querySelectorAll(".section").forEach(s=>{
-s.style.display="none"
-})
-
-if(el(id)){
-el(id).style.display="block"
-}
+function closeModal(id){
+if(el(id)) el(id).style.display="none"
 }
 
 /* ================= WS ================= */
