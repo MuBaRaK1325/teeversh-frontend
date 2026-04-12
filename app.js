@@ -58,7 +58,6 @@ if(el("usernameDisplay")){
 el("usernameDisplay").innerText="Hello "+currentUser.username
 }
 
-/* 🔥 FIX: FORCE NAV WORK */
 initNavigation()
 
 await loadAccount()
@@ -68,25 +67,15 @@ fetchTransactions()
 setTimeout(connectWebSocket,1000)
 }
 
-/* ================= NAVIGATION FIX ================= */
+/* ================= NAVIGATION ================= */
 
 function initNavigation(){
 
-/* hide all sections first */
 document.querySelectorAll(".section").forEach(s=>{
 s.style.display="none"
 })
 
-/* show home by default */
 if(el("home")) el("home").style.display="block"
-
-/* 🔥 auto bind buttons (NO HTML DEPENDENCY) */
-document.querySelectorAll("[data-section]").forEach(btn=>{
-btn.onclick = () => {
-showSection(btn.dataset.section)
-}
-})
-
 }
 
 function showSection(id){
@@ -167,12 +156,11 @@ selectedNetwork = (network || "").toLowerCase()
 selectedPlan = null
 
 document.querySelectorAll(".networkItem").forEach(n=>{
-n.style.border="2px solid transparent"
+n.classList.remove("active")
 })
 
 if(element){
-element.style.border="3px solid #6c5ce7"
-element.style.borderRadius="50%"
+element.classList.add("active")
 }
 
 renderPlans()
@@ -187,8 +175,9 @@ if(!list) return
 
 list.innerHTML=""
 
+/* ✅ FIXED MATCHING */
 const filtered = cachedPlans.filter(p=>
-(p.network || "").toLowerCase() === selectedNetwork
+(p.network || "").toLowerCase().includes(selectedNetwork)
 )
 
 if(!filtered.length){
@@ -198,13 +187,16 @@ return
 
 filtered.forEach(p=>{
 
+/* ✅ FIX VALIDITY */
+let validity = p.validity || p.duration || p.plan_validity || "N/A"
+
 const div=document.createElement("div")
 div.className="planItem"
 
 div.innerHTML=`
 <strong>${p.name}</strong><br>
-${p.validity}<br>
-₦${p.price}
+${validity}<br>
+<strong>₦${p.price}</strong>
 `
 
 div.onclick=()=>{
@@ -221,23 +213,27 @@ list.appendChild(div)
 
 function openConfirmModal(plan){
 
+let validity = plan.validity || plan.duration || plan.plan_validity || "N/A"
+
 el("msgBox").innerHTML=`
 <div style="text-align:center;color:white">
 <h3 style="color:#6c5ce7">Confirm Purchase</h3>
 <p>${plan.name}</p>
-<p>${plan.validity}</p>
+<p>${validity}</p>
 <p>₦${plan.price}</p>
 
-<button onclick="openPinModal()" style="background:#6c5ce7;margin-top:10px;padding:12px;border:none;border-radius:10px;color:#fff;width:100%">
+<button onclick="openPinModal()" 
+style="background:#6c5ce7;margin-top:10px;padding:12px;border:none;border-radius:10px;color:#fff;width:100%">
 Enter PIN
 </button>
 
-<button onclick="confirmBiometric()" style="margin-top:10px;padding:12px;width:100%">
+<button onclick="confirmBiometric()" 
+style="margin-top:10px;padding:12px;width:100%">
 Use Fingerprint
 </button>
-
 </div>
 `
+
 openModal("msgModal")
 }
 
@@ -245,6 +241,7 @@ openModal("msgModal")
 
 function openPinModal(){
 closeModal("msgModal")
+
 if(el("pinModal")){
 el("pinModal").style.display="flex"
 }else{
@@ -319,6 +316,7 @@ Continue
 </button>
 </div>
 `
+
 openModal("msgModal")
 }
 
@@ -339,10 +337,12 @@ showMsg("Biometric Disabled ❌")
 }else{
 localStorage.setItem("biometric","true")
 
+try{
 await fetch(API+"/api/biometric/enable",{
 method:"POST",
 headers:{Authorization:"Bearer "+getToken()}
 })
+}catch{}
 
 showMsg("Biometric Enabled ✅")
 }
