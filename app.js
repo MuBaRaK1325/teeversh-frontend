@@ -13,6 +13,8 @@ let purchaseType=""
 function getToken(){ return localStorage.getItem("token") }
 function el(id){ return document.getElementById(id) }
 
+/* ================= MESSAGE ================= */
+
 function showMsg(msg){
 if(!el("msgBox")) return alert(msg)
 
@@ -33,7 +35,7 @@ return false
 return true
 }
 
-/* ================= LOAD DASHBOARD ================= */
+/* ================= LOAD ================= */
 
 async function loadDashboard(){
 
@@ -102,11 +104,10 @@ div.innerHTML=`
 ${t.phone||""}<br>
 <span>${t.status}</span>
 `
-
 return div
 }
 
-/* ================= LOAD PLANS ================= */
+/* ================= PLANS ================= */
 
 async function loadPlans(){
 
@@ -114,22 +115,23 @@ const res=await fetch(API+"/api/plans",{
 headers:{Authorization:"Bearer "+getToken()}
 })
 
-const allPlans=await res.json()
-
-cachedPlans = allPlans.filter(p=>{
-if(currentUser.is_top_user){
-return true
-}else{
-return p.is_top !== true
-}
-})
+cachedPlans = await res.json()
 }
 
-/* ================= NETWORK ================= */
+/* ================= NETWORK SELECT ================= */
 
 function selectNetwork(network){
+
 selectedNetwork = network
 selectedPlan = null
+
+/* 🔥 Highlight selected logo */
+document.querySelectorAll(".networkItem").forEach(n=>{
+n.style.border="2px solid transparent"
+})
+
+event.currentTarget.style.border="2px solid #6c5ce7"
+
 renderPlans()
 }
 
@@ -209,7 +211,7 @@ async function buyData(pin){
 const phone=el("dataPhone").value
 
 if(!phone || !selectedPlan){
-showMsg("Select plan and enter phone")
+showMsg("Select plan & enter phone")
 return
 }
 
@@ -229,10 +231,8 @@ pin
 const data=await res.json()
 
 if(res.ok){
-
 showReceipt("DATA", selectedPlan.price, phone)
 fetchTransactions()
-
 }else{
 showMsg(data.message)
 }
@@ -249,10 +249,12 @@ return
 
 try{
 
+/* ✅ This triggers fingerprint / face / device auth */
 await navigator.credentials.get({
 publicKey:{
 challenge:new Uint8Array(32),
-timeout:60000
+timeout:60000,
+userVerification:"preferred"
 }
 })
 
@@ -263,11 +265,33 @@ buyData("biometric")
 }
 
 }catch{
-showMsg("Biometric failed")
+showMsg("Biometric cancelled or failed")
 }
 }
 
-/* ================= CHANGE PASSWORD ================= */
+/* ================= TOGGLE BIOMETRIC ================= */
+
+async function toggleBiometric(){
+
+let state = localStorage.getItem("biometric")
+
+if(state==="true"){
+localStorage.setItem("biometric","false")
+showMsg("Biometric Disabled")
+}else{
+localStorage.setItem("biometric","true")
+
+/* enable on server */
+await fetch(API+"/api/biometric/enable",{
+method:"POST",
+headers:{Authorization:"Bearer "+getToken()}
+})
+
+showMsg("Biometric Enabled")
+}
+}
+
+/* ================= PASSWORD ================= */
 
 async function submitPassword(){
 
@@ -291,7 +315,7 @@ showMsg(data.message)
 closeModal("passwordModal")
 }
 
-/* ================= CHANGE PIN ================= */
+/* ================= PIN ================= */
 
 async function submitPin(){
 
@@ -332,6 +356,8 @@ if(el("accountNumber")) el("accountNumber").innerText=user.account_number||"N/A"
 }catch{}
 }
 
+/* ================= COPY ================= */
+
 function copyAccount(){
 navigator.clipboard.writeText(el("accountNumber").innerText)
 showMsg("Copied")
@@ -347,14 +373,14 @@ function closeModal(id){
 if(el(id)) el(id).style.display="none"
 }
 
-/* ================= NAVIGATION FIX ================= */
+/* ================= NAV ================= */
 
 function showSection(id){
 document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"))
 if(el(id)) el(id).classList.add("active")
 }
 
-/* ================= WEBSOCKET ================= */
+/* ================= WS ================= */
 
 function connectWebSocket(){
 
