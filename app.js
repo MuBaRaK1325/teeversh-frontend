@@ -15,6 +15,8 @@ function el(id){ return document.getElementById(id) }
 /* ================= MESSAGE ================= */
 
 function showMsg(msg){
+if(!el("msgBox")) return alert(msg)
+
 el("msgBox").innerHTML=`
 <div style="text-align:center;color:white">
 <p>${msg}</p>
@@ -74,7 +76,6 @@ el("walletBalance").innerText="₦"+Number(balance).toLocaleString()
 /* ================= TRANSACTIONS ================= */
 
 async function fetchTransactions(){
-
 try{
 const res=await fetch(API+"/api/transactions",{
 headers:{Authorization:"Bearer "+getToken()}
@@ -89,7 +90,14 @@ el("transactionHistory").innerHTML=""
 tx.slice(0,5).forEach(t=>el("transactionHistory").appendChild(txCard(t)))
 }
 
-}catch{}
+if(el("allTransactions")){
+el("allTransactions").innerHTML=""
+tx.forEach(t=>el("allTransactions").appendChild(txCard(t)))
+}
+
+}catch(e){
+console.log("TX ERROR",e)
+}
 }
 
 function txCard(t){
@@ -103,32 +111,34 @@ ${t.phone||""}<br>
 return div
 }
 
-/* ================= LOAD PLANS ================= */
+/* ================= PLANS ================= */
 
 async function loadPlans(){
+try{
 const res=await fetch(API+"/api/plans",{
 headers:{Authorization:"Bearer "+getToken()}
 })
-
 cachedPlans = await res.json()
-
-console.log("PLANS:", cachedPlans) // DEBUG
+}catch(e){
+console.log("PLANS ERROR",e)
+}
 }
 
-/* ================= NETWORK SELECT ================= */
+/* ================= NETWORK ================= */
 
 function selectNetwork(network, element){
 
-selectedNetwork = network.toLowerCase()
+selectedNetwork = (network || "").toLowerCase()
 selectedPlan = null
 
-/* highlight */
 document.querySelectorAll(".networkItem").forEach(n=>{
 n.style.border="2px solid transparent"
 })
 
+if(element){
 element.style.border="3px solid #6c5ce7"
 element.style.borderRadius="50%"
+}
 
 renderPlans()
 }
@@ -142,7 +152,7 @@ if(!list) return
 
 list.innerHTML=""
 
-/* FIX: case-insensitive match */
+/* FIX: case insensitive */
 const filtered = cachedPlans.filter(p=>
 (p.network || "").toLowerCase() === selectedNetwork
 )
@@ -157,18 +167,10 @@ filtered.forEach(p=>{
 const div=document.createElement("div")
 div.className="planItem"
 
-div.style=`
-background:#0c1a36;
-padding:15px;
-border-radius:12px;
-margin-bottom:10px;
-color:white;
-`
-
 div.innerHTML=`
 <strong>${p.name}</strong><br>
-<span style="color:#aaa">${p.validity}</span><br>
-<span style="color:#6c5ce7;font-weight:bold">₦${p.price}</span>
+${p.validity}<br>
+₦${p.price}
 `
 
 div.onclick=()=>{
@@ -181,7 +183,7 @@ list.appendChild(div)
 })
 }
 
-/* ================= CONFIRM MODAL ================= */
+/* ================= CONFIRM ================= */
 
 function openConfirmModal(plan){
 
@@ -190,13 +192,13 @@ el("msgBox").innerHTML=`
 <h3 style="color:#6c5ce7">Confirm Purchase</h3>
 <p>${plan.name}</p>
 <p>${plan.validity}</p>
-<p style="font-size:20px">₦${plan.price}</p>
+<p>₦${plan.price}</p>
 
 <button onclick="openPinModal()" style="background:#6c5ce7;margin-top:10px;padding:12px;border:none;border-radius:10px;color:#fff;width:100%">
 Enter PIN
 </button>
 
-<button onclick="confirmBiometric()" style="margin-top:10px;padding:12px;border:none;border-radius:10px;width:100%">
+<button onclick="confirmBiometric()" style="margin-top:10px;padding:12px;width:100%">
 Use Fingerprint
 </button>
 
@@ -214,18 +216,20 @@ openModal("msgModal")
 function openPinModal(){
 closeModal("msgModal")
 
-/* FORCE modal visible */
+if(el("pinModal")){
 el("pinModal").style.display="flex"
+}else{
+showMsg("PIN modal missing in HTML")
+}
 }
 
 function confirmPurchase(){
 
-const pin=el("pinInput").value
+const pin=el("pinInput")?.value
 
 if(!pin) return showMsg("Enter PIN")
 
 closeModal("pinModal")
-
 buyData(pin)
 }
 
@@ -233,13 +237,14 @@ buyData(pin)
 
 async function buyData(pin){
 
-const phone=el("dataPhone").value
+const phone=el("dataPhone")?.value
 
 if(!phone || !selectedPlan){
 showMsg("Select plan & enter phone")
 return
 }
 
+try{
 const res=await fetch(API+"/api/buy-data",{
 method:"POST",
 headers:{
@@ -256,17 +261,17 @@ pin
 const data=await res.json()
 
 if(res.ok){
-
 showMsg("Purchase Successful ✅")
-
 fetchTransactions()
-
 }else{
 showMsg(data.message)
 }
+}catch(e){
+showMsg("Network error")
+}
 }
 
-/* ================= BIOMETRIC (REALISTIC, NO PASSKEY) ================= */
+/* ================= BIOMETRIC ================= */
 
 function confirmBiometric(){
 
@@ -275,11 +280,10 @@ showMsg("Enable biometric first")
 return
 }
 
-/* simulate real biometric UI */
 el("msgBox").innerHTML=`
 <div style="text-align:center;color:white">
 <h3>🔒 Biometric</h3>
-<p>Touch fingerprint sensor...</p>
+<p>Touch fingerprint sensor</p>
 
 <button onclick="finishBiometric()" 
 style="background:#6c5ce7;padding:12px;border:none;border-radius:10px;color:#fff;width:100%">
@@ -296,7 +300,7 @@ closeModal("msgModal")
 buyData("biometric")
 }
 
-/* ================= TOGGLE BIOMETRIC ================= */
+/* ================= TOGGLE ================= */
 
 async function toggleBiometric(){
 
@@ -309,13 +313,61 @@ showMsg("Biometric Disabled ❌")
 
 localStorage.setItem("biometric","true")
 
+try{
 await fetch(API+"/api/biometric/enable",{
 method:"POST",
 headers:{Authorization:"Bearer "+getToken()}
 })
+}catch{}
 
 showMsg("Biometric Enabled ✅")
 }
+}
+
+/* ================= PASSWORD ================= */
+
+async function submitPassword(){
+
+const oldPass=el("oldPassword")?.value
+const newPass=el("newPassword")?.value
+
+if(!oldPass||!newPass) return showMsg("Fill fields")
+
+const res=await fetch(API+"/api/change-password",{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+Authorization:"Bearer "+getToken()
+},
+body:JSON.stringify({oldPass,newPass})
+})
+
+const data=await res.json()
+showMsg(data.message)
+closeModal("passwordModal")
+}
+
+/* ================= PIN ================= */
+
+async function submitPin(){
+
+const oldPin=el("oldPin")?.value
+const newPin=el("newPin")?.value
+
+if(!oldPin||!newPin) return showMsg("Fill fields")
+
+const res=await fetch(API+"/api/change-pin",{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+Authorization:"Bearer "+getToken()
+},
+body:JSON.stringify({oldPin,newPin})
+})
+
+const data=await res.json()
+showMsg(data.message)
+closeModal("pinModalBox")
 }
 
 /* ================= ACCOUNT ================= */
@@ -335,14 +387,22 @@ if(el("accountNumber")) el("accountNumber").innerText=user.account_number||"N/A"
 }catch{}
 }
 
-/* ================= MODALS ================= */
-
-function openModal(id){
-if(el(id)) el(id).style.display="flex"
+function copyAccount(){
+navigator.clipboard.writeText(el("accountNumber").innerText)
+showMsg("Copied")
 }
 
-function closeModal(id){
-if(el(id)) el(id).style.display="none"
+/* ================= NAVIGATION FIX ================= */
+
+function showSection(id){
+
+document.querySelectorAll(".section").forEach(s=>{
+s.style.display="none"
+})
+
+if(el(id)){
+el(id).style.display="block"
+}
 }
 
 /* ================= WS ================= */
