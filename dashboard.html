@@ -113,6 +113,11 @@ padding:12px;
 border-radius:10px;
 margin-top:10px;
 cursor:pointer;
+border:2px solid transparent;
+}
+
+.planItem.active{
+border:2px solid var(--primary);
 }
 
 /* TRANSACTION */
@@ -178,7 +183,6 @@ opacity:0.8;
 
 <!-- HOME -->
 <section id="home" class="section active">
-
 <h3 id="usernameDisplay"></h3>
 
 <div class="walletCard">
@@ -188,32 +192,43 @@ opacity:0.8;
 
 <div class="quickActions">
 <div class="quickCard" onclick="showSection('data')">📶 Buy Data</div>
-<div class="quickCard" onclick="comingSoon()">📞 Airtime</div>
+<div class="quickCard" onclick="showSection('fund')">💰 Fund Wallet</div>
 </div>
 
 <div id="transactionHistory"></div>
+</section>
 
+<!-- FUND -->
+<section id="fund" class="section">
+<h3>Fund Wallet</h3>
+
+<div class="walletCard">
+<p id="bankName">Bank</p>
+<strong id="accountNumber">0000000000</strong>
+<button onclick="copyAccount()">Copy Account Number</button>
+</div>
+
+<button onclick="showSection('home')">⬅ Back</button>
 </section>
 
 <!-- DATA -->
 <section id="data" class="section">
 
+<button onclick="showSection('home')">⬅ Back</button>
+
 <h3>Select Network</h3>
 
 <div class="networkGrid">
 <div class="networkItem" onclick="selectNetwork('MTN')">
-<img src="images/mtn.png">
-<p>MTN</p>
+<img src="images/mtn.png"><p>MTN</p>
 </div>
 
 <div class="networkItem" onclick="selectNetwork('GLO')">
-<img src="images/glo.png">
-<p>GLO</p>
+<img src="images/glo.png"><p>GLO</p>
 </div>
 
 <div class="networkItem" onclick="selectNetwork('AIRTEL')">
-<img src="images/airtel.png">
-<p>AIRTEL</p>
+<img src="images/airtel.png"><p>AIRTEL</p>
 </div>
 </div>
 
@@ -221,18 +236,18 @@ opacity:0.8;
 
 <div id="planList"></div>
 
-<button onclick="openPinModal('data')">Buy Data</button>
-<button onclick="confirmBiometric()">Use Fingerprint</button>
-
 </section>
 
 <!-- HISTORY -->
 <section id="transactions" class="section">
+<button onclick="showSection('home')">⬅ Back</button>
 <div id="allTransactions"></div>
 </section>
 
 <!-- PROFILE -->
 <section id="profile" class="section">
+
+<button onclick="showSection('home')">⬅ Back</button>
 
 <button onclick="openModal('passwordModal')">Change Password</button>
 <button onclick="openModal('pinModalBox')">Change PIN</button>
@@ -240,20 +255,25 @@ opacity:0.8;
 <button onclick="logout()">Logout</button>
 
 <div class="footer">
-<p>Contact Developer: WhatsApp 08117988561</p>
-<p>Support: WhatsApp 07047457735</p>
+<p><a href="https://wa.me/2348117988561" target="_blank">Contact Developer</a></p>
+<p><a href="https://wa.me/2347047457735" target="_blank">Support</a></p>
 <p>© TEEVERSH GLOBAL RESOURCES NIG LTD</p>
 <p>Developed by Mayconnect</p>
 </div>
 
 </section>
 
-<!-- PIN -->
-<div id="pinModal" class="modal">
+<!-- CONFIRM MODAL -->
+<div id="confirmModal" class="modal">
 <div class="modalBox">
+<h3>Confirm Purchase</h3>
+
 <input id="pinInput" placeholder="Enter PIN">
-<button onclick="confirmPurchase()">Confirm</button>
-<button onclick="closeModal('pinModal')">Cancel</button>
+
+<button onclick="confirmPurchase()">Confirm with PIN</button>
+<button onclick="confirmBiometric()">Use Fingerprint</button>
+
+<button onclick="closeModal('confirmModal')">Cancel</button>
 </div>
 </div>
 
@@ -277,7 +297,7 @@ opacity:0.8;
 </div>
 </div>
 
-<!-- MESSAGE MODAL -->
+<!-- MESSAGE -->
 <div id="msgModal" class="modal">
 <div class="modalBox" id="msgBox"></div>
 </div>
@@ -299,6 +319,7 @@ opacity:0.8;
 
 <script>
 let purchaseType=""
+let selectedPlan=null
 
 /* NAV */
 function showSection(id){
@@ -310,42 +331,39 @@ document.getElementById(id).classList.add("active")
 function openModal(id){document.getElementById(id).style.display="flex"}
 function closeModal(id){document.getElementById(id).style.display="none"}
 
-/* COMING SOON */
-function comingSoon(){
-showMsg("Airtime coming soon 🚀")
+/* NETWORK */
+function selectNetwork(net){
+loadPlans(net)
 }
 
-/* PIN */
-function openPinModal(type){
-purchaseType=type
-openModal("pinModal")
+/* PLAN SELECT */
+function selectPlan(id,el){
+selectedPlan=id
+document.querySelectorAll(".planItem").forEach(p=>p.classList.remove("active"))
+el.classList.add("active")
+
+openModal("confirmModal")
 }
 
+/* PURCHASE */
 function confirmPurchase(){
-const pin=pinInput.value
+const pin=document.getElementById("pinInput").value
 if(!pin) return showMsg("Enter PIN")
 
-if(purchaseType==="data") buyData(pin)
-
-closeModal("pinModal")
+buyData(pin)
+closeModal("confirmModal")
 }
 
 /* MESSAGE */
 function showMsg(msg){
-document.getElementById("msgBox").innerText=msg
+msgBox.innerText=msg
 openModal("msgModal")
 }
 
-/* RECEIPT */
-function showReceipt(type,amount,phone){
-receiptContent.innerHTML=`
-<h3>🧾 Receipt</h3>
-<p>${type}</p>
-<p>₦${amount}</p>
-<p>${phone}</p>
-<button onclick="closeModal('receiptModal')">Close</button>
-`
-openModal("receiptModal")
+/* COPY */
+function copyAccount(){
+navigator.clipboard.writeText(accountNumber.innerText)
+showMsg("Copied ✅")
 }
 </script>
 
