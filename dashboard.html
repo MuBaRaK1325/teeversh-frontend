@@ -18,7 +18,7 @@ margin:0;
 background:var(--bg);
 color:white;
 font-family:Arial;
-padding-bottom:140px;
+padding-bottom:120px;
 }
 
 /* HEADER */
@@ -31,11 +31,11 @@ background:var(--card);
 }
 
 .logo img{
-width:70px;
-height:70px;
+width:65px;
+height:65px;
 border-radius:50%;
-border:3px solid #6c5ce7;
-box-shadow:0 0 15px #6c5ce7;
+border:3px solid var(--primary);
+box-shadow:0 0 10px var(--primary);
 }
 
 /* WALLET */
@@ -67,6 +67,7 @@ cursor:pointer;
 .section{display:none;padding:20px;}
 .section.active{display:block;}
 
+/* INPUT */
 input{
 width:100%;
 padding:12px;
@@ -84,6 +85,7 @@ border-radius:10px;
 color:white;
 margin-top:10px;
 width:100%;
+cursor:pointer;
 }
 
 /* NETWORK */
@@ -96,14 +98,22 @@ margin-top:15px;
 
 .networkItem{
 background:var(--card);
-padding:10px;
-border-radius:12px;
+padding:12px;
+border-radius:50%;
 text-align:center;
 cursor:pointer;
+border:2px solid transparent;
+transition:0.3s;
 }
 
 .networkItem img{
 width:45px;
+height:45px;
+border-radius:50%;
+}
+
+.networkItem.active{
+border:3px solid var(--primary);
 }
 
 /* PLAN */
@@ -113,11 +123,6 @@ padding:12px;
 border-radius:10px;
 margin-top:10px;
 cursor:pointer;
-border:2px solid transparent;
-}
-
-.planItem.active{
-border:2px solid var(--primary);
 }
 
 /* TRANSACTION */
@@ -147,7 +152,7 @@ color:white;
 .modal{
 position:fixed;
 top:0;left:0;width:100%;height:100%;
-background:rgba(0,0,0,0.9);
+background:rgba(0,0,0,0.85);
 display:none;
 align-items:center;
 justify-content:center;
@@ -156,7 +161,7 @@ justify-content:center;
 .modalBox{
 background:var(--card);
 padding:20px;
-border-radius:10px;
+border-radius:12px;
 width:85%;
 text-align:center;
 }
@@ -219,17 +224,19 @@ opacity:0.8;
 <h3>Select Network</h3>
 
 <div class="networkGrid">
-<div class="networkItem" onclick="selectNetwork('MTN')">
+
+<div class="networkItem" onclick="selectNetwork('mtn', this)">
 <img src="images/mtn.png"><p>MTN</p>
 </div>
 
-<div class="networkItem" onclick="selectNetwork('GLO')">
+<div class="networkItem" onclick="selectNetwork('glo', this)">
 <img src="images/glo.png"><p>GLO</p>
 </div>
 
-<div class="networkItem" onclick="selectNetwork('AIRTEL')">
+<div class="networkItem" onclick="selectNetwork('airtel', this)">
 <img src="images/airtel.png"><p>AIRTEL</p>
 </div>
+
 </div>
 
 <input id="dataPhone" placeholder="Phone Number">
@@ -255,25 +262,18 @@ opacity:0.8;
 <button onclick="logout()">Logout</button>
 
 <div class="footer">
-<p><a href="https://wa.me/2348117988561" target="_blank">Contact Developer</a></p>
-<p><a href="https://wa.me/2347047457735" target="_blank">Support</a></p>
-<p>© TEEVERSH GLOBAL RESOURCES NIG LTD</p>
-<p>Developed by Mayconnect</p>
+<p>© TEEVERSH GLOBAL RESOURCES</p>
 </div>
 
 </section>
 
-<!-- CONFIRM MODAL -->
-<div id="confirmModal" class="modal">
+<!-- PIN MODAL -->
+<div id="pinModal" class="modal">
 <div class="modalBox">
-<h3>Confirm Purchase</h3>
-
+<h3>Enter PIN</h3>
 <input id="pinInput" placeholder="Enter PIN">
-
-<button onclick="confirmPurchase()">Confirm with PIN</button>
-<button onclick="confirmBiometric()">Use Fingerprint</button>
-
-<button onclick="closeModal('confirmModal')">Cancel</button>
+<button onclick="confirmPurchase()">Confirm</button>
+<button onclick="closeModal('pinModal')">Cancel</button>
 </div>
 </div>
 
@@ -302,11 +302,6 @@ opacity:0.8;
 <div class="modalBox" id="msgBox"></div>
 </div>
 
-<!-- RECEIPT -->
-<div id="receiptModal" class="modal">
-<div class="modalBox" id="receiptContent"></div>
-</div>
-
 <!-- NAV -->
 <div class="bottomNav">
 <button onclick="showSection('home')">Home</button>
@@ -316,56 +311,6 @@ opacity:0.8;
 </div>
 
 <script src="app.js"></script>
-
-<script>
-let purchaseType=""
-let selectedPlan=null
-
-/* NAV */
-function showSection(id){
-document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"))
-document.getElementById(id).classList.add("active")
-}
-
-/* MODAL */
-function openModal(id){document.getElementById(id).style.display="flex"}
-function closeModal(id){document.getElementById(id).style.display="none"}
-
-/* NETWORK */
-function selectNetwork(net){
-loadPlans(net)
-}
-
-/* PLAN SELECT */
-function selectPlan(id,el){
-selectedPlan=id
-document.querySelectorAll(".planItem").forEach(p=>p.classList.remove("active"))
-el.classList.add("active")
-
-openModal("confirmModal")
-}
-
-/* PURCHASE */
-function confirmPurchase(){
-const pin=document.getElementById("pinInput").value
-if(!pin) return showMsg("Enter PIN")
-
-buyData(pin)
-closeModal("confirmModal")
-}
-
-/* MESSAGE */
-function showMsg(msg){
-msgBox.innerText=msg
-openModal("msgModal")
-}
-
-/* COPY */
-function copyAccount(){
-navigator.clipboard.writeText(accountNumber.innerText)
-showMsg("Copied ✅")
-}
-</script>
 
 </body>
 </html>
