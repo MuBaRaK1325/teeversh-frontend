@@ -2,9 +2,8 @@ const CACHE_NAME = 'teeversh-v1';
 const urlsToCache = [
   '/',
   '/dashboard.html',
-  '/images/TEEVERSH.png',
-  '/css/style.css',
-  '/js/app.js'
+  '/images/TEEVERSH-192.png',
+  '/images/TEEVERSH-512.png'
 ];
 
 self.addEventListener('install', event => {
