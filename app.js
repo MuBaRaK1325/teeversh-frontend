@@ -1,19 +1,15 @@
 const API = "https://mayconnect-backend-1.onrender.com";
 
 let cachedPlans = [];
-let cachedAdminPlans = []; // for admin edit
+let cachedAdminPlans = [];
 let currentUser = null;
 let ws = null;
 
 let selectedNetwork = null;
 let selectedPlan = null;
 let airtimeNetwork = null;
-let actionType = null; // "DATA" or "AIRTIME"
-let editingPlanId = null; // for edit modal
-
-// ADDED FOR FINGERPRINT/FCM - START
-let CURRENT_USER_ID = null;
-// ADDED FOR FINGERPRINT/FCM - END
+let actionType = null;
+let editingPlanId = null;
 
 /* ================= HELPERS ================= */
 function getToken() { return localStorage.getItem("token"); }
@@ -57,24 +53,20 @@ async function loadDashboard() {
     const res = await fetch(API + "/api/me", { headers: { Authorization: "Bearer " + getToken() } });
     currentUser = await res.json();
     
-    // ADDED FOR FINGERPRINT/FCM - START
-    CURRENT_USER_ID = currentUser.id; // Set global user ID for FCM token save
-    // If Android app, show fingerprint button
+    // FINGERPRINT/FCM - Set global user ID
+    window.CURRENT_USER_ID = currentUser.id;
     if (window.Android && el("biometricLoginBtn")) {
         el("biometricLoginBtn").style.display = "block";
     }
-    // ADDED FOR FINGERPRINT/FCM - END
     
   } catch {
     logout();
     return;
   }
 
-  // Update UI with user info
   if (el("usernameDisplay")) el("usernameDisplay").innerText = "Hello " + currentUser.username;
   if (el("companyBadge")) el("companyBadge").innerText = currentUser.company.toUpperCase();
   
-  // Show admin wallet + admin panels
   if (currentUser && currentUser.is_admin === true) {
     document.querySelectorAll(".adminOnly").forEach(e => e.style.display = "block");
     if (el("adminWalletBalance")) el("adminWalletBalance").innerText = formatNaira(currentUser.admin_wallet);
@@ -150,7 +142,7 @@ function txCard(t) {
   return div;
 }
 
-/* ================= PLANS - WITH RESTRICTED FILTER ================= */
+/* ================= PLANS ================= */
 async function loadPlans() {
   try {
     const res = await fetch(API + "/api/plans", {
@@ -163,7 +155,6 @@ async function loadPlans() {
   }
 }
 
-/* ================= NETWORK ================= */
 function selectNetwork(network, element) {
   selectedNetwork = (network || "").toLowerCase();
   selectedPlan = null;
@@ -172,14 +163,12 @@ function selectNetwork(network, element) {
   renderPlans();
 }
 
-/* ================= AIRTIME ================= */
 function selectAirtimeNetwork(network, element) {
   airtimeNetwork = network;
   document.querySelectorAll(".airtimeNet").forEach(n => n.classList.remove("active"));
   if (element) element.classList.add("active");
 }
 
-/* ================= RENDER PLANS - SHOW TOP USER PRICE ================= */
 function renderPlans() {
   const list = el("planList");
   if (!list) return;
@@ -206,7 +195,7 @@ function renderPlans() {
     `;
 
     div.onclick = () => {
-      selectedPlan = {...p, price: priceDisplay}; // use discounted price
+      selectedPlan = {...p, price: priceDisplay};
       actionType = "DATA";
       openConfirmModal(selectedPlan);
     };
@@ -430,14 +419,14 @@ async function removeTopUser(email) {
   }
 }
 
-/* ================= ADMIN: PLANS MANAGER - FULL CONTROL ================= */
+/* ================= ADMIN: PLANS MANAGER ================= */
 async function loadAdminPlans() {
   try {
     const res = await fetch(API + "/admin/plans", {
       headers: { Authorization: "Bearer " + getToken() }
     });
     const plans = await res.json();
-    cachedAdminPlans = plans; // cache for editing
+    cachedAdminPlans = plans;
     const list = el("adminPlansList");
     if (list) {
       list.innerHTML = "";
@@ -489,8 +478,7 @@ async function addPlan() {
     showMsg(data.message, res.ok ? "success" : "error");
     if (res.ok) {
       loadAdminPlans();
-      loadPlans(); // refresh user plans too
-      // clear form
+      loadPlans();
       el("newPlanId").value = "";
       el("newPlanName").value = "";
       el("newPlanPrice").value = "";
@@ -678,7 +666,7 @@ async function requestWithdrawal() {
     showMsg(data.message, res.ok ? "success" : "error");
     if (res.ok) {
       loadWithdrawals();
-      loadDashboard(); // refresh admin_wallet
+      loadDashboard();
     }
   } catch {
     hideLoader();
@@ -733,7 +721,6 @@ async function loadAccount() {
   if (el("accountNumber")) el("accountNumber").innerText = user.account_number || "N/A";
   if (el("accountName")) el("accountName").innerText = user.account_name || "N/A";
 
-  // Show generate button if no account
   if (!user.account_number && el("generateAccountBtn")) {
     el("generateAccountBtn").style.display = "block";
   }
@@ -753,7 +740,7 @@ async function generateAccount() {
     showMsg(data.message, res.ok? "success" : "error");
     if (res.ok) {
       if (el("generateAccountBtn")) el("generateAccountBtn").style.display = "none";
-      await loadAccount(); // refresh
+      await loadAccount();
     }
   } catch {
     hideLoader();
