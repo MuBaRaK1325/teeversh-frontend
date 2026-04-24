@@ -712,7 +712,27 @@ window.confirmPurchase = function() {
 // 8. Set CURRENT_USER_ID after login - ADD THIS TO YOUR app.js login success
 // Example: CURRENT_USER_ID = response.user.id;
 </script>
-
+<script>
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  
+  // Show your own install button
+  const installBtn = document.createElement('button');
+  installBtn.textContent = 'Install App';
+  installBtn.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#ca3be7;color:#fff;padding:12px 20px;border:none;border-radius:8px;z-index:9999';
+  document.body.appendChild(installBtn);
+  
+  installBtn.addEventListener('click', () => {
+    installBtn.style.display = 'none';
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choice) => {
+      deferredPrompt = null;
+    });
+  });
+});
+</script>
 <script src="app.js"></script>
 </body>
 </html>

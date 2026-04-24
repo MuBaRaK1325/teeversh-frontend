@@ -13,6 +13,11 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('fetch', event => {
+  // Don't cache API calls
+  if (event.request.url.includes('mayconnect-backend-1.onrender.com')) {
+    return fetch(event.request);
+  }
+  
   event.respondWith(
     caches.match(event.request).then(response => response || fetch(event.request))
   );
