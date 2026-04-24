@@ -1,4 +1,4 @@
-const CACHE_NAME = 'teeversh-v1';
+const CACHE_NAME = 'teeversh-v2'; // bump version when you change SW
 const urlsToCache = [
   '/',
   '/dashboard.html',
@@ -12,11 +12,17 @@ self.addEventListener('install', event => {
   );
 });
 
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys => Promise.all(
+      keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+    ))
+  );
+});
+
 self.addEventListener('fetch', event => {
-  // Don't cache API calls
-  if (event.request.url.includes('mayconnect-backend-1.onrender.com')) {
-    return fetch(event.request);
-  }
+  // Don't cache API POST requests
+  if (event.request.method !== 'GET') return;
   
   event.respondWith(
     caches.match(event.request).then(response => response || fetch(event.request))
