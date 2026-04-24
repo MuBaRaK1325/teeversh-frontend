@@ -11,6 +11,10 @@ let airtimeNetwork = null;
 let actionType = null; // "DATA" or "AIRTIME"
 let editingPlanId = null; // for edit modal
 
+// ADDED FOR FINGERPRINT/FCM - START
+let CURRENT_USER_ID = null;
+// ADDED FOR FINGERPRINT/FCM - END
+
 /* ================= HELPERS ================= */
 function getToken() { return localStorage.getItem("token"); }
 function el(id) { return document.getElementById(id); }
@@ -52,6 +56,15 @@ async function loadDashboard() {
     const payload = JSON.parse(atob(getToken().split(".")[1]));
     const res = await fetch(API + "/api/me", { headers: { Authorization: "Bearer " + getToken() } });
     currentUser = await res.json();
+    
+    // ADDED FOR FINGERPRINT/FCM - START
+    CURRENT_USER_ID = currentUser.id; // Set global user ID for FCM token save
+    // If Android app, show fingerprint button
+    if (window.Android && el("biometricLoginBtn")) {
+        el("biometricLoginBtn").style.display = "block";
+    }
+    // ADDED FOR FINGERPRINT/FCM - END
+    
   } catch {
     logout();
     return;

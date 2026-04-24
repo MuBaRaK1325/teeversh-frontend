@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title> TEEVERSH VTU Dashboard</title>
+<title>TEEVERSH VTU Dashboard</title>
+
+<!-- PWA TAGS - ADDED -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#ca3be7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="/images/TEEVERSH-192.png">
 
 <style>
 :root{
@@ -302,11 +309,6 @@ margin-top:8px;
 }
 </style>
 </head>
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/service-worker.js');
-}
-</script>
 <body>
 <!-- ADD PLAN MODAL - UPDATED -->
 <div id="addPlanModal" class="modal">
@@ -542,6 +544,7 @@ if ('serviceWorker' in navigator) {
 <button onclick="showSection('home')">⬅ Back</button>
 <button onclick="openModal('passwordModal')">Change Password</button>
 <button onclick="openModal('pinModalBox')">Change PIN</button>
+<button onclick="loginWithBiometric()" id="biometricLoginBtn" style="display:none">Login with Fingerprint</button>
 <button onclick="logout()">Logout</button>
 
 <!-- ADMIN PANEL -->
@@ -611,7 +614,103 @@ if ('serviceWorker' in navigator) {
 <button onclick="showSection('profile')">Profile</button>
 </div>
 
+<!-- TEEVERSH PWA + FINGERPRINT + FCM CODE - ADDED -->
+<script>
+// 1. SERVICE WORKER REGISTRATION
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/service-worker.js');
+}
+
+// 2. GLOBAL VAR FOR FINGERPRINT ACTION
+let CURRENT_USER_ID = null; // Set this from your app.js after login
+let pendingBiometricAction = '';
+
+// 3. FINGERPRINT CALLBACKS FROM ANDROID
+window.biometricSuccess = function(action) {
+    if (action === 'login') {
+        let token = localStorage.getItem('auth_token');
+        if (token && typeof autoLogin === 'function') {
+            autoLogin(token);
+        } else {
+            showMsg('Please login with password first to enable fingerprint');
+        }
+    }
+    if (action === 'purchase') {
+        confirmPurchase(); // Call your existing purchase function
+    }
+}
+
+window.biometricError = function(msg) {
+    showMsg('Biometric failed: ' + msg);
+}
+
+// 4. FCM TOKEN CALLBACK FROM ANDROID  
+window.fcmTokenReceived = function(token) {
+    console.log('FCM Token:', token);
+    if (CURRENT_USER_ID) {
+        fetch('/api/save-fcm-token', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({token: token, user_id: CURRENT_USER_ID})
+        }).catch(e => console.log('Token save failed'));
+    }
+    // Show fingerprint button if in app
+    if (window.Android) {
+        document.getElementById('biometricLoginBtn').style.display = 'block';
+    }
+}
+
+// 5. TRIGGER FUNCTIONS - CALL THESE FROM YOUR BUTTONS
+function loginWithBiometric() {
+    if (window.Android) {
+        window.Android.requestBiometric('login');
+    } else {
+        showMsg('Fingerprint only available in app');
+    }
+}
+
+function confirmPurchaseWithBiometric() {
+    if (window.Android) {
+        pendingBiometricAction = 'purchase';
+        window.Android.requestBiometric('purchase');
+    } else {
+        // Fallback to PIN for browser users
+        openModal('pinModal');
+    }
+}
+
+// 6. CALL THIS AFTER SUCCESSFUL PASSWORD LOGIN
+function saveTokenForBiometric(token) {
+    localStorage.setItem('auth_token', token);
+    if (window.Android) {
+        window.Android.showToast('Fingerprint login enabled');
+    }
+}
+
+// 7. HELPER - Replace your existing openAirtimePin and data purchase calls
+function openAirtimePin() {
+    if (window.Android) {
+        confirmPurchaseWithBiometric();
+    } else {
+        openModal('pinModal');
+    }
+}
+
+// Hook into your existing data purchase flow
+const originalConfirmPurchase = window.confirmPurchase;
+window.confirmPurchase = function() {
+    if (window.Android && pendingBiometricAction === '') {
+        confirmPurchaseWithBiometric();
+    } else {
+        originalConfirmPurchase();
+        pendingBiometricAction = '';
+    }
+}
+
+// 8. Set CURRENT_USER_ID after login - ADD THIS TO YOUR app.js login success
+// Example: CURRENT_USER_ID = response.user.id;
 </script>
+
 <script src="app.js"></script>
 </body>
 </html>
