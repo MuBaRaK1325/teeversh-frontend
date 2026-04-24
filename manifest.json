@@ -9,13 +9,13 @@
   "description": "Buy cheap data, airtime and pay bills instantly",
   "icons": [
     {
-      "src": "images/TEEVERSH-192.png",
+      "src": "/images/TEEVERSH-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "images/TEEVERSH-512.png",
+      "src": "/images/TEEVERSH-512.png",
       "sizes": "512x512", 
       "type": "image/png",
       "purpose": "any maskable"
