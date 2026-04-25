@@ -642,7 +642,52 @@ padding:8px 16px;
   <button id="installBtn" class="primaryBtn">Install</button>
   <button id="closeBanner" class="dangerBtn">Later</button>
 </div>
+<script>
+// Push notification setup
+const VAPID_PUBLIC_KEY = 'BMtFYrnGJdIB6N8NmOkbzzgZFd3n4TJYWsm1mmgpKMLHH01_ZZGQ8A2hM7FrVsm30CFejzJT7iM4VyJqY_HOCBE'; // Get from Firebase
 
+async function subscribeUser() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  
+  const reg = await navigator.serviceWorker.ready;
+  const sub = await reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+  });
+  
+  // Send subscription to your backend
+  if (CURRENT_USER_ID) {
+    fetch('https://mayconnect-backend-1.onrender.com/api/save-push-sub', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({user_id: CURRENT_USER_ID, subscription: sub})
+    });
+  }
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+}
+
+// Ask permission after login
+function requestNotificationPermission() {
+  if (Notification.permission === 'default') {
+    if (confirm('Enable notifications for transaction alerts?')) {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') subscribeUser();
+      });
+    }
+  } else if (Notification.permission === 'granted') {
+    subscribeUser();
+  }
+}
+
+// Call this after successful login in app.js
+// requestNotificationPermission();
+</script>
 <!-- TEEVERSH PWA + FINGERPRINT + FCM CODE -->
 <script>
 // 1. SERVICE WORKER REGISTRATION WITH UPDATE PROMPT
@@ -778,6 +823,7 @@ window.confirmPurchase = function() {
 
 // 9. Set CURRENT_USER_ID after login - ADD THIS TO YOUR app.js login success
 // Example: CURRENT_USER_ID = response.user.id;
+
 </script>
 <script src="app.js"></script>
 </body>

@@ -28,3 +28,21 @@ self.addEventListener('fetch', event => {
     caches.match(event.request).then(response => response || fetch(event.request))
   );
 });
+// Handle push notifications
+self.addEventListener('push', event => {
+  const data = event.data ? event.data.json() : {};
+  const title = data.title || 'TEEVERSH';
+  const options = {
+    body: data.body || 'You have a new update',
+    icon: '/images/TEEVERSH-192.png',
+    badge: '/images/TEEVERSH-192.png',
+    vibrate: [200, 100, 200],
+    data: data.url || '/dashboard.html'
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(clients.openWindow(event.data || '/dashboard.html'));
+});
