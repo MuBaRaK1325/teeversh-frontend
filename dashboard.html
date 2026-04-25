@@ -643,25 +643,37 @@ padding:8px 16px;
   <button id="closeBanner" class="dangerBtn">Later</button>
 </div>
 <script>
-// Push notification setup
-const VAPID_PUBLIC_KEY = 'BMtFYrnGJdIB6N8NmOkbzzgZFd3n4TJYWsm1mmgpKMLHH01_ZZGQ8A2hM7FrVsm30CFejzJT7iM4VyJqY_HOCBE'; // Get from Firebase
+</script>
+<!-- PUSH NOTIFICATION CODE -->
+<script>
+const COMPANY_ID = 'teeversh'; // Change to: mayconnect, teeversh, sadeeq, bnhabeeb
+const VAPID_PUBLIC_KEY = 'BNm7r2...paste your public key here';
 
 async function subscribeUser() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-  
-  const reg = await navigator.serviceWorker.ready;
-  const sub = await reg.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-  });
-  
-  // Send subscription to your backend
-  if (CURRENT_USER_ID) {
-    fetch('https://mayconnect-backend-1.onrender.com/api/save-push-sub', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({user_id: CURRENT_USER_ID, subscription: sub})
+  if (!('serviceWorker' in navigator) ||!('PushManager' in window)) return;
+  if (Notification.permission!== 'granted') return;
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
     });
+
+    if (CURRENT_USER_ID) {
+      await fetch('https://mayconnect-backend-1.onrender.com/api/save-push-sub', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          company_id: COMPANY_ID,
+          user_id: CURRENT_USER_ID,
+          subscription: sub
+        })
+      });
+      console.log('Push subscribed');
+    }
+  } catch (e) {
+    console.log('Push sub failed:', e);
   }
 }
 
@@ -672,8 +684,9 @@ function urlBase64ToUint8Array(base64String) {
   return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
 }
 
-// Ask permission after login
 function requestNotificationPermission() {
+  if (!('Notification' in window)) return;
+
   if (Notification.permission === 'default') {
     if (confirm('Enable notifications for transaction alerts?')) {
       Notification.requestPermission().then(permission => {
@@ -685,7 +698,8 @@ function requestNotificationPermission() {
   }
 }
 
-// Call this after successful login in app.js
+// Call this AFTER successful login in app.js
+// Example: after you set CURRENT_USER_ID = response.user.id;
 // requestNotificationPermission();
 </script>
 <!-- TEEVERSH PWA + FINGERPRINT + FCM CODE -->
