@@ -268,6 +268,25 @@ overflow-y:auto;
 text-align:center;
 }
 
+.modal-content{
+background:var(--card);
+padding:20px;
+border-radius:12px;
+width:85%;
+max-width:400px;
+text-align:center;
+}
+
+.modal-buttons{
+display:flex;
+gap:10px;
+margin-top:15px;
+}
+
+.modal-buttons button{
+flex:1;
+}
+
 /* ADMIN */
 .adminOnly{
 display:none;
@@ -332,71 +351,6 @@ padding:8px 16px;
 </style>
 </head>
 <body>
-<!-- ADD PLAN MODAL - UPDATED -->
-<div id="addPlanModal" class="modal">
-<div class="modalBox">
-  <h3>Add New Plan</h3>
-  <input id="newPlanId" type="number" placeholder="Plan ID (from provider)" />
-  <select id="newPlanNetwork">
-    <option value="">Select Network</option>
-    <option value="MTN">MTN</option>
-    <option value="GLO">GLO</option>
-    <option value="AIRTEL">AIRTEL</option>
-    <option value="9MOBILE">9MOBILE</option>
-  </select>
-  <input id="newPlanName" placeholder="Plan Name e.g 1GB SME" />
-  <input id="newPlanPrice" type="number" step="0.01" placeholder="Selling Price" />
-  <input id="newPlanTopPrice" type="number" step="0.01" placeholder="Top User Price" />
-  <input id="newPlanCost" type="number" step="0.01" placeholder="Your Cost" />
-  <input id="newPlanValidity" placeholder="Validity e.g 30 Days" />
-  <select id="newPlanProvider">
-    <option value="">Select Provider</option>
-    <option value="maitama">Maitama</option>
-    <option value="cheapdatahub">CheapDataHub</option>
-    <option value="subpadi">SubPadi</option>
-  </select>
-  <input id="newPlanNetworkId" placeholder="Network ID: 1=MTN, 2=Airtel, 3=Glo, 4=9mobile" />
-  <input id="newPlanApiId" placeholder="API Plan ID from provider dashboard" />
-  <label><input id="newPlanRestricted" type="checkbox"> Restricted to my company</label>
-  <div style="display:flex;gap:10px;margin-top:15px;">
-    <button onclick="addPlan()" class="successBtn">Add Plan</button>
-    <button onclick="closeModal('addPlanModal')" class="dangerBtn">Cancel</button>
-  </div>
-</div>
-</div>
-
-<!-- EDIT PLAN MODAL - UPDATED -->
-<div id="editPlanModal" class="modal">
-<div class="modalBox">
-  <h3>Edit Plan</h3>
-  <input type="hidden" id="editPlanId" />
-  <select id="editPlanNetwork">
-    <option value="MTN">MTN</option>
-    <option value="AIRTEL">AIRTEL</option>
-    <option value="GLO">GLO</option>
-    <option value="9MOBILE">9MOBILE</option>
-  </select>
-  <input id="editPlanName" placeholder="Plan Name" />
-  <input id="editPlanPrice" type="number" step="0.01" placeholder="Selling Price" />
-  <input id="editPlanTopPrice" type="number" step="0.01" placeholder="Top User Price" />
-  <input id="editPlanCost" type="number" step="0.01" placeholder="Your Cost" />
-  <input id="editPlanValidity" placeholder="Validity" />
-  <select id="editPlanProvider">
-    <option value="">Select Provider</option>
-    <option value="maitama">Maitama</option>
-    <option value="cheapdatahub">CheapDataHub</option>
-    <option value="subpadi">SubPadi</option>
-  </select>
-  <input id="editPlanNetworkId" placeholder="Network ID" />
-  <input id="editPlanApiId" placeholder="API Plan ID" />
-  <label><input id="editPlanRestricted" type="checkbox"> Restricted to my company</label>
-  <label><input id="editPlanActive" type="checkbox"> Active</label>
-  <div style="display:flex;gap:10px;margin-top:15px;">
-    <button onclick="savePlanEdit()" class="successBtn">Update Plan</button>
-    <button onclick="closeModal('editPlanModal')" class="dangerBtn">Cancel</button>
-  </div>
-</div>
-</div>
 
 <header>
 <div class="logoContainer">
@@ -458,11 +412,7 @@ padding:8px 16px;
 <div class="networkItem" onclick="selectNetwork('glo', this)"><img src="images/glo.png" alt="GLO"></div>
 <div class="networkItem" onclick="selectNetwork('airtel', this)"><img src="images/airtel.png" alt="AIRTEL"></div>
 </div>
-<div class="setting-item">
-  <h3>Security</h3>
-  <button id="enableBiometricBtn" onclick="enableBiometric()">Enable Fingerprint Login</button>
-  <p id="biometricStatus">Not enabled</p>
-</div>
+
 <input id="dataPhone" type="tel" placeholder="Phone Number">
 <div id="planList"></div>
 </section>
@@ -568,18 +518,18 @@ padding:8px 16px;
 <!-- PROFILE -->
 <section id="profile" class="section">
 <button onclick="showSection('home')">⬅ Back</button>
-<button onclick="openModal('passwordModal')">Change Password</button>
-<button onclick="openModal('pinModalBox')">Change PIN</button>
-<button onclick="loginWithBiometric()" id="biometricLoginBtn" style="display:none">Login with Fingerprint</button>
-<button onclick="logout()">Logout</button>
-<div class="setting-item" style="margin-top:15px;">
+
+<div class="adminSection" style="background:var(--card);">
   <h3>Security</h3>
   <button id="enableBiometricBtn" onclick="enableBiometric()">🫆 Enable Fingerprint Login</button>
   <p id="biometricStatus" style="font-size:12px;opacity:0.8;margin-top:5px;">Not enabled</p>
 </div>
 
+<button onclick="openModal('passwordModal')">Change Password</button>
+<button onclick="openModal('pinModalBox')">Change PIN</button>
 <button onclick="loginWithBiometric()" id="biometricLoginBtn" style="display:none">Login with Fingerprint</button>
 <button onclick="logout()">Logout</button>
+
 <!-- ADMIN PANEL -->
 <div class="adminOnly">
 <h3>Admin Tools</h3>
@@ -605,20 +555,86 @@ padding:8px 16px;
 
 </section>
 
-<!-- PIN MODAL -->
+<!-- ADD PLAN MODAL -->
+<div id="addPlanModal" class="modal">
+<div class="modalBox">
+  <h3>Add New Plan</h3>
+  <input id="newPlanId" type="number" placeholder="Plan ID (from provider)" />
+  <select id="newPlanNetwork">
+    <option value="">Select Network</option>
+    <option value="MTN">MTN</option>
+    <option value="GLO">GLO</option>
+    <option value="AIRTEL">AIRTEL</option>
+    <option value="9MOBILE">9MOBILE</option>
+  </select>
+  <input id="newPlanName" placeholder="Plan Name e.g 1GB SME" />
+  <input id="newPlanPrice" type="number" step="0.01" placeholder="Selling Price" />
+  <input id="newPlanTopPrice" type="number" step="0.01" placeholder="Top User Price" />
+  <input id="newPlanCost" type="number" step="0.01" placeholder="Your Cost" />
+  <input id="newPlanValidity" placeholder="Validity e.g 30 Days" />
+  <select id="newPlanProvider">
+    <option value="">Select Provider</option>
+    <option value="maitama">Maitama</option>
+    <option value="cheapdatahub">CheapDataHub</option>
+    <option value="subpadi">SubPadi</option>
+  </select>
+  <input id="newPlanNetworkId" placeholder="Network ID: 1=MTN, 2=Airtel, 3=Glo, 4=9mobile" />
+  <input id="newPlanApiId" placeholder="API Plan ID from provider dashboard" />
+  <label><input id="newPlanRestricted" type="checkbox"> Restricted to my company</label>
+  <div style="display:flex;gap:10px;margin-top:15px;">
+    <button onclick="addPlan()" class="successBtn">Add Plan</button>
+    <button onclick="closeModal('addPlanModal')" class="dangerBtn">Cancel</button>
+  </div>
+</div>
+</div>
+
+<!-- EDIT PLAN MODAL -->
+<div id="editPlanModal" class="modal">
+<div class="modalBox">
+  <h3>Edit Plan</h3>
+  <input type="hidden" id="editPlanId" />
+  <select id="editPlanNetwork">
+    <option value="MTN">MTN</option>
+    <option value="AIRTEL">AIRTEL</option>
+    <option value="GLO">GLO</option>
+    <option value="9MOBILE">9MOBILE</option>
+  </select>
+  <input id="editPlanName" placeholder="Plan Name" />
+  <input id="editPlanPrice" type="number" step="0.01" placeholder="Selling Price" />
+  <input id="editPlanTopPrice" type="number" step="0.01" placeholder="Top User Price" />
+  <input id="editPlanCost" type="number" step="0.01" placeholder="Your Cost" />
+  <input id="editPlanValidity" placeholder="Validity" />
+  <select id="editPlanProvider">
+    <option value="">Select Provider</option>
+    <option value="maitama">Maitama</option>
+    <option value="cheapdatahub">CheapDataHub</option>
+    <option value="subpadi">SubPadi</option>
+  </select>
+  <input id="editPlanNetworkId" placeholder="Network ID" />
+  <input id="editPlanApiId" placeholder="API Plan ID" />
+  <label><input id="editPlanRestricted" type="checkbox"> Restricted to my company</label>
+  <label><input id="editPlanActive" type="checkbox"> Active</label>
+  <div style="display:flex;gap:10px;margin-top:15px;">
+    <button onclick="savePlanEdit()" class="successBtn">Update Plan</button>
+    <button onclick="closeModal('editPlanModal')" class="dangerBtn">Cancel</button>
+  </div>
+</div>
+</div>
+
+<!-- PURCHASE MODAL - PIN OR BIOMETRIC -->
 <div id="purchaseModal" class="modal">
   <div class="modal-content">
     <h3>Confirm Purchase</h3>
-    <p>Enter PIN or use fingerprint</p>
+    <p id="purchaseDetails"></p>
     <input type="password" id="purchasePin" placeholder="Enter PIN" maxlength="4">
 
     <div class="modal-buttons">
-      <button onclick="purchaseWithPin()">Pay with PIN</button>
-      <button id="biometricPurchaseBtn" onclick="purchaseWithBiometric()" style="display:none;">
+      <button onclick="purchaseWithPin()" class="primaryBtn">Pay with PIN</button>
+      <button id="biometricPurchaseBtn" onclick="purchaseWithBiometric()" style="display:none;" class="successBtn">
         🫆 Pay with Fingerprint
       </button>
-      <button onclick="closeModal()">Cancel</button>
     </div>
+    <button onclick="closeModal('purchaseModal')" class="dangerBtn" style="margin-top:10px;">Cancel</button>
   </div>
 </div>
 
@@ -661,335 +677,7 @@ padding:8px 16px;
   <button id="installBtn" class="primaryBtn">Install</button>
   <button id="closeBanner" class="dangerBtn">Later</button>
 </div>
-<script>
-</script>
-<script>
-// Check if biometric is enabled for current user
-async function checkBiometricStatus() {
-  try {
-    const res = await fetch('/api/me', {
-      headers: { 'Authorization': `Bearer ${localStorage.token}` }
-    });
-    const user = await res.json();
-    
-    const creds = await fetch('/api/auth/webauthn/check-enabled', {
-      headers: { 'Authorization': `Bearer ${localStorage.token}` }
-    }).then(r => r.json());
-    
-    if (creds.enabled) {
-      document.getElementById('biometricStatus').innerText = 'Enabled ✓';
-      document.getElementById('enableBiometricBtn').style.display = 'none';
-      document.getElementById('biometricPurchaseBtn').style.display = 'inline-block';
-    }
-  } catch(e) {}
-}
 
-// 1. Enable biometric on dashboard
-async function enableBiometric() {
-  try {
-    const start = await fetch('/api/auth/webauthn/register-start', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${localStorage.token}` }
-    }).then(r => r.json());
-
-    const cred = await navigator.credentials.create({ publicKey: start });
-
-    const finish = await fetch('/api/auth/webauthn/register-finish', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.token}` },
-      body: JSON.stringify(cred)
-    }).then(r => r.json());
-
-    if (finish.verified) {
-      alert('Fingerprint enabled successfully!');
-      checkBiometricStatus();
-    } else {
-      alert('Failed to enable fingerprint');
-    }
-  } catch (e) {
-    alert('Biometric error: ' + e.message);
-  }
-}
-
-// 2. Purchase with fingerprint
-async function purchaseWithBiometric() {
-  const plan_id = document.getElementById('selectedPlanId').value;
-  const phone = document.getElementById('purchasePhone').value;
-  
-  if (!phone) return alert('Enter phone number');
-
-  try {
-    // Step 1: Get challenge
-    const start = await fetch('/api/auth/webauthn/verify-purchase', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${localStorage.token}` }
-    }).then(r => r.json());
-
-    // Step 2: Ask for fingerprint
-    const assertion = await navigator.credentials.get({ publicKey: start });
-
-    // Step 3: Verify fingerprint
-    const verify = await fetch('/api/auth/webauthn/verify-purchase-finish', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.token}` },
-      body: JSON.stringify(assertion)
-    }).then(r => r.json());
-
-    if (!verify.verified) return alert('Fingerprint verification failed');
-
-    // Step 4: Process purchase with biometric flag
-    const res = await fetch('/api/buy-data', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.token}` },
-      body: JSON.stringify({ plan_id, phone, pin: 'biometric_verified' })
-    });
-
-    const data = await res.json();
-    if (data.success) {
-      alert('Purchase successful with fingerprint!');
-      closeModal();
-      updateWalletBalance(data.balance);
-    } else {
-      alert('Purchase failed: ' + data.message);
-    }
-  } catch (e) {
-    if (e.name === 'NotAllowedError') {
-      alert('Fingerprint cancelled or failed');
-    } else {
-      alert('Error: ' + e.message);
-    }
-  }
-}
-
-// 3. Login with fingerprint - for login.html
-async function biometricLogin() {
-  const email = document.getElementById('loginEmail').value;
-  if (!email) return alert('Enter email first');
-
-  try {
-    const start = await fetch('/api/auth/webauthn/login-start', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    }).then(r => r.json());
-
-    const assertion = await navigator.credentials.get({ publicKey: start });
-
-    const finish = await fetch('/api/auth/webauthn/login-finish', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({...assertion, email })
-    }).then(r => r.json());
-
-    if (finish.token) {
-      localStorage.token = finish.token;
-      location.href = '/dashboard.html';
-    } else {
-      alert('Biometric login failed');
-    }
-  } catch (e) {
-    alert('Biometric error: ' + e.message);
-  }
-}
-
-// Call on page load
-checkBiometricStatus();
-</script>
-<!-- PUSH NOTIFICATION CODE -->
-<script>
-const COMPANY_ID = 'teeversh'; // Change to: mayconnect, teeversh, sadeeq, bnhabeeb
-const VAPID_PUBLIC_KEY = 'BNm7r2...paste your public key here';
-
-async function subscribeUser() {
-  if (!('serviceWorker' in navigator) ||!('PushManager' in window)) return;
-  if (Notification.permission!== 'granted') return;
-
-  try {
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-    });
-
-    if (CURRENT_USER_ID) {
-      await fetch('https://mayconnect-backend-1.onrender.com/api/save-push-sub', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          company_id: COMPANY_ID,
-          user_id: CURRENT_USER_ID,
-          subscription: sub
-        })
-      });
-      console.log('Push subscribed');
-    }
-  } catch (e) {
-    console.log('Push sub failed:', e);
-  }
-}
-
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
-  return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
-}
-
-function requestNotificationPermission() {
-  if (!('Notification' in window)) return;
-
-  if (Notification.permission === 'default') {
-    if (confirm('Enable notifications for transaction alerts?')) {
-      Notification.requestPermission().then(permission => {
-        if (permission === 'granted') subscribeUser();
-      });
-    }
-  } else if (Notification.permission === 'granted') {
-    subscribeUser();
-  }
-}
-
-// Call this AFTER successful login in app.js
-// Example: after you set CURRENT_USER_ID = response.user.id;
-// requestNotificationPermission();
-</script>
-<!-- TEEVERSH PWA + FINGERPRINT + FCM CODE -->
-<script>
-// 1. SERVICE WORKER REGISTRATION WITH UPDATE PROMPT
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/service-worker.js').then(reg => {
-    reg.addEventListener('updatefound', () => {
-      const newWorker = reg.installing;
-      newWorker.addEventListener('statechange', () => {
-        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-          if (confirm('New version available. Reload to update?')) {
-            window.location.reload();
-          }
-        }
-      });
-    });
-  });
-}
-
-// 2. INSTALL PROMPT HANDLING
-let deferredPrompt;
-const installBanner = document.getElementById('installBanner');
-const installBtn = document.getElementById('installBtn');
-const closeBanner = document.getElementById('closeBanner');
-
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-  installBanner.style.display = 'block';
-});
-
-installBtn.addEventListener('click', async () => {
-  installBanner.style.display = 'none';
-  if (deferredPrompt) {
-    deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
-    deferredPrompt = null;
-  }
-});
-
-closeBanner.addEventListener('click', () => {
-  installBanner.style.display = 'none';
-});
-
-window.addEventListener('appinstalled', () => {
-  installBanner.style.display = 'none';
-});
-
-// 3. GLOBAL VAR FOR FINGERPRINT ACTION
-let CURRENT_USER_ID = null; // Set this from your app.js after login
-let pendingBiometricAction = '';
-
-// 4. FINGERPRINT CALLBACKS FROM ANDROID
-window.biometricSuccess = function(action) {
-    if (action === 'login') {
-        let token = localStorage.getItem('auth_token');
-        if (token && typeof autoLogin === 'function') {
-            autoLogin(token);
-        } else {
-            showMsg('Please login with password first to enable fingerprint');
-        }
-    }
-    if (action === 'purchase') {
-        confirmPurchase(); // Call your existing purchase function
-    }
-}
-
-window.biometricError = function(msg) {
-    showMsg('Biometric failed: ' + msg);
-}
-
-// 5. FCM TOKEN CALLBACK FROM ANDROID  
-window.fcmTokenReceived = function(token) {
-    console.log('FCM Token:', token);
-    if (CURRENT_USER_ID) {
-        fetch('/api/save-fcm-token', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({token: token, user_id: CURRENT_USER_ID})
-        }).catch(e => console.log('Token save failed'));
-    }
-    // Show fingerprint button if in app
-    if (window.Android) {
-        document.getElementById('biometricLoginBtn').style.display = 'block';
-    }
-}
-
-// 6. TRIGGER FUNCTIONS - CALL THESE FROM YOUR BUTTONS
-function loginWithBiometric() {
-    if (window.Android) {
-        window.Android.requestBiometric('login');
-    } else {
-        showMsg('Fingerprint only available in app');
-    }
-}
-
-function confirmPurchaseWithBiometric() {
-    if (window.Android) {
-        pendingBiometricAction = 'purchase';
-        window.Android.requestBiometric('purchase');
-    } else {
-        // Fallback to PIN for browser users
-        openModal('pinModal');
-    }
-}
-
-// 7. CALL THIS AFTER SUCCESSFUL PASSWORD LOGIN
-function saveTokenForBiometric(token) {
-    localStorage.setItem('auth_token', token);
-    if (window.Android) {
-        window.Android.showToast('Fingerprint login enabled');
-    }
-}
-
-// 8. HELPER - Replace your existing openAirtimePin and data purchase calls
-function openAirtimePin() {
-    if (window.Android) {
-        confirmPurchaseWithBiometric();
-    } else {
-        openModal('pinModal');
-    }
-}
-
-// Hook into your existing data purchase flow
-const originalConfirmPurchase = window.confirmPurchase;
-window.confirmPurchase = function() {
-    if (window.Android && pendingBiometricAction === '') {
-        confirmPurchaseWithBiometric();
-    } else if (typeof originalConfirmPurchase === 'function') {
-        originalConfirmPurchase();
-        pendingBiometricAction = '';
-    }
-}
-
-// 9. Set CURRENT_USER_ID after login - ADD THIS TO YOUR app.js login success
-// Example: CURRENT_USER_ID = response.user.id;
-
-</script>
 <script src="app.js"></script>
 </body>
 </html>
