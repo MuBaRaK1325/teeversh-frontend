@@ -53,9 +53,7 @@ async function loadDashboard() {
   try {
     const res = await fetch(API + "/api/me", { headers: { Authorization: "Bearer " + getToken() } });
     currentUser = await res.json();
-
     window.CURRENT_USER_ID = currentUser.id;
-
   } catch {
     logout();
     return;
@@ -177,7 +175,12 @@ function renderPlans() {
 
   list.innerHTML = "";
 
-  const filtered = cachedPlans.filter(p => (p.network || "").toLowerCase().includes(selectedNetwork));
+  if (!selectedNetwork) {
+    list.innerHTML = "<p>Select a network first</p>";
+    return;
+  }
+
+  const filtered = cachedPlans.filter(p => (p.network || "").toLowerCase() === selectedNetwork);
 
   if (!filtered.length) {
     list.innerHTML = "<p>No plans available for this network</p>";
@@ -919,7 +922,6 @@ async function submitPin() {
   hideLoader();
   showMsg(data.message, res.ok? "success" : "error");
 }
-
 /* ================= ADMIN DATA LOADER ================= */
 function loadAdminData() {
   loadProfitDashboard();
