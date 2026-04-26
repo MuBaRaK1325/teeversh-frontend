@@ -572,7 +572,14 @@ padding:8px 16px;
 <button onclick="openModal('pinModalBox')">Change PIN</button>
 <button onclick="loginWithBiometric()" id="biometricLoginBtn" style="display:none">Login with Fingerprint</button>
 <button onclick="logout()">Logout</button>
+<div class="setting-item" style="margin-top:15px;">
+  <h3>Security</h3>
+  <button id="enableBiometricBtn" onclick="enableBiometric()">🫆 Enable Fingerprint Login</button>
+  <p id="biometricStatus" style="font-size:12px;opacity:0.8;margin-top:5px;">Not enabled</p>
+</div>
 
+<button onclick="loginWithBiometric()" id="biometricLoginBtn" style="display:none">Login with Fingerprint</button>
+<button onclick="logout()">Logout</button>
 <!-- ADMIN PANEL -->
 <div class="adminOnly">
 <h3>Admin Tools</h3>
