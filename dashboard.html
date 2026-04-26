@@ -458,7 +458,11 @@ padding:8px 16px;
 <div class="networkItem" onclick="selectNetwork('glo', this)"><img src="images/glo.png" alt="GLO"></div>
 <div class="networkItem" onclick="selectNetwork('airtel', this)"><img src="images/airtel.png" alt="AIRTEL"></div>
 </div>
-
+<div class="setting-item">
+  <h3>Security</h3>
+  <button id="enableBiometricBtn" onclick="enableBiometric()">Enable Fingerprint Login</button>
+  <p id="biometricStatus">Not enabled</p>
+</div>
 <input id="dataPhone" type="tel" placeholder="Phone Number">
 <div id="planList"></div>
 </section>
@@ -595,12 +599,20 @@ padding:8px 16px;
 </section>
 
 <!-- PIN MODAL -->
-<div id="pinModal" class="modal">
-<div class="modalBox">
-<input id="pinInput" type="password" maxlength="4" placeholder="Enter PIN">
-<button onclick="confirmPurchase()">Confirm</button>
-<button onclick="closeModal('pinModal')">Cancel</button>
-</div>
+<div id="purchaseModal" class="modal">
+  <div class="modal-content">
+    <h3>Confirm Purchase</h3>
+    <p>Enter PIN or use fingerprint</p>
+    <input type="password" id="purchasePin" placeholder="Enter PIN" maxlength="4">
+
+    <div class="modal-buttons">
+      <button onclick="purchaseWithPin()">Pay with PIN</button>
+      <button id="biometricPurchaseBtn" onclick="purchaseWithBiometric()" style="display:none;">
+        🫆 Pay with Fingerprint
+      </button>
+      <button onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
 </div>
 
 <!-- PASSWORD -->
@@ -643,6 +655,138 @@ padding:8px 16px;
   <button id="closeBanner" class="dangerBtn">Later</button>
 </div>
 <script>
+</script>
+<script>
+// Check if biometric is enabled for current user
+async function checkBiometricStatus() {
+  try {
+    const res = await fetch('/api/me', {
+      headers: { 'Authorization': `Bearer ${localStorage.token}` }
+    });
+    const user = await res.json();
+    
+    const creds = await fetch('/api/auth/webauthn/check-enabled', {
+      headers: { 'Authorization': `Bearer ${localStorage.token}` }
+    }).then(r => r.json());
+    
+    if (creds.enabled) {
+      document.getElementById('biometricStatus').innerText = 'Enabled ✓';
+      document.getElementById('enableBiometricBtn').style.display = 'none';
+      document.getElementById('biometricPurchaseBtn').style.display = 'inline-block';
+    }
+  } catch(e) {}
+}
+
+// 1. Enable biometric on dashboard
+async function enableBiometric() {
+  try {
+    const start = await fetch('/api/auth/webauthn/register-start', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${localStorage.token}` }
+    }).then(r => r.json());
+
+    const cred = await navigator.credentials.create({ publicKey: start });
+
+    const finish = await fetch('/api/auth/webauthn/register-finish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.token}` },
+      body: JSON.stringify(cred)
+    }).then(r => r.json());
+
+    if (finish.verified) {
+      alert('Fingerprint enabled successfully!');
+      checkBiometricStatus();
+    } else {
+      alert('Failed to enable fingerprint');
+    }
+  } catch (e) {
+    alert('Biometric error: ' + e.message);
+  }
+}
+
+// 2. Purchase with fingerprint
+async function purchaseWithBiometric() {
+  const plan_id = document.getElementById('selectedPlanId').value;
+  const phone = document.getElementById('purchasePhone').value;
+  
+  if (!phone) return alert('Enter phone number');
+
+  try {
+    // Step 1: Get challenge
+    const start = await fetch('/api/auth/webauthn/verify-purchase', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${localStorage.token}` }
+    }).then(r => r.json());
+
+    // Step 2: Ask for fingerprint
+    const assertion = await navigator.credentials.get({ publicKey: start });
+
+    // Step 3: Verify fingerprint
+    const verify = await fetch('/api/auth/webauthn/verify-purchase-finish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.token}` },
+      body: JSON.stringify(assertion)
+    }).then(r => r.json());
+
+    if (!verify.verified) return alert('Fingerprint verification failed');
+
+    // Step 4: Process purchase with biometric flag
+    const res = await fetch('/api/buy-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.token}` },
+      body: JSON.stringify({ plan_id, phone, pin: 'biometric_verified' })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      alert('Purchase successful with fingerprint!');
+      closeModal();
+      updateWalletBalance(data.balance);
+    } else {
+      alert('Purchase failed: ' + data.message);
+    }
+  } catch (e) {
+    if (e.name === 'NotAllowedError') {
+      alert('Fingerprint cancelled or failed');
+    } else {
+      alert('Error: ' + e.message);
+    }
+  }
+}
+
+// 3. Login with fingerprint - for login.html
+async function biometricLogin() {
+  const email = document.getElementById('loginEmail').value;
+  if (!email) return alert('Enter email first');
+
+  try {
+    const start = await fetch('/api/auth/webauthn/login-start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    }).then(r => r.json());
+
+    const assertion = await navigator.credentials.get({ publicKey: start });
+
+    const finish = await fetch('/api/auth/webauthn/login-finish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({...assertion, email })
+    }).then(r => r.json());
+
+    if (finish.token) {
+      localStorage.token = finish.token;
+      location.href = '/dashboard.html';
+    } else {
+      alert('Biometric login failed');
+    }
+  } catch (e) {
+    alert('Biometric error: ' + e.message);
+  }
+}
+
+// Call on page load
+checkBiometricStatus();
 </script>
 <!-- PUSH NOTIFICATION CODE -->
 <script>
