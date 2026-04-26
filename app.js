@@ -10,6 +10,8 @@ let selectedPlan = null;
 let airtimeNetwork = null;
 let actionType = null;
 let editingPlanId = null;
+let selectedPlanId = null;
+let selectedPhone = null;
 
 /* ================= HELPERS ================= */
 function getToken() { return localStorage.getItem("token"); }
@@ -49,15 +51,10 @@ async function loadDashboard() {
   if (!checkAuth()) return;
 
   try {
-    const payload = JSON.parse(atob(getToken().split(".")[1]));
     const res = await fetch(API + "/api/me", { headers: { Authorization: "Bearer " + getToken() } });
     currentUser = await res.json();
     
-    // FINGERPRINT/FCM - Set global user ID
     window.CURRENT_USER_ID = currentUser.id;
-    if (window.Android && el("biometricLoginBtn")) {
-        el("biometricLoginBtn").style.display = "block";
-    }
     
   } catch {
     logout();
@@ -78,6 +75,7 @@ async function loadDashboard() {
   await loadPlans();
   fetchTransactions();
   if (currentUser.is_admin) loadAdminData();
+  checkBiometricStatus();
 
   setTimeout(connectWebSocket, 1000);
 }
@@ -101,6 +99,10 @@ function showSection(id) {
 /* ================= WALLET ================= */
 function updateWallet(balance) {
   if (el("walletBalance")) el("walletBalance").innerText = formatNaira(balance);
+}
+
+function loadWallet() {
+  loadAccount();
 }
 
 /* ================= COPY ACCOUNT ================= */
@@ -196,57 +198,175 @@ function renderPlans() {
 
     div.onclick = () => {
       selectedPlan = {...p, price: priceDisplay};
+      selectedPlanId = p.id;
       actionType = "DATA";
-      openConfirmModal(selectedPlan);
+      openPurchaseModal(p.id, p.name, priceDisplay);
     };
 
     list.appendChild(div);
   });
 }
 
-/* ================= CONFIRM ================= */
-function openConfirmModal(plan) {
-  el("msgBox").innerHTML = `
-    <div style="text-align:center">
-      <h3>Confirm Purchase</h3>
-      <p>${plan.name}</p>
-      <p><strong>${formatNaira(plan.price)}</strong></p>
-      <button onclick="proceedToPin()" class="primaryBtn">Continue</button>
-    </div>`;
-  openModal("msgModal");
+/* ================= BIOMETRIC ================= */
+async function checkBiometricStatus() {
+  if (!getToken()) return;
+  
+  try {
+    const res = await fetch(API + '/api/auth/webauthn/check-enabled', {
+      headers: { 'Authorization': 'Bearer ' + getToken() }
+    }).then(r => r.json());
+    
+    if (res.enabled) {
+      if (el('biometricStatus')) el('biometricStatus').innerText = 'Enabled ✓';
+      if (el('enableBiometricBtn')) el('enableBiometricBtn').style.display = 'none';
+      if (el('biometricPurchaseBtn')) el('biometricPurchaseBtn').style.display = 'inline-block';
+      if (el('biometricLoginBtn')) el('biometricLoginBtn').style.display = 'inline-block';
+    } else {
+      if (el('biometricPurchaseBtn')) el('biometricPurchaseBtn').style.display = 'none';
+      if (el('biometricLoginBtn')) el('biometricLoginBtn').style.display = 'none';
+    }
+  } catch(e) {
+    console.log('Biometric check failed:', e);
+  }
 }
 
-function proceedToPin() {
-  closeModal("msgModal");
-  openPinModal();
+async function enableBiometric() {
+  if (!window.PublicKeyCredential) {
+    return showMsg('Biometric not supported on this device/browser', 'error');
+  }
+  
+  try {
+    showLoader('Initializing biometric...');
+    const start = await fetch(API + '/api/auth/webauthn/register-start', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + getToken() }
+    }).then(r => r.json());
+
+    hideLoader();
+    const cred = await navigator.credentials.create({ publicKey: start });
+
+    showLoader('Saving credential...');
+    const finish = await fetch(API + '/api/auth/webauthn/register-finish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+      body: JSON.stringify(cred)
+    }).then(r => r.json());
+
+    hideLoader();
+    if (finish.verified) {
+      showMsg('Fingerprint enabled successfully!', 'success');
+      checkBiometricStatus();
+    } else {
+      showMsg('Failed to enable fingerprint', 'error');
+    }
+  } catch (e) {
+    hideLoader();
+    showMsg('Biometric error: ' + e.message, 'error');
+  }
 }
 
-/* ================= PIN MODAL ================= */
-function openPinModal() {
-  el("pinInput").value = "";
-  el("pinModal").style.display = "flex";
-  setTimeout(() => el("pinInput").focus(), 100);
+async function loginWithBiometric() {
+  const email = prompt('Enter your email:');
+  if (!email) return;
+
+  try {
+    showLoader('Starting biometric login...');
+    const start = await fetch(API + '/api/auth/webauthn/login-start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    }).then(r => r.json());
+
+    hideLoader();
+    const assertion = await navigator.credentials.get({ publicKey: start });
+
+    showLoader('Verifying...');
+    const finish = await fetch(API + '/api/auth/webauthn/login-finish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({...assertion, email })
+    }).then(r => r.json());
+
+    hideLoader();
+    if (finish.token) {
+      localStorage.setItem('token', finish.token);
+      location.reload();
+    } else {
+      showMsg('Biometric login failed', 'error');
+    }
+  } catch (e) {
+    hideLoader();
+    showMsg('Biometric error: ' + e.message, 'error');
+  }
 }
 
-function confirmPurchase() {
-  const pin = el("pinInput").value;
-  if (!pin) return showMsg("Enter PIN", "error");
-  closeModal("pinModal");
-  if (actionType === "DATA") buyData(pin);
-  if (actionType === "AIRTIME") buyAirtime(pin);
+/* ================= PURCHASE MODAL ================= */
+function openPurchaseModal(planId, planName, planPrice) {
+  selectedPlanId = planId;
+  selectedPhone = el('dataPhone').value;
+  
+  if (!selectedPhone) return showMsg('Enter phone number first', 'error');
+  
+  el('purchasePin').value = '';
+  el('purchaseModal').style.display = 'flex';
+  checkBiometricStatus();
+}
+
+function purchaseWithPin() {
+  const pin = el('purchasePin').value;
+  if (!pin) return showMsg('Enter PIN', 'error');
+  closeModal('purchaseModal');
+  buyData(pin);
+}
+
+async function purchaseWithBiometric() {
+  if (!selectedPhone) return showMsg('Enter phone number first', 'error');
+
+  try {
+    closeModal('purchaseModal');
+    showLoader('Verify fingerprint...');
+    
+    const start = await fetch(API + '/api/auth/webauthn/verify-purchase', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + getToken() }
+    }).then(r => r.json());
+
+    hideLoader();
+    const assertion = await navigator.credentials.get({ publicKey: start });
+
+    showLoader('Verifying...');
+    const verify = await fetch(API + '/api/auth/webauthn/verify-purchase-finish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+      body: JSON.stringify(assertion)
+    }).then(r => r.json());
+
+    hideLoader();
+    if (!verify.verified) return showMsg('Fingerprint verification failed', 'error');
+
+    buyData('biometric_verified');
+    
+  } catch (e) {
+    hideLoader();
+    if (e.name === 'NotAllowedError') {
+      showMsg('Fingerprint cancelled', 'error');
+    } else {
+      showMsg('Error: ' + e.message, 'error');
+    }
+  }
 }
 
 /* ================= BUY DATA ================= */
 async function buyData(pin) {
-  const phone = el("dataPhone").value;
-  if (!phone ||!selectedPlan) return showMsg("Select plan & enter phone", "error");
+  const phone = selectedPhone || el("dataPhone").value;
+  if (!phone ||!selectedPlanId) return showMsg("Select plan & enter phone", "error");
   showLoader("Purchasing data...");
 
   try {
     const res = await fetch(API + "/api/buy-data", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-      body: JSON.stringify({ phone, plan_id: selectedPlan.id, pin })
+      body: JSON.stringify({ phone, plan_id: selectedPlanId, pin })
     });
     const data = await res.json();
     hideLoader();
@@ -323,6 +443,20 @@ async function confirmFund() {
     hideLoader();
     showMsg("Server error", "error");
   }
+}
+
+/* ================= PIN MODAL ================= */
+function openPinModal() {
+  el("pinModal").style.display = "flex";
+  setTimeout(() => el("pinInput").focus(), 100);
+}
+
+function confirmPurchase() {
+  const pin = el("pinInput").value;
+  if (!pin) return showMsg("Enter PIN", "error");
+  closeModal("pinModal");
+  if (actionType === "DATA") buyData(pin);
+  if (actionType === "AIRTIME") buyAirtime(pin);
 }
 
 /* ================= ADMIN: PROFIT DASHBOARD ================= */
