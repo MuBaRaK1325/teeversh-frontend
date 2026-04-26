@@ -922,6 +922,7 @@ async function submitPin() {
   hideLoader();
   showMsg(data.message, res.ok? "success" : "error");
 }
+
 /* ================= ADMIN DATA LOADER ================= */
 function loadAdminData() {
   loadProfitDashboard();
