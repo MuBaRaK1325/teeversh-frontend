@@ -21,15 +21,29 @@ function formatDate(date) { return new Date(date).toLocaleDateString('en-GB'); }
 function openModal(id) { const m = el(id); if (m) m.style.display = "flex"; }
 function closeModal(id) { const m = el(id); if (m) m.style.display = "none"; }
 
-/* ================= WEBAUTHN BUFFER HELPERS ================= */
-function bufferDecode(value) {
-  return Uint8Array.from(atob(value.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+/* ================= WEBAUTHN HELPERS ================= */
+// Base64URL encode ArrayBuffer -> String
+function bufferEncode(value) {
+  if (!value) return null;
+  return btoa(String.fromCharCode(...new Uint8Array(value)))
+   .replace(/\+/g, '-')
+   .replace(/\//g, '_')
+   .replace(/=+$/, '');
 }
 
-function bufferEncode(value) {
-  return btoa(String.fromCharCode.apply(null, new Uint8Array(value)))
-   .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+// Base64URL decode String -> ArrayBuffer
+function bufferDecode(value) {
+  if (!value) return null;
+  const padding = '='.repeat((4 - value.length % 4) % 4);
+  const base64 = (value + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray.buffer;
 }
+
 
 /* ================= MESSAGE ================= */
 function showMsg(msg, type = "info") {
@@ -220,25 +234,33 @@ function renderPlans() {
   });
 }
 
-/* ================= BIOMETRIC ================= */
+/* ================= BIOMETRIC AUTH ================= */
 async function checkBiometricStatus() {
   if (!getToken()) return;
+
+  // First check if browser supports it
+  const browserSupports = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(() => false);
+  const statusEl = el('biometricStatus');
+  const enableBtn = el('enableBiometricBtn');
+  const loginBtn = el('biometricLoginBtn');
+
+  if (!browserSupports) {
+    if (statusEl) statusEl.innerText = 'Not supported on this device';
+    if (enableBtn) enableBtn.style.display = 'none';
+    return;
+  }
 
   try {
     const res = await fetch(API + '/api/auth/webauthn/check-enabled', {
       headers: { 'Authorization': 'Bearer ' + getToken() }
     }).then(r => r.json());
 
-    const statusEl = el('biometricStatus');
-    const enableBtn = el('enableBiometricBtn');
-    const loginBtn = el('biometricLoginBtn');
-
     if (res.enabled) {
       if (statusEl) statusEl.innerText = 'Enabled ✓';
       if (enableBtn) enableBtn.style.display = 'none';
       if (loginBtn) loginBtn.style.display = 'inline-block';
     } else {
-      if (statusEl) statusEl.innerText = 'Not enabled';
+      if (statusEl) statusEl.innerText = 'Available - click to enable';
       if (enableBtn) enableBtn.style.display = 'block';
       if (loginBtn) loginBtn.style.display = 'none';
     }
@@ -259,22 +281,30 @@ async function enableBiometric() {
       headers: { 'Authorization': 'Bearer ' + getToken() }
     }).then(r => r.json());
 
+    if (start.error) throw new Error(start.error);
+
     hideLoader();
-    
-    // FIX: Convert challenge and user.id to ArrayBuffer
-    start.challenge = bufferDecode(start.challenge);
-    start.user.id = bufferDecode(start.user.id);
-    
-    if (start.excludeCredentials) {
-      start.excludeCredentials = start.excludeCredentials.map(cred => ({
+    showLoader('Touch fingerprint sensor...');
+
+    // Convert challenge and user.id to ArrayBuffer
+    const options = {
+     ...start,
+      challenge: bufferDecode(start.challenge),
+      user: {...start.user, id: bufferDecode(start.user.id) }
+    };
+
+    if (options.excludeCredentials) {
+      options.excludeCredentials = options.excludeCredentials.map(cred => ({
        ...cred,
         id: bufferDecode(cred.id)
       }));
     }
 
-    const cred = await navigator.credentials.create({ publicKey: start });
+    const cred = await navigator.credentials.create({ publicKey: options });
 
-    // FIX: Convert back to base64url for sending
+    showLoader('Saving credential...');
+
+    // Convert back to base64url for sending
     const credential = {
       id: cred.id,
       rawId: bufferEncode(cred.rawId),
@@ -285,7 +315,6 @@ async function enableBiometric() {
       type: cred.type
     };
 
-    showLoader('Saving credential...');
     const finish = await fetch(API + '/api/auth/webauthn/register-finish', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
@@ -297,10 +326,11 @@ async function enableBiometric() {
       showMsg('Fingerprint enabled successfully!', 'success');
       checkBiometricStatus();
     } else {
-      showMsg('Failed to enable fingerprint', 'error');
+      showMsg('Failed to enable fingerprint: ' + (finish.error || 'Unknown'), 'error');
     }
   } catch (e) {
     hideLoader();
+    console.error('Biometric error:', e);
     showMsg('Biometric error: ' + e.message, 'error');
   }
 }
@@ -317,18 +347,26 @@ async function loginWithBiometric() {
       body: JSON.stringify({ email })
     }).then(r => r.json());
 
+    if (start.error) throw new Error(start.error);
+
     hideLoader();
-    
-    // FIX: Convert challenge and allowCredentials to ArrayBuffer
-    start.challenge = bufferDecode(start.challenge);
-    start.allowCredentials = start.allowCredentials.map(cred => ({
-     ...cred,
-      id: bufferDecode(cred.id)
-    }));
+    showLoader('Touch fingerprint sensor...');
 
-    const assertion = await navigator.credentials.get({ publicKey: start });
+    // Convert challenge and allowCredentials to ArrayBuffer
+    const options = {
+     ...start,
+      challenge: bufferDecode(start.challenge),
+      allowCredentials: start.allowCredentials.map(cred => ({
+       ...cred,
+        id: bufferDecode(cred.id)
+      }))
+    };
 
-    // FIX: Convert back to base64url for sending
+    const assertion = await navigator.credentials.get({ publicKey: options });
+
+    showLoader('Verifying...');
+
+    // Convert back to base64url for sending
     const credential = {
       id: assertion.id,
       rawId: bufferEncode(assertion.rawId),
@@ -341,7 +379,6 @@ async function loginWithBiometric() {
       type: assertion.type
     };
 
-    showLoader('Verifying...');
     const finish = await fetch(API + '/api/auth/webauthn/login-finish', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -353,14 +390,14 @@ async function loginWithBiometric() {
       localStorage.setItem('token', finish.token);
       location.reload();
     } else {
-      showMsg('Biometric login failed', 'error');
+      showMsg('Biometric login failed: ' + (finish.error || 'Unknown'), 'error');
     }
   } catch (e) {
     hideLoader();
+    console.error('Biometric login error:', e);
     showMsg('Biometric error: ' + e.message, 'error');
   }
 }
-
 /* ================= PURCHASE MODAL - NULL SAFE ================= */
 async function openPurchaseModal(planId, planName, planPrice) {
   selectedPlanId = planId;
