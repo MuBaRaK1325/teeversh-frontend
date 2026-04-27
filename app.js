@@ -301,7 +301,7 @@ async function loginWithBiometric() {
   }
 }
 
-/* ================= PURCHASE MODAL - BNHABEEB + BIOMETRIC ================= */
+/* ================= PURCHASE MODAL ================= */
 async function openPurchaseModal(planId, planName, planPrice) {
   selectedPlanId = planId;
   selectedPhone = el('dataPhone')?.value;
@@ -309,22 +309,24 @@ async function openPurchaseModal(planId, planName, planPrice) {
   if (!selectedPhone) return showMsg('Enter phone number first', 'error');
   
   actionType = "DATA";
-  el('pinInput').value = '';
-  el('pinModalTitle').innerText = 'Confirm Purchase';
-  el('pinModalDetails').innerHTML = `<strong>${planName}</strong><br>${formatNaira(planPrice)}<br>To: ${selectedPhone}`;
+  if (el('pinInput')) el('pinInput').value = '';
+  if (el('pinModalTitle')) el('pinModalTitle').innerText = 'Confirm Purchase';
+  if (el('pinModalDetails')) el('pinModalDetails').innerHTML = `<strong>${planName}</strong><br>${formatNaira(planPrice)}<br>To: ${selectedPhone}`;
   
   try {
     const res = await fetch(API + '/api/auth/webauthn/check-enabled', {
       headers: { 'Authorization': 'Bearer ' + getToken() }
     });
     const data = await res.json();
-    el('biometricPurchaseBtn').style.display = data.enabled ? 'inline-block' : 'none';
+    if (el('biometricPurchaseBtn')) {
+      el('biometricPurchaseBtn').style.display = data.enabled ? 'inline-block' : 'none';
+    }
   } catch (e) {
     console.log('Biometric check failed:', e);
   }
   
   openModal('pinModal');
-  setTimeout(() => el('pinInput').focus(), 100);
+  setTimeout(() => el('pinInput')?.focus(), 100);
 }
 
 function openAirtimePin() {
@@ -334,22 +336,24 @@ function openAirtimePin() {
   
   selectedPhone = phone;
   actionType = "AIRTIME";
-  el('pinInput').value = '';
-  el('pinModalTitle').innerText = 'Confirm Airtime';
-  el('pinModalDetails').innerHTML = `<strong>${airtimeNetwork.toUpperCase()} Airtime</strong><br>${formatNaira(amount)}<br>To: ${phone}`;
+  if (el('pinInput')) el('pinInput').value = '';
+  if (el('pinModalTitle')) el('pinModalTitle').innerText = 'Confirm Airtime';
+  if (el('pinModalDetails')) el('pinModalDetails').innerHTML = `<strong>${airtimeNetwork.toUpperCase()} Airtime</strong><br>${formatNaira(amount)}<br>To: ${phone}`;
   
   fetch(API + '/api/auth/webauthn/check-enabled', {
     headers: { 'Authorization': 'Bearer ' + getToken() }
   }).then(r => r.json()).then(data => {
-    el('biometricPurchaseBtn').style.display = data.enabled ? 'inline-block' : 'none';
+    if (el('biometricPurchaseBtn')) {
+      el('biometricPurchaseBtn').style.display = data.enabled ? 'inline-block' : 'none';
+    }
   }).catch(() => {});
   
   openModal('pinModal');
-  setTimeout(() => el('pinInput').focus(), 100);
+  setTimeout(() => el('pinInput')?.focus(), 100);
 }
 
 function confirmPurchase() {
-  const pin = el('pinInput').value;
+  const pin = el('pinInput')?.value;
   if (!pin) return showMsg('Enter PIN', 'error');
   closeModal('pinModal');
   
@@ -418,7 +422,7 @@ async function buyData(pin) {
       showMsg("Data purchase successful ✅", "success");
       updateWallet(data.balance);
       fetchTransactions();
-      el("dataPhone").value = '';
+      if (el("dataPhone")) el("dataPhone").value = '';
     } else {
       showMsg(data.message || "Purchase failed", "error");
     }
@@ -453,8 +457,8 @@ async function buyAirtime(pin) {
       showMsg("Airtime purchase successful ✅", "success");
       updateWallet(data.balance);
       fetchTransactions();
-      el("airtimePhone").value = '';
-      el("airtimeAmount").value = '';
+      if (el("airtimePhone")) el("airtimePhone").value = '';
+      if (el("airtimeAmount")) el("airtimeAmount").value = '';
     } else {
       showMsg(data.message || "Purchase failed", "error");
     }
@@ -914,7 +918,38 @@ async function generateAccount() {
   }
 }
 
+/* ================= PASSWORD & PIN ================= */
+async function submitPassword() {
+  const oldPass = el("oldPassword").value;
+  const newPass = el("newPassword").value;
+  if (!oldPass ||!newPass) return showMsg("Fill fields", "error");
 
+  showLoader("Updating...");
+  const res = await fetch(API + "/api/change-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+    body: JSON.stringify({ oldPass, newPass })
+  });
+  const data = await res.json();
+  hideLoader();
+  showMsg(data.message, res.ok ? "success" : "error");
+}
+
+async function submitPin() {
+  const oldPin = el("oldPin").value;
+  const newPin = el("newPin").value;
+  if (!oldPin ||!newPin) return showMsg("Fill fields", "error");
+
+  showLoader("Updating...");
+  const res = await fetch(API + "/api/change-pin", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+    body: JSON.stringify({ oldPin, newPin })
+  });
+  const data = await res.json();
+  hideLoader();
+  showMsg(data.message, res.ok ? "success" : "error");
+}
 
 /* ================= ADMIN DATA LOADER ================= */
 function loadAdminData() {
