@@ -627,12 +627,9 @@ padding:8px 16px;
     <h3>Confirm Purchase</h3>
     <p id="purchaseDetails"></p>
     <input type="password" id="purchasePin" placeholder="Enter PIN" maxlength="4">
-
     <div class="modal-buttons">
       <button onclick="purchaseWithPin()" class="primaryBtn">Pay with PIN</button>
-      <button id="biometricPurchaseBtn" onclick="purchaseWithBiometric()" style="display:none;" class="successBtn">
-        🫆 Pay with Fingerprint
-      </button>
+      <button id="biometricPurchaseBtn" onclick="purchaseWithBiometric()" style="display:none;" class="successBtn">🫆 Pay with Fingerprint</button>
     </div>
     <button onclick="closeModal('purchaseModal')" class="dangerBtn" style="margin-top:10px;">Cancel</button>
   </div>
