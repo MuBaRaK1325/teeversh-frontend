@@ -246,7 +246,7 @@ padding:8px;
 font-size:12px;
 }
 
-/* MODAL */
+/* MODAL - FIXED Z-INDEX */
 .modal{
 position:fixed;
 top:0;left:0;width:100%;height:100%;
@@ -254,7 +254,7 @@ background:rgba(0,0,0,0.85);
 display:none;
 align-items:center;
 justify-content:center;
-z-index:1000;
+z-index:10000;
 }
 
 .modalBox{
@@ -351,6 +351,8 @@ padding:8px 16px;
 </style>
 </head>
 <body>
+<!-- VERSION MARKER - REMOVE AFTER TESTING -->
+<div style="background:#00c853;padding:8px;text-align:center;font-weight:bold;font-size:14px">DASHF3 LIVE - APR 26</div>
 
 <!-- ADD PLAN MODAL -->
 <div id="addPlanModal" class="modal">
@@ -472,7 +474,6 @@ padding:8px 16px;
 <section id="data" class="section">
 <button onclick="showSection('home')">⬅ Back</button>
 <h3>Select Network</h3>
-<button onclick="closeModal"()">cancel</button>
 <div class="networkGrid">
 <div class="networkItem" onclick="selectNetwork('mtn', this)"><img src="images/mtn.png" alt="MTN"></div>
 <div class="networkItem" onclick="selectNetwork('glo', this)"><img src="images/glo.png" alt="GLO"></div>
@@ -675,6 +676,6 @@ padding:8px 16px;
   <button id="closeBanner" class="dangerBtn">Later</button>
 </div>
 
-<script src="app.js"></script>
+<script src="app.js?v=dashf3"></script>
 </body>
 </html>

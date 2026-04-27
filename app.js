@@ -1,3 +1,5 @@
+
+  
 const API = "https://mayconnect-backend-1.onrender.com";
 
 let cachedPlans = [];
@@ -305,23 +307,34 @@ async function loginWithBiometric() {
   }
 }
 
-/* ================= PURCHASE MODAL ================= */
+/* ================= PURCHASE MODAL - FIXED WITH NULL CHECKS ================= */
 function openPurchaseModal(planId, planName, planPrice) {
   selectedPlanId = planId;
-  selectedPhone = el('dataPhone').value;
+  const phoneInput = el('dataPhone');
+  selectedPhone = phoneInput? phoneInput.value : '';
 
   if (!selectedPhone) return showMsg('Enter phone number first', 'error');
 
-  if (el('purchaseDetails')) {
-    el('purchaseDetails').innerHTML = `<strong>${planName}</strong><br>${formatNaira(planPrice)}<br>To: ${selectedPhone}`;
+  const detailsEl = el('purchaseDetails');
+  const pinEl = el('purchasePin');
+  const modalEl = el('purchaseModal');
+
+  // Debug: log what exists
+  console.log('purchaseModal:',!!modalEl, 'purchaseDetails:',!!detailsEl, 'purchasePin:',!!pinEl);
+
+  if (!modalEl ||!detailsEl ||!pinEl) {
+    return showMsg('Purchase modal not found. Refresh and try again.', 'error');
   }
-  el('purchasePin').value = '';
-  el('purchaseModal').style.display = 'flex';
+
+  detailsEl.innerHTML = `<strong>${planName}</strong><br>${formatNaira(planPrice)}<br>To: ${selectedPhone}`;
+  pinEl.value = '';
+  modalEl.style.display = 'flex';
   checkBiometricStatus();
 }
 
 function purchaseWithPin() {
-  const pin = el('purchasePin').value;
+  const pinEl = el('purchasePin');
+  const pin = pinEl? pinEl.value : '';
   if (!pin) return showMsg('Enter PIN', 'error');
   closeModal('purchaseModal');
   buyData(pin);
@@ -366,7 +379,8 @@ async function purchaseWithBiometric() {
 
 /* ================= BUY DATA ================= */
 async function buyData(pin) {
-  const phone = selectedPhone || el("dataPhone").value;
+  const phoneInput = el("dataPhone");
+  const phone = selectedPhone || (phoneInput? phoneInput.value : '');
   if (!phone ||!selectedPlanId) return showMsg("Select plan & enter phone", "error");
   showLoader("Purchasing data...");
 
@@ -396,8 +410,10 @@ function openAirtimePin() {
 }
 
 async function buyAirtime(pin) {
-  const phone = el("airtimePhone").value;
-  const amount = el("airtimeAmount").value;
+  const phoneEl = el("airtimePhone");
+  const amountEl = el("airtimeAmount");
+  const phone = phoneEl? phoneEl.value : '';
+  const amount = amountEl? amountEl.value : '';
   if (!phone ||!amount ||!airtimeNetwork) return showMsg("Fill all fields", "error");
 
   showLoader("Purchasing airtime...");
@@ -433,7 +449,8 @@ function openFundModal() {
 }
 
 async function confirmFund() {
-  const amount = el("fundAmount").value;
+  const amountEl = el("fundAmount");
+  const amount = amountEl? amountEl.value : '';
   if (!amount || amount < 100) return showMsg("Minimum funding is ₦100", "error");
 
   showLoader("Initializing payment...");
@@ -455,12 +472,15 @@ async function confirmFund() {
 
 /* ================= PIN MODAL ================= */
 function openPinModal() {
-  el("pinModal").style.display = "flex";
-  setTimeout(() => el("pinInput").focus(), 100);
+  const modal = el("pinModal");
+  const input = el("pinInput");
+  if (modal) modal.style.display = "flex";
+  if (input) setTimeout(() => input.focus(), 100);
 }
 
 function confirmPurchase() {
-  const pin = el("pinInput").value;
+  const pinEl = el("pinInput");
+  const pin = pinEl? pinEl.value : '';
   if (!pin) return showMsg("Enter PIN", "error");
   closeModal("pinModal");
   if (actionType === "DATA") buyData(pin);
@@ -469,8 +489,10 @@ function confirmPurchase() {
 
 /* ================= ADMIN: PROFIT DASHBOARD ================= */
 async function loadProfitDashboard() {
-  const from = el("profitFrom")?.value || new Date(new Date().setDate(1)).toISOString().split('T')[0];
-  const to = el("profitTo")?.value || new Date().toISOString().split('T')[0];
+  const fromEl = el("profitFrom");
+  const toEl = el("profitTo");
+  const from = fromEl?.value || new Date(new Date().setDate(1)).toISOString().split('T')[0];
+  const to = toEl?.value || new Date().toISOString().split('T')[0];
 
   showLoader("Loading profit data...");
   try {
@@ -523,7 +545,8 @@ async function loadTopUsers() {
 }
 
 async function addTopUser() {
-  const email = el("topUserEmail").value;
+  const emailEl = el("topUserEmail");
+  const email = emailEl? emailEl.value : '';
   if (!email) return showMsg("Enter email", "error");
 
   showLoader("Adding top user...");
@@ -591,17 +614,17 @@ async function loadAdminPlans() {
 
 async function addPlan() {
   const plan = {
-    plan_id: el("newPlanId").value,
-    network: el("newPlanNetwork").value,
-    name: el("newPlanName").value,
-    price: el("newPlanPrice").value,
-    top_price: el("newPlanTopPrice").value,
-    cost: el("newPlanCost").value,
-    validity: el("newPlanValidity").value,
-    restricted: el("newPlanRestricted").checked,
-    provider: el("newPlanProvider").value,
-    network_id: el("newPlanNetworkId").value,
-    api_plan_id: el("newPlanApiId").value
+    plan_id: el("newPlanId")?.value,
+    network: el("newPlanNetwork")?.value,
+    name: el("newPlanName")?.value,
+    price: el("newPlanPrice")?.value,
+    top_price: el("newPlanTopPrice")?.value,
+    cost: el("newPlanCost")?.value,
+    validity: el("newPlanValidity")?.value,
+    restricted: el("newPlanRestricted")?.checked,
+    provider: el("newPlanProvider")?.value,
+    network_id: el("newPlanNetworkId")?.value,
+    api_plan_id: el("newPlanApiId")?.value
   };
 
   if (!plan.plan_id ||!plan.network ||!plan.name ||!plan.price ||!plan.cost ||!plan.provider ||!plan.network_id ||!plan.api_plan_id) {
@@ -621,16 +644,12 @@ async function addPlan() {
     if (res.ok) {
       loadAdminPlans();
       loadPlans();
-      el("newPlanId").value = "";
-      el("newPlanName").value = "";
-      el("newPlanPrice").value = "";
-      el("newPlanTopPrice").value = "";
-      el("newPlanCost").value = "";
-      el("newPlanValidity").value = "";
-      el("newPlanRestricted").checked = false;
-      el("newPlanProvider").value = "";
-      el("newPlanNetworkId").value = "";
-      el("newPlanApiId").value = "";
+      ["newPlanId","newPlanName","newPlanPrice","newPlanTopPrice","newPlanCost","newPlanValidity","newPlanProvider","newPlanNetworkId","newPlanApiId"].forEach(id => {
+        const input = el(id);
+        if (input) input.value = "";
+      });
+      const check = el("newPlanRestricted");
+      if (check) check.checked = false;
     }
   } catch {
     hideLoader();
@@ -665,16 +684,16 @@ async function editPlan(id) {
 
   editingPlanId = id;
 
-  el("editPlanName").value = plan.name || "";
-  el("editPlanPrice").value = plan.price || "";
-  el("editPlanTopPrice").value = plan.top_price || "";
-  el("editPlanCost").value = plan.cost || "";
-  el("editPlanValidity").value = plan.validity || "";
-  el("editPlanRestricted").checked = plan.restricted || false;
-  el("editPlanProvider").value = plan.provider || "";
-  el("editPlanNetworkId").value = plan.network_id || "";
-  el("editPlanApiId").value = plan.api_plan_id || "";
-  el("editPlanActive").checked = plan.is_active!== false;
+  if (el("editPlanName")) el("editPlanName").value = plan.name || "";
+  if (el("editPlanPrice")) el("editPlanPrice").value = plan.price || "";
+  if (el("editPlanTopPrice")) el("editPlanTopPrice").value = plan.top_price || "";
+  if (el("editPlanCost")) el("editPlanCost").value = plan.cost || "";
+  if (el("editPlanValidity")) el("editPlanValidity").value = plan.validity || "";
+  if (el("editPlanRestricted")) el("editPlanRestricted").checked = plan.restricted || false;
+  if (el("editPlanProvider")) el("editPlanProvider").value = plan.provider || "";
+  if (el("editPlanNetworkId")) el("editPlanNetworkId").value = plan.network_id || "";
+  if (el("editPlanApiId")) el("editPlanApiId").value = plan.api_plan_id || "";
+  if (el("editPlanActive")) el("editPlanActive").checked = plan.is_active!== false;
 
   openModal("editPlanModal");
 }
@@ -683,16 +702,16 @@ async function savePlanEdit() {
   if (!editingPlanId) return;
 
   const updated = {
-    name: el("editPlanName").value,
-    price: el("editPlanPrice").value,
-    top_price: el("editPlanTopPrice").value,
-    cost: el("editPlanCost").value,
-    validity: el("editPlanValidity").value,
-    restricted: el("editPlanRestricted").checked,
-    provider: el("editPlanProvider").value,
-    network_id: el("editPlanNetworkId").value,
-    api_plan_id: el("editPlanApiId").value,
-    is_active: el("editPlanActive").checked
+    name: el("editPlanName")?.value,
+    price: el("editPlanPrice")?.value,
+    top_price: el("editPlanTopPrice")?.value,
+    cost: el("editPlanCost")?.value,
+    validity: el("editPlanValidity")?.value,
+    restricted: el("editPlanRestricted")?.checked,
+    provider: el("editPlanProvider")?.value,
+    network_id: el("editPlanNetworkId")?.value,
+    api_plan_id: el("editPlanApiId")?.value,
+    is_active: el("editPlanActive")?.checked
   };
 
   if (!updated.name ||!updated.price ||!updated.cost ||!updated.provider ||!updated.network_id ||!updated.api_plan_id) {
@@ -722,7 +741,8 @@ async function savePlanEdit() {
 
 /* ================= ADMIN: USERS MANAGER ================= */
 async function loadAdminUsers() {
-  const search = el("userSearch")?.value || "";
+  const searchEl = el("userSearch");
+  const search = searchEl?.value || "";
   try {
     const res = await fetch(`${API}/admin/users?search=${search}`, {
       headers: { Authorization: "Bearer " + getToken() }
@@ -787,10 +807,10 @@ async function loadWithdrawals() {
 }
 
 async function requestWithdrawal() {
-  const amount = el("withdrawAmount").value;
-  const bank_name = el("withdrawBank").value;
-  const account_number = el("withdrawAccountNumber").value;
-  const account_name = el("withdrawAccountName").value;
+  const amount = el("withdrawAmount")?.value;
+  const bank_name = el("withdrawBank")?.value;
+  const account_number = el("withdrawAccountNumber")?.value;
+  const account_name = el("withdrawAccountName")?.value;
 
   if (!amount ||!bank_name ||!account_number ||!account_name) {
     return showMsg("Fill all fields", "error");
@@ -839,7 +859,8 @@ async function approveWithdrawal(reference) {
 
 /* ================= REVERSAL ================= */
 async function reverseTransaction() {
-  const reference = el("reverseRef").value;
+  const refEl = el("reverseRef");
+  const reference = refEl? refEl.value : '';
   if (!reference) return showMsg("Enter transaction reference", "error");
 
   showLoader("Reversing...");
@@ -889,6 +910,7 @@ async function generateAccount() {
     showMsg("Server error", "error");
   }
 }
+
 
 /* ================= PASSWORD & PIN ================= */
 async function submitPassword() {
