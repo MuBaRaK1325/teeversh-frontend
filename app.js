@@ -25,10 +25,15 @@ function closeModal(id) { const m = el(id); if (m) m.style.display = "none"; }
 // Base64URL encode ArrayBuffer -> String
 function bufferEncode(value) {
   if (!value) return null;
-  return btoa(String.fromCharCode(...new Uint8Array(value)))
-   .replace(/\+/g, '-')
-   .replace(/\//g, '_')
-   .replace(/=+$/, '');
+  const uint8Array = new Uint8Array(value);
+  let binary = '';
+  for (let i = 0; i < uint8Array.byteLength; i++) {
+    binary += String.fromCharCode(uint8Array[i]);
+  }
+  return btoa(binary)
+  .replace(/\+/g, '-')
+  .replace(/\//g, '_')
+  .replace(/=+$/, '');
 }
 
 // Base64URL decode String -> ArrayBuffer
