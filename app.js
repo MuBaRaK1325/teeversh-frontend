@@ -254,7 +254,79 @@ async function checkBiometricStatus() {
     if (enableBtn) enableBtn.style.display = 'none';
     return;
   }
+async function enableBiometric() {
+  if (!window.PublicKeyCredential) {
+    return showMsg('Biometric not supported on this device/browser', 'error');
+  }
 
+  try {
+    showLoader('Initializing biometric...');
+    const start = await fetch(API + '/api/auth/webauthn/register-start', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + getToken() }
+    }).then(r => r.json());
+
+    if (start.error) throw new Error(start.error);
+
+    hideLoader();
+    showLoader('Touch fingerprint sensor...');
+
+    const options = {
+    ...start,
+      challenge: bufferDecode(start.challenge),
+      user: {...start.user, id: bufferDecode(start.user.id) }
+    };
+
+    if (options.excludeCredentials) {
+      options.excludeCredentials = options.excludeCredentials.map(cred => ({
+      ...cred,
+        id: bufferDecode(cred.id)
+      }));
+    }
+
+    const cred = await navigator.credentials.create({ publicKey: options });
+
+    showLoader('Saving credential...');
+
+    const credential = {
+      id: cred.id,
+      rawId: bufferEncode(cred.rawId),
+      response: {
+        attestationObject: bufferEncode(cred.response.attestationObject),
+        clientDataJSON: bufferEncode(cred.response.clientDataJSON)
+      },
+      type: cred.type
+    };
+
+    // ADD THIS DEBUG BLOCK
+    console.log('Credential object:', credential);
+    console.log('rawId:', credential.rawId);
+    console.log('attestationObject:', credential.response.attestationObject);
+    console.log('clientDataJSON:', credential.response.clientDataJSON);
+
+    if (!credential.rawId ||!credential.response.attestationObject ||!credential.response.clientDataJSON) {
+      throw new Error('One of the credential fields is null/undefined');
+    }
+
+    const finish = await fetch(API + '/api/auth/webauthn/register-finish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+      body: JSON.stringify(credential)
+    }).then(r => r.json());
+
+    hideLoader();
+    if (finish.verified) {
+      showMsg('Fingerprint enabled successfully!', 'success');
+      checkBiometricStatus();
+    } else {
+      showMsg('Failed to enable fingerprint: ' + (finish.error || 'Unknown'), 'error');
+    }
+  } catch (e) {
+    hideLoader();
+    console.error('Biometric error:', e);
+    showMsg('Biometric error: ' + e.message, 'error');
+  }
+}
   try {
     const res = await fetch(API + '/api/auth/webauthn/check-enabled', {
       headers: { 'Authorization': 'Bearer ' + getToken() }
