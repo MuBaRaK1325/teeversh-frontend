@@ -301,7 +301,7 @@ async function loginWithBiometric() {
   }
 }
 
-/* ================= PURCHASE MODAL ================= */
+/* ================= PURCHASE MODAL - NULL SAFE ================= */
 async function openPurchaseModal(planId, planName, planPrice) {
   selectedPlanId = planId;
   selectedPhone = el('dataPhone')?.value;
@@ -309,18 +309,21 @@ async function openPurchaseModal(planId, planName, planPrice) {
   if (!selectedPhone) return showMsg('Enter phone number first', 'error');
   
   actionType = "DATA";
-  if (el('pinInput')) el('pinInput').value = '';
-  if (el('pinModalTitle')) el('pinModalTitle').innerText = 'Confirm Purchase';
-  if (el('pinModalDetails')) el('pinModalDetails').innerHTML = `<strong>${planName}</strong><br>${formatNaira(planPrice)}<br>To: ${selectedPhone}`;
+  const pinInput = el('pinInput');
+  const pinTitle = el('pinModalTitle');
+  const pinDetails = el('pinModalDetails');
+  
+  if (pinInput) pinInput.value = '';
+  if (pinTitle) pinTitle.innerText = 'Confirm Purchase';
+  if (pinDetails) pinDetails.innerHTML = `<strong>${planName}</strong><br>${formatNaira(planPrice)}<br>To: ${selectedPhone}`;
   
   try {
     const res = await fetch(API + '/api/auth/webauthn/check-enabled', {
       headers: { 'Authorization': 'Bearer ' + getToken() }
     });
     const data = await res.json();
-    if (el('biometricPurchaseBtn')) {
-      el('biometricPurchaseBtn').style.display = data.enabled ? 'inline-block' : 'none';
-    }
+    const bioBtn = el('biometricPurchaseBtn');
+    if (bioBtn) bioBtn.style.display = data.enabled ? 'inline-block' : 'none';
   } catch (e) {
     console.log('Biometric check failed:', e);
   }
@@ -336,16 +339,19 @@ function openAirtimePin() {
   
   selectedPhone = phone;
   actionType = "AIRTIME";
-  if (el('pinInput')) el('pinInput').value = '';
-  if (el('pinModalTitle')) el('pinModalTitle').innerText = 'Confirm Airtime';
-  if (el('pinModalDetails')) el('pinModalDetails').innerHTML = `<strong>${airtimeNetwork.toUpperCase()} Airtime</strong><br>${formatNaira(amount)}<br>To: ${phone}`;
+  const pinInput = el('pinInput');
+  const pinTitle = el('pinModalTitle');
+  const pinDetails = el('pinModalDetails');
+  
+  if (pinInput) pinInput.value = '';
+  if (pinTitle) pinTitle.innerText = 'Confirm Airtime';
+  if (pinDetails) pinDetails.innerHTML = `<strong>${airtimeNetwork.toUpperCase()} Airtime</strong><br>${formatNaira(amount)}<br>To: ${phone}`;
   
   fetch(API + '/api/auth/webauthn/check-enabled', {
     headers: { 'Authorization': 'Bearer ' + getToken() }
   }).then(r => r.json()).then(data => {
-    if (el('biometricPurchaseBtn')) {
-      el('biometricPurchaseBtn').style.display = data.enabled ? 'inline-block' : 'none';
-    }
+    const bioBtn = el('biometricPurchaseBtn');
+    if (bioBtn) bioBtn.style.display = data.enabled ? 'inline-block' : 'none';
   }).catch(() => {});
   
   openModal('pinModal');
@@ -467,6 +473,7 @@ async function buyAirtime(pin) {
     showMsg("Network error. Try again.", "error");
   }
 }
+
 
 /* ================= FUND ================= */
 function openFundModal() {
