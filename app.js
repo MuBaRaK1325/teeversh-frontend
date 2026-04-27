@@ -376,64 +376,38 @@ async function purchaseWithBiometric() {
     }
   }
 }
+/* ================= PURCHASE MODAL - BNHABEEB STYLE ================= */
+function openPurchaseModal(planId, planName, planPrice) {
+  selectedPlanId = planId;
+  selectedPhone = el('dataPhone').value;
 
-/* ================= BUY DATA ================= */
-async function buyData(pin) {
-  const phoneInput = el("dataPhone");
-  const phone = selectedPhone || (phoneInput? phoneInput.value : '');
-  if (!phone ||!selectedPlanId) return showMsg("Select plan & enter phone", "error");
-  showLoader("Purchasing data...");
-
-  try {
-    const res = await fetch(API + "/api/buy-data", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-      body: JSON.stringify({ phone, plan_id: selectedPlanId, pin })
-    });
-    const data = await res.json();
-    hideLoader();
-    if (res.ok) {
-      showMsg("Data purchase successful ✅", "success");
-      updateWallet(data.balance);
-      fetchTransactions();
-    } else showMsg(data.message, "error");
-  } catch {
-    hideLoader();
-    showMsg("Server error", "error");
-  }
+  if (!selectedPhone) return showMsg('Enter phone number first', 'error');
+  
+  actionType = "DATA";
+  el('pinInput').value = '';
+  openModal('pinModal');
+  setTimeout(() => el('pinInput').focus(), 100);
 }
 
-/* ================= BUY AIRTIME ================= */
+function confirmPurchase() {
+  const pin = el('pinInput').value;
+  if (!pin) return showMsg('Enter PIN', 'error');
+  closeModal('pinModal');
+  
+  if (actionType === "DATA") buyData(pin);
+  if (actionType === "AIRTIME") buyAirtime(pin);
+}
+
+/* ================= BUY AIRTIME - UPDATE THIS ================= */
 function openAirtimePin() {
+  const phone = el("airtimePhone").value;
+  const amount = el("airtimeAmount").value;
+  if (!phone || !amount || !airtimeNetwork) return showMsg("Fill all fields", "error");
+  
   actionType = "AIRTIME";
-  openPinModal();
-}
-
-async function buyAirtime(pin) {
-  const phoneEl = el("airtimePhone");
-  const amountEl = el("airtimeAmount");
-  const phone = phoneEl? phoneEl.value : '';
-  const amount = amountEl? amountEl.value : '';
-  if (!phone ||!amount ||!airtimeNetwork) return showMsg("Fill all fields", "error");
-
-  showLoader("Purchasing airtime...");
-  try {
-    const res = await fetch(API + "/api/buy-airtime", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-      body: JSON.stringify({ phone, amount, network: airtimeNetwork, pin })
-    });
-    const data = await res.json();
-    hideLoader();
-    if (res.ok) {
-      showMsg("Airtime successful ✅", "success");
-      updateWallet(data.balance);
-      fetchTransactions();
-    } else showMsg(data.message, "error");
-  } catch {
-    hideLoader();
-    showMsg("Server error", "error");
-  }
+  el('pinInput').value = '';
+  openModal('pinModal');
+  setTimeout(() => el('pinInput').focus(), 100);
 }
 
 /* ================= FUND ================= */

@@ -622,17 +622,12 @@ padding:8px 16px;
 
 </section>
 
-<!-- PURCHASE MODAL - PIN OR BIOMETRIC -->
-<div id="purchaseModal" class="modal">
-  <div class="modal-content">
-    <h3>Confirm Purchase</h3>
-    <p id="purchaseDetails"></p>
-    <input type="password" id="purchasePin" placeholder="Enter PIN" maxlength="4">
-    <div class="modal-buttons">
-      <button onclick="purchaseWithPin()" class="primaryBtn">Pay with PIN</button>
-      <button id="biometricPurchaseBtn" onclick="purchaseWithBiometric()" style="display:none;" class="successBtn">🫆 Pay with Fingerprint</button>
-    </div>
-    <button onclick="closeModal('purchaseModal')" class="dangerBtn" style="margin-top:10px;">Cancel</button>
+<!-- PIN MODAL - COPIED FROM BNHABEEB LOGIC -->
+<div id="pinModal" class="modal">
+  <div class="modalBox">
+    <input id="pinInput" type="password" maxlength="4" placeholder="Enter PIN">
+    <button onclick="confirmPurchase()">Confirm</button>
+    <button onclick="closeModal('pinModal')">Cancel</button>
   </div>
 </div>
 
