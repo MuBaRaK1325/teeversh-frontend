@@ -25,12 +25,14 @@
 --warning:#ffa000;
 }
 
+*{box-sizing:border-box}
 body{
 margin:0;
 background:var(--bg);
 color:white;
 font-family:Arial;
 padding-bottom:120px;
+-webkit-tap-highlight-color:transparent;
 }
 
 /* HEADER */
@@ -98,7 +100,7 @@ text-align:center;
 cursor:pointer;
 transition:0.2s;
 }
-.quickCard:hover{transform:scale(1.03);}
+.quickCard:active{transform:scale(0.97);}
 
 /* SECTION */
 .section{display:none;padding:20px;}
@@ -112,7 +114,7 @@ border-radius:8px;
 border:none;
 background:#331a3a;
 color:white;
-box-sizing:border-box;
+font-size:16px;
 }
 
 label{
@@ -133,6 +135,7 @@ margin-top:10px;
 width:100%;
 cursor:pointer;
 font-weight:bold;
+font-size:16px;
 }
 .primaryBtn{background:var(--primary);}
 .dangerBtn{background:var(--danger);}
@@ -184,7 +187,7 @@ cursor:pointer;
 position:relative;
 transition:0.2s;
 }
-.planItem:hover{background:#32113a;}
+.planItem:active{background:#32113a;}
 
 .topUserBadge{
 position:absolute;
@@ -237,6 +240,7 @@ display:flex;
 justify-content:space-around;
 padding:8px 0;
 border-top:1px solid #391a3a;
+z-index:999;
 }
 
 .bottomNav button{
@@ -246,7 +250,7 @@ padding:8px;
 font-size:12px;
 }
 
-/* MODAL - FIXED Z-INDEX */
+/* MODAL - FIXED Z-INDEX FOR ANDROID WEBVIEW */
 .modal{
 position:fixed;
 top:0;left:0;width:100%;height:100%;
@@ -254,7 +258,7 @@ background:rgba(0,0,0,0.85);
 display:none;
 align-items:center;
 justify-content:center;
-z-index:10000;
+z-index:99999;
 }
 
 .modalBox{
@@ -265,15 +269,6 @@ width:85%;
 max-width:400px;
 max-height:80vh;
 overflow-y:auto;
-text-align:center;
-}
-
-.modal-content{
-background:var(--card);
-padding:20px;
-border-radius:12px;
-width:85%;
-max-width:400px;
 text-align:center;
 }
 
@@ -351,8 +346,8 @@ padding:8px 16px;
 </style>
 </head>
 <body>
-<!-- VERSION MARKER - REMOVE AFTER TESTING -->
-<div style="background:#00c853;padding:8px;text-align:center;font-weight:bold;font-size:14px">DASHF3 LIVE - APR 26</div>
+<!-- VERSION MARKER -->
+<div style="background:#00c853;padding:8px;text-align:center;font-weight:bold;font-size:14px">TEEVERSH DASH v2.1 - APR 26</div>
 
 <!-- ADD PLAN MODAL -->
 <div id="addPlanModal" class="modal">
@@ -588,7 +583,7 @@ padding:8px 16px;
 
 <div class="adminSection" style="background:var(--card);">
   <h3>Security</h3>
-  <button id="enableBiometricBtn" onclick="enableBiometric()">🫆 Enable Fingerprint Login</button>
+  <button id="enableBiometricBtn" onclick="enableBiometric()">🫆 Enable Fingerprint</button>
   <p id="biometricStatus" style="font-size:12px;opacity:0.8;margin-top:5px;">Not enabled</p>
 </div>
 
@@ -622,12 +617,17 @@ padding:8px 16px;
 
 </section>
 
-<!-- PIN MODAL - COPIED FROM BNHABEEB LOGIC -->
+<!-- PIN MODAL - BNHABEEB + BIOMETRIC -->
 <div id="pinModal" class="modal">
   <div class="modalBox">
-    <input id="pinInput" type="password" maxlength="4" placeholder="Enter PIN">
-    <button onclick="confirmPurchase()">Confirm</button>
-    <button onclick="closeModal('pinModal')">Cancel</button>
+    <h3 id="pinModalTitle">Enter PIN</h3>
+    <p id="pinModalDetails" style="font-size:14px;opacity:0.8;margin:10px 0;"></p>
+    <input id="pinInput" type="password" maxlength="4" placeholder="Enter PIN" inputmode="numeric">
+    <div class="modal-buttons">
+      <button onclick="confirmPurchase()" class="primaryBtn">Pay with PIN</button>
+      <button id="biometricPurchaseBtn" onclick="purchaseWithBiometric()" style="display:none;" class="successBtn">🫆 Fingerprint</button>
+    </div>
+    <button onclick="closeModal('pinModal')" class="dangerBtn" style="margin-top:10px;">Cancel</button>
   </div>
 </div>
 
@@ -644,8 +644,8 @@ padding:8px 16px;
 <!-- PIN CHANGE -->
 <div id="pinModalBox" class="modal">
 <div class="modalBox">
-<input id="oldPin" type="password" maxlength="4" placeholder="Old PIN">
-<input id="newPin" type="password" maxlength="4" placeholder="New PIN">
+<input id="oldPin" type="password" maxlength="4" placeholder="Old PIN" inputmode="numeric">
+<input id="newPin" type="password" maxlength="4" placeholder="New PIN" inputmode="numeric">
 <button onclick="submitPin()">Update</button>
 <button onclick="closeModal('pinModalBox')">Cancel</button>
 </div>
@@ -671,6 +671,6 @@ padding:8px 16px;
   <button id="closeBanner" class="dangerBtn">Later</button>
 </div>
 
-<script src="app.js?v=dashf3"></script>
+<script src="app.js?v=2.1.0"></script>
 </body>
 </html>

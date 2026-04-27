@@ -1,5 +1,3 @@
-
-  
 const API = "https://mayconnect-backend-1.onrender.com";
 
 let cachedPlans = [];
@@ -203,8 +201,6 @@ function renderPlans() {
 
     div.onclick = () => {
       selectedPlan = {...p, price: priceDisplay};
-      selectedPlanId = p.id;
-      actionType = "DATA";
       openPurchaseModal(p.id, p.name, priceDisplay);
     };
 
@@ -224,12 +220,10 @@ async function checkBiometricStatus() {
     if (res.enabled) {
       if (el('biometricStatus')) el('biometricStatus').innerText = 'Enabled ✓';
       if (el('enableBiometricBtn')) el('enableBiometricBtn').style.display = 'none';
-      if (el('biometricPurchaseBtn')) el('biometricPurchaseBtn').style.display = 'inline-block';
       if (el('biometricLoginBtn')) el('biometricLoginBtn').style.display = 'inline-block';
     } else {
       if (el('biometricStatus')) el('biometricStatus').innerText = 'Not enabled';
       if (el('enableBiometricBtn')) el('enableBiometricBtn').style.display = 'block';
-      if (el('biometricPurchaseBtn')) el('biometricPurchaseBtn').style.display = 'none';
       if (el('biometricLoginBtn')) el('biometricLoginBtn').style.display = 'none';
     }
   } catch(e) {
@@ -307,44 +301,67 @@ async function loginWithBiometric() {
   }
 }
 
-/* ================= PURCHASE MODAL - FIXED WITH NULL CHECKS ================= */
-function openPurchaseModal(planId, planName, planPrice) {
+/* ================= PURCHASE MODAL - BNHABEEB + BIOMETRIC ================= */
+async function openPurchaseModal(planId, planName, planPrice) {
   selectedPlanId = planId;
-  const phoneInput = el('dataPhone');
-  selectedPhone = phoneInput? phoneInput.value : '';
+  selectedPhone = el('dataPhone')?.value;
 
   if (!selectedPhone) return showMsg('Enter phone number first', 'error');
-
-  const detailsEl = el('purchaseDetails');
-  const pinEl = el('purchasePin');
-  const modalEl = el('purchaseModal');
-
-  // Debug: log what exists
-  console.log('purchaseModal:',!!modalEl, 'purchaseDetails:',!!detailsEl, 'purchasePin:',!!pinEl);
-
-  if (!modalEl ||!detailsEl ||!pinEl) {
-    return showMsg('Purchase modal not found. Refresh and try again.', 'error');
+  
+  actionType = "DATA";
+  el('pinInput').value = '';
+  el('pinModalTitle').innerText = 'Confirm Purchase';
+  el('pinModalDetails').innerHTML = `<strong>${planName}</strong><br>${formatNaira(planPrice)}<br>To: ${selectedPhone}`;
+  
+  try {
+    const res = await fetch(API + '/api/auth/webauthn/check-enabled', {
+      headers: { 'Authorization': 'Bearer ' + getToken() }
+    });
+    const data = await res.json();
+    el('biometricPurchaseBtn').style.display = data.enabled ? 'inline-block' : 'none';
+  } catch (e) {
+    console.log('Biometric check failed:', e);
   }
-
-  detailsEl.innerHTML = `<strong>${planName}</strong><br>${formatNaira(planPrice)}<br>To: ${selectedPhone}`;
-  pinEl.value = '';
-  modalEl.style.display = 'flex';
-  checkBiometricStatus();
+  
+  openModal('pinModal');
+  setTimeout(() => el('pinInput').focus(), 100);
 }
 
-function purchaseWithPin() {
-  const pinEl = el('purchasePin');
-  const pin = pinEl? pinEl.value : '';
+function openAirtimePin() {
+  const phone = el("airtimePhone").value;
+  const amount = el("airtimeAmount").value;
+  if (!phone || !amount || !airtimeNetwork) return showMsg("Fill all fields", "error");
+  
+  selectedPhone = phone;
+  actionType = "AIRTIME";
+  el('pinInput').value = '';
+  el('pinModalTitle').innerText = 'Confirm Airtime';
+  el('pinModalDetails').innerHTML = `<strong>${airtimeNetwork.toUpperCase()} Airtime</strong><br>${formatNaira(amount)}<br>To: ${phone}`;
+  
+  fetch(API + '/api/auth/webauthn/check-enabled', {
+    headers: { 'Authorization': 'Bearer ' + getToken() }
+  }).then(r => r.json()).then(data => {
+    el('biometricPurchaseBtn').style.display = data.enabled ? 'inline-block' : 'none';
+  }).catch(() => {});
+  
+  openModal('pinModal');
+  setTimeout(() => el('pinInput').focus(), 100);
+}
+
+function confirmPurchase() {
+  const pin = el('pinInput').value;
   if (!pin) return showMsg('Enter PIN', 'error');
-  closeModal('purchaseModal');
-  buyData(pin);
+  closeModal('pinModal');
+  
+  if (actionType === "DATA") buyData(pin);
+  if (actionType === "AIRTIME") buyAirtime(pin);
 }
 
 async function purchaseWithBiometric() {
   if (!selectedPhone) return showMsg('Enter phone number first', 'error');
 
   try {
-    closeModal('purchaseModal');
+    closeModal('pinModal');
     showLoader('Verify fingerprint...');
 
     const start = await fetch(API + '/api/auth/webauthn/verify-purchase', {
@@ -365,7 +382,8 @@ async function purchaseWithBiometric() {
     hideLoader();
     if (!verify.verified) return showMsg('Fingerprint verification failed', 'error');
 
-    buyData('biometric_verified');
+    if (actionType === "DATA") buyData('biometric_verified');
+    if (actionType === "AIRTIME") buyAirtime('biometric_verified');
 
   } catch (e) {
     hideLoader();
@@ -376,38 +394,74 @@ async function purchaseWithBiometric() {
     }
   }
 }
-/* ================= PURCHASE MODAL - BNHABEEB STYLE ================= */
-function openPurchaseModal(planId, planName, planPrice) {
-  selectedPlanId = planId;
-  selectedPhone = el('dataPhone').value;
 
-  if (!selectedPhone) return showMsg('Enter phone number first', 'error');
+/* ================= BUY DATA ================= */
+async function buyData(pin) {
+  const phone = selectedPhone || el("dataPhone")?.value;
   
-  actionType = "DATA";
-  el('pinInput').value = '';
-  openModal('pinModal');
-  setTimeout(() => el('pinInput').focus(), 100);
+  if (!phone || !selectedPlanId) return showMsg("Select plan & enter phone", "error");
+  if (!pin) return showMsg("Enter PIN", "error");
+  
+  showLoader("Purchasing data...");
+
+  try {
+    const res = await fetch(API + "/api/buy-data", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+      body: JSON.stringify({ phone, plan_id: selectedPlanId, pin })
+    });
+    
+    const data = await res.json();
+    hideLoader();
+    
+    if (res.ok && data.success !== false) {
+      showMsg("Data purchase successful ✅", "success");
+      updateWallet(data.balance);
+      fetchTransactions();
+      el("dataPhone").value = '';
+    } else {
+      showMsg(data.message || "Purchase failed", "error");
+    }
+  } catch (err) {
+    hideLoader();
+    console.log('Buy error:', err);
+    showMsg("Network error. Try again.", "error");
+  }
 }
 
-function confirmPurchase() {
-  const pin = el('pinInput').value;
-  if (!pin) return showMsg('Enter PIN', 'error');
-  closeModal('pinModal');
+/* ================= BUY AIRTIME ================= */
+async function buyAirtime(pin) {
+  const phone = selectedPhone || el("airtimePhone")?.value;
+  const amount = el("airtimeAmount")?.value;
   
-  if (actionType === "DATA") buyData(pin);
-  if (actionType === "AIRTIME") buyAirtime(pin);
-}
-
-/* ================= BUY AIRTIME - UPDATE THIS ================= */
-function openAirtimePin() {
-  const phone = el("airtimePhone").value;
-  const amount = el("airtimeAmount").value;
   if (!phone || !amount || !airtimeNetwork) return showMsg("Fill all fields", "error");
+  if (!pin) return showMsg("Enter PIN", "error");
   
-  actionType = "AIRTIME";
-  el('pinInput').value = '';
-  openModal('pinModal');
-  setTimeout(() => el('pinInput').focus(), 100);
+  showLoader("Purchasing airtime...");
+
+  try {
+    const res = await fetch(API + "/api/buy-airtime", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+      body: JSON.stringify({ phone, amount, network: airtimeNetwork, pin })
+    });
+    
+    const data = await res.json();
+    hideLoader();
+    
+    if (res.ok && data.success !== false) {
+      showMsg("Airtime purchase successful ✅", "success");
+      updateWallet(data.balance);
+      fetchTransactions();
+      el("airtimePhone").value = '';
+      el("airtimeAmount").value = '';
+    } else {
+      showMsg(data.message || "Purchase failed", "error");
+    }
+  } catch (err) {
+    hideLoader();
+    showMsg("Network error. Try again.", "error");
+  }
 }
 
 /* ================= FUND ================= */
@@ -423,8 +477,7 @@ function openFundModal() {
 }
 
 async function confirmFund() {
-  const amountEl = el("fundAmount");
-  const amount = amountEl? amountEl.value : '';
+  const amount = el("fundAmount")?.value;
   if (!amount || amount < 100) return showMsg("Minimum funding is ₦100", "error");
 
   showLoader("Initializing payment...");
@@ -444,29 +497,10 @@ async function confirmFund() {
   }
 }
 
-/* ================= PIN MODAL ================= */
-function openPinModal() {
-  const modal = el("pinModal");
-  const input = el("pinInput");
-  if (modal) modal.style.display = "flex";
-  if (input) setTimeout(() => input.focus(), 100);
-}
-
-function confirmPurchase() {
-  const pinEl = el("pinInput");
-  const pin = pinEl? pinEl.value : '';
-  if (!pin) return showMsg("Enter PIN", "error");
-  closeModal("pinModal");
-  if (actionType === "DATA") buyData(pin);
-  if (actionType === "AIRTIME") buyAirtime(pin);
-}
-
 /* ================= ADMIN: PROFIT DASHBOARD ================= */
 async function loadProfitDashboard() {
-  const fromEl = el("profitFrom");
-  const toEl = el("profitTo");
-  const from = fromEl?.value || new Date(new Date().setDate(1)).toISOString().split('T')[0];
-  const to = toEl?.value || new Date().toISOString().split('T')[0];
+  const from = el("profitFrom")?.value || new Date(new Date().setDate(1)).toISOString().split('T')[0];
+  const to = el("profitTo")?.value || new Date().toISOString().split('T')[0];
 
   showLoader("Loading profit data...");
   try {
@@ -519,8 +553,7 @@ async function loadTopUsers() {
 }
 
 async function addTopUser() {
-  const emailEl = el("topUserEmail");
-  const email = emailEl? emailEl.value : '';
+  const email = el("topUserEmail")?.value;
   if (!email) return showMsg("Enter email", "error");
 
   showLoader("Adding top user...");
@@ -619,11 +652,9 @@ async function addPlan() {
       loadAdminPlans();
       loadPlans();
       ["newPlanId","newPlanName","newPlanPrice","newPlanTopPrice","newPlanCost","newPlanValidity","newPlanProvider","newPlanNetworkId","newPlanApiId"].forEach(id => {
-        const input = el(id);
-        if (input) input.value = "";
+        if (el(id)) el(id).value = "";
       });
-      const check = el("newPlanRestricted");
-      if (check) check.checked = false;
+      if (el("newPlanRestricted")) el("newPlanRestricted").checked = false;
     }
   } catch {
     hideLoader();
@@ -715,8 +746,7 @@ async function savePlanEdit() {
 
 /* ================= ADMIN: USERS MANAGER ================= */
 async function loadAdminUsers() {
-  const searchEl = el("userSearch");
-  const search = searchEl?.value || "";
+  const search = el("userSearch")?.value || "";
   try {
     const res = await fetch(`${API}/admin/users?search=${search}`, {
       headers: { Authorization: "Bearer " + getToken() }
@@ -833,8 +863,7 @@ async function approveWithdrawal(reference) {
 
 /* ================= REVERSAL ================= */
 async function reverseTransaction() {
-  const refEl = el("reverseRef");
-  const reference = refEl? refEl.value : '';
+  const reference = el("reverseRef")?.value;
   if (!reference) return showMsg("Enter transaction reference", "error");
 
   showLoader("Reversing...");
@@ -886,38 +915,6 @@ async function generateAccount() {
 }
 
 
-/* ================= PASSWORD & PIN ================= */
-async function submitPassword() {
-  const oldPass = el("oldPassword").value;
-  const newPass = el("newPassword").value;
-  if (!oldPass ||!newPass) return showMsg("Fill fields", "error");
-
-  showLoader("Updating...");
-  const res = await fetch(API + "/api/change-password", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-    body: JSON.stringify({ oldPass, newPass })
-  });
-  const data = await res.json();
-  hideLoader();
-  showMsg(data.message, res.ok? "success" : "error");
-}
-
-async function submitPin() {
-  const oldPin = el("oldPin").value;
-  const newPin = el("newPin").value;
-  if (!oldPin ||!newPin) return showMsg("Fill fields", "error");
-
-  showLoader("Updating...");
-  const res = await fetch(API + "/api/change-pin", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-    body: JSON.stringify({ oldPin, newPin })
-  });
-  const data = await res.json();
-  hideLoader();
-  showMsg(data.message, res.ok? "success" : "error");
-}
 
 /* ================= ADMIN DATA LOADER ================= */
 function loadAdminData() {
