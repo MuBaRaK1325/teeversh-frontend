@@ -21,6 +21,16 @@ function formatDate(date) { return new Date(date).toLocaleDateString('en-GB'); }
 function openModal(id) { const m = el(id); if (m) m.style.display = "flex"; }
 function closeModal(id) { const m = el(id); if (m) m.style.display = "none"; }
 
+/* ================= WEBAUTHN BUFFER HELPERS ================= */
+function bufferDecode(value) {
+  return Uint8Array.from(atob(value.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+}
+
+function bufferEncode(value) {
+  return btoa(String.fromCharCode.apply(null, new Uint8Array(value)))
+   .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
 /* ================= MESSAGE ================= */
 function showMsg(msg, type = "info") {
   const color = type === "error"? "#ff4d4d" : type === "success"? "#00c853" : "#2196f3";
@@ -250,13 +260,36 @@ async function enableBiometric() {
     }).then(r => r.json());
 
     hideLoader();
+    
+    // FIX: Convert challenge and user.id to ArrayBuffer
+    start.challenge = bufferDecode(start.challenge);
+    start.user.id = bufferDecode(start.user.id);
+    
+    if (start.excludeCredentials) {
+      start.excludeCredentials = start.excludeCredentials.map(cred => ({
+       ...cred,
+        id: bufferDecode(cred.id)
+      }));
+    }
+
     const cred = await navigator.credentials.create({ publicKey: start });
+
+    // FIX: Convert back to base64url for sending
+    const credential = {
+      id: cred.id,
+      rawId: bufferEncode(cred.rawId),
+      response: {
+        attestationObject: bufferEncode(cred.response.attestationObject),
+        clientDataJSON: bufferEncode(cred.response.clientDataJSON)
+      },
+      type: cred.type
+    };
 
     showLoader('Saving credential...');
     const finish = await fetch(API + '/api/auth/webauthn/register-finish', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
-      body: JSON.stringify(cred)
+      body: JSON.stringify(credential)
     }).then(r => r.json());
 
     hideLoader();
@@ -285,13 +318,34 @@ async function loginWithBiometric() {
     }).then(r => r.json());
 
     hideLoader();
+    
+    // FIX: Convert challenge and allowCredentials to ArrayBuffer
+    start.challenge = bufferDecode(start.challenge);
+    start.allowCredentials = start.allowCredentials.map(cred => ({
+     ...cred,
+      id: bufferDecode(cred.id)
+    }));
+
     const assertion = await navigator.credentials.get({ publicKey: start });
+
+    // FIX: Convert back to base64url for sending
+    const credential = {
+      id: assertion.id,
+      rawId: bufferEncode(assertion.rawId),
+      response: {
+        authenticatorData: bufferEncode(assertion.response.authenticatorData),
+        clientDataJSON: bufferEncode(assertion.response.clientDataJSON),
+        signature: bufferEncode(assertion.response.signature),
+        userHandle: assertion.response.userHandle? bufferEncode(assertion.response.userHandle) : null
+      },
+      type: assertion.type
+    };
 
     showLoader('Verifying...');
     const finish = await fetch(API + '/api/auth/webauthn/login-finish', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({...assertion, email })
+      body: JSON.stringify({...credential, email })
     }).then(r => r.json());
 
     hideLoader();
@@ -386,13 +440,34 @@ async function purchaseWithBiometric() {
     }).then(r => r.json());
 
     hideLoader();
+    
+    // FIX: Convert challenge and allowCredentials to ArrayBuffer
+    start.challenge = bufferDecode(start.challenge);
+    start.allowCredentials = start.allowCredentials.map(cred => ({
+     ...cred,
+      id: bufferDecode(cred.id)
+    }));
+
     const assertion = await navigator.credentials.get({ publicKey: start });
+
+    // FIX: Convert back to base64url for sending
+    const credential = {
+      id: assertion.id,
+      rawId: bufferEncode(assertion.rawId),
+      response: {
+        authenticatorData: bufferEncode(assertion.response.authenticatorData),
+        clientDataJSON: bufferEncode(assertion.response.clientDataJSON),
+        signature: bufferEncode(assertion.response.signature),
+        userHandle: assertion.response.userHandle? bufferEncode(assertion.response.userHandle) : null
+      },
+      type: assertion.type
+    };
 
     showLoader('Verifying...');
     const verify = await fetch(API + '/api/auth/webauthn/verify-purchase-finish', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
-      body: JSON.stringify(assertion)
+      body: JSON.stringify(credential)
     }).then(r => r.json());
 
     hideLoader();
@@ -876,6 +951,7 @@ async function approveWithdrawal(reference) {
     showMsg("Server error", "error");
   }
 }
+
 
 /* ================= REVERSAL ================= */
 async function reverseTransaction() {
