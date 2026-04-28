@@ -296,20 +296,26 @@ async function checkBiometricStatus() {
 
 async function enableBiometric() {
   if (!window.PublicKeyCredential) {
+    logToScreen('ERROR: WebAuthn not supported');
     return showMsg('Biometric not supported on this device/browser', 'error');
   }
 
   try {
-    showLoader('Initializing biometric...');
+    logToScreen('1. Starting...');
+    logToScreen('2. Hostname: ' + window.location.hostname);
+    logToScreen('3. Protocol: ' + window.location.protocol);
+    
     const start = await fetch(API + '/api/auth/webauthn/register-start', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + getToken() }
     }).then(r => r.json());
 
     if (start.error) throw new Error(start.error);
-
-    hideLoader();
-    showLoader('Touch fingerprint sensor...');
+    
+    logToScreen('4. Got options from server');
+    logToScreen('5. rpId from server: ' + start.rpId);
+    logToScreen('6. excludeCreds count: ' + (start.excludeCredentials?.length || 0));
+    logToScreen('7. challenge type: ' + typeof start.challenge);
 
     const options = {
     ...start,
@@ -318,22 +324,25 @@ async function enableBiometric() {
     };
 
     if (options.excludeCredentials && options.excludeCredentials.length > 0) {
+      logToScreen('8. Decoding excludeCredentials...');
       options.excludeCredentials = options.excludeCredentials.map(cred => ({
       ...cred,
         id: bufferDecode(cred.id)
       }));
     } else {
+      logToScreen('8. No excludeCredentials, deleting field');
       delete options.excludeCredentials;
     }
 
-    console.log('PublicKey options:', options);
-    console.log('rpID:', options.rpId, 'vs hostname:', window.location.hostname);
-
+    logToScreen('9. Calling navigator.credentials.create...');
+    
     const cred = await navigator.credentials.create({
       publicKey: options,
       signal: AbortSignal.timeout(60000)
     });
-
+    
+    logToScreen('10. SUCCESS: Fingerprint created!');
+    
     showLoader('Saving credential...');
 
     const credential = {
@@ -355,22 +364,23 @@ async function enableBiometric() {
 
     hideLoader();
     if (finish.verified) {
+      logToScreen('11. Backend verified!');
       showMsg('Fingerprint enabled successfully!', 'success');
       checkBiometricStatus();
     } else {
-      showMsg('Failed to enable fingerprint: ' + (finish.error || 'Unknown'), 'error');
+      logToScreen('11. Backend error: ' + (finish.error || 'Unknown'));
+      showMsg('Failed: ' + (finish.error || 'Unknown'), 'error');
     }
   } catch (e) {
     hideLoader();
+    logToScreen('ERROR: ' + e.name + ' - ' + e.message);
     console.error('Biometric error:', e);
     if (e.name === 'NotAllowedError') {
       showMsg('Biometric cancelled or timed out', 'error');
     } else if (e.name === 'InvalidStateError') {
-      showMsg('Biometric already enabled on this device. Clear site data and try again.', 'error');
-    } else if (e.name === 'NotSupportedError') {
-      showMsg('This device does not support platform authenticator', 'error');
+      showMsg('Biometric already enabled. Clear site data first.', 'error');
     } else {
-      showMsg('Biometric error: ' + e.message, 'error');
+      showMsg('Error: ' + e.message, 'error');
     }
   }
 }

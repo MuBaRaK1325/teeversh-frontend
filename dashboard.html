@@ -346,6 +346,17 @@ padding:8px 16px;
 </style>
 </head>
 <body>
+  <!-- DEBUG BOX -->
+<div id="debugLog" style="position:fixed;bottom:80px;left:10px;right:10px;background:#000;color:#0f0;padding:10px;font-size:10px;max-height:200px;overflow:auto;z-index:99999;display:none;border:1px solid #0f0;"></div>
+
+<script>
+function logToScreen(msg) {
+  const el = document.getElementById('debugLog');
+  el.style.display = 'block';
+  el.innerHTML += msg + '<br>';
+  el.scrollTop = el.scrollHeight;
+}
+</script>
 <!-- VERSION MARKER -->
 <div style="background:#00c853;padding:8px;text-align:center;font-weight:bold;font-size:14px">TEEVERSH DASH v2.2 - BIOMETRIC</div>
 
