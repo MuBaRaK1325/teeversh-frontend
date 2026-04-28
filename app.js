@@ -239,7 +239,8 @@ function renderPlans() {
   });
 }
 
-/* ================= BIOMETRIC AUTH ================= *
+// ================= WEBAUTHN - FRONTEND =================
+
 // Base64URL <-> ArrayBuffer helpers
 function bufferDecode(value) {
   value = value.replace(/-/g, '+').replace(/_/g, '/');
@@ -269,6 +270,7 @@ async function checkBiometricStatus() {
   if (!browserSupports) {
     if (statusEl) statusEl.innerText = 'Not supported on this device';
     if (enableBtn) enableBtn.style.display = 'none';
+    if (loginBtn) loginBtn.style.display = 'none';
     return;
   }
 
@@ -288,6 +290,7 @@ async function checkBiometricStatus() {
     }
   } catch(e) {
     console.log('Biometric check failed:', e);
+    if (statusEl) statusEl.innerText = 'Check failed';
   }
 }
 
@@ -308,20 +311,19 @@ async function enableBiometric() {
     hideLoader();
     showLoader('Touch fingerprint sensor...');
 
-    // Convert challenge and user.id to ArrayBuffer
     const options = {
-     ...start,
+    ...start,
       challenge: bufferDecode(start.challenge),
       user: {...start.user, id: bufferDecode(start.user.id) }
     };
 
     if (options.excludeCredentials && options.excludeCredentials.length > 0) {
       options.excludeCredentials = options.excludeCredentials.map(cred => ({
-       ...cred,
+      ...cred,
         id: bufferDecode(cred.id)
       }));
     } else {
-      delete options.excludeCredentials; // FIX: Don't send empty array
+      delete options.excludeCredentials;
     }
 
     console.log('PublicKey options:', options);
@@ -329,7 +331,7 @@ async function enableBiometric() {
 
     const cred = await navigator.credentials.create({
       publicKey: options,
-      signal: AbortSignal.timeout(60000) // FIX: 60s timeout prevents hang
+      signal: AbortSignal.timeout(60000)
     });
 
     showLoader('Saving credential...');
@@ -342,7 +344,7 @@ async function enableBiometric() {
         clientDataJSON: bufferEncode(cred.response.clientDataJSON)
       },
       type: cred.type,
-      clientExtensionResults: cred.getClientExtensionResults() // FIX: Required by v13
+      clientExtensionResults: cred.getClientExtensionResults()
     };
 
     const finish = await fetch(API + '/api/auth/webauthn/register-finish', {
@@ -365,6 +367,8 @@ async function enableBiometric() {
       showMsg('Biometric cancelled or timed out', 'error');
     } else if (e.name === 'InvalidStateError') {
       showMsg('Biometric already enabled on this device. Clear site data and try again.', 'error');
+    } else if (e.name === 'NotSupportedError') {
+      showMsg('This device does not support platform authenticator', 'error');
     } else {
       showMsg('Biometric error: ' + e.message, 'error');
     }
@@ -389,10 +393,10 @@ async function loginWithBiometric() {
     showLoader('Touch fingerprint sensor...');
 
     const options = {
-     ...start,
+    ...start,
       challenge: bufferDecode(start.challenge),
       allowCredentials: start.allowCredentials.map(cred => ({
-       ...cred,
+      ...cred,
         id: bufferDecode(cred.id)
       }))
     };
@@ -414,7 +418,7 @@ async function loginWithBiometric() {
         userHandle: assertion.response.userHandle? bufferEncode(assertion.response.userHandle) : null
       },
       type: assertion.type,
-      clientExtensionResults: assertion.getClientExtensionResults() // FIX: Required by v13
+      clientExtensionResults: assertion.getClientExtensionResults()
     };
 
     const finish = await fetch(API + '/api/auth/webauthn/login-finish', {
@@ -440,6 +444,19 @@ async function loginWithBiometric() {
     }
   }
 }
+
+// Helper functions you should already have
+function el(id) { return document.getElementById(id); }
+function getToken() { return localStorage.getItem('token'); }
+function showMsg(msg, type) { alert(msg); }
+function showLoader(msg) { console.log('Loader:', msg); }
+function hideLoader() { console.log('Loader hidden'); }
+
+// Run on page load if user is logged in
+document.addEventListener('DOMContentLoaded', () => {
+  if (getToken()) checkBiometricStatus();
+});
+
 /* ================= PURCHASE MODAL - NULL SAFE ================= */
 async function openPurchaseModal(planId, planName, planPrice) {
   selectedPlanId = planId;
