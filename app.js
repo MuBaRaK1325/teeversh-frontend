@@ -22,7 +22,6 @@ function openModal(id) { const m = el(id); if (m) m.style.display = "flex"; }
 function closeModal(id) { const m = el(id); if (m) m.style.display = "none"; }
 
 /* ================= WEBAUTHN HELPERS ================= */
-// Base64URL encode ArrayBuffer -> String
 function bufferEncode(value) {
   if (!value) return null;
   const uint8Array = new Uint8Array(value);
@@ -31,12 +30,11 @@ function bufferEncode(value) {
     binary += String.fromCharCode(uint8Array[i]);
   }
   return btoa(binary)
-  .replace(/\+/g, '-')
-  .replace(/\//g, '_')
-  .replace(/=+$/, '');
+ .replace(/\+/g, '-')
+ .replace(/\//g, '_')
+ .replace(/=+$/, '');
 }
 
-// Base64URL decode String -> ArrayBuffer
 function bufferDecode(value) {
   if (!value) return null;
   const padding = '='.repeat((4 - value.length % 4) % 4);
@@ -49,16 +47,37 @@ function bufferDecode(value) {
   return outputArray.buffer;
 }
 
-
-/* ================= MESSAGE ================= */
+/* ================= MESSAGE MODAL ================= */
 function showMsg(msg, type = "info") {
   const color = type === "error"? "#ff4d4d" : type === "success"? "#00c853" : "#2196f3";
   el("msgBox").innerHTML = `
     <div style="text-align:center">
-      <p style="color:${color}">${msg}</p>
+      <p style="color:${color};margin-bottom:16px">${msg}</p>
       <button onclick="closeModal('msgModal')" class="primaryBtn">OK</button>
     </div>`;
   openModal("msgModal");
+}
+
+/* ================= INPUT MODAL ================= */
+function showInputModal(title, placeholder, callback) {
+  el("msgBox").innerHTML = `
+    <div style="text-align:center">
+      <h3 style="margin-bottom:12px">${title}</h3>
+      <input id="modalInput" type="text" placeholder="${placeholder}" style="width:100%;padding:10px;margin-bottom:16px" />
+      <div style="display:flex;gap:8px;justify-content:center">
+        <button id="modalCancelBtn" class="secondaryBtn">Cancel</button>
+        <button id="modalOkBtn" class="primaryBtn">OK</button>
+      </div>
+    </div>`;
+  openModal("msgModal");
+  setTimeout(() => el("modalInput")?.focus(), 100);
+
+  el("modalCancelBtn").onclick = () => closeModal("msgModal");
+  el("modalOkBtn").onclick = () => {
+    const val = el("modalInput").value;
+    closeModal("msgModal");
+    if (val) callback(val);
+  };
 }
 
 /* ================= LOADER ================= */
@@ -239,26 +258,7 @@ function renderPlans() {
   });
 }
 
-// ================= WEBAUTHN - FRONTEND =================
-
-// Base64URL <-> ArrayBuffer helpers
-function bufferDecode(value) {
-  value = value.replace(/-/g, '+').replace(/_/g, '/');
-  const pad = value.length % 4;
-  if (pad) value += '='.repeat(4 - pad);
-  const str = atob(value);
-  const bytes = new Uint8Array(str.length);
-  for (let i = 0; i < str.length; i++) bytes[i] = str.charCodeAt(i);
-  return bytes.buffer;
-}
-
-function bufferEncode(value) {
-  const bytes = new Uint8Array(value);
-  let str = '';
-  for (let i = 0; i < bytes.byteLength; i++) str += String.fromCharCode(bytes[i]);
-  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-}
-
+/* ================= WEBAUTHN ================= */
 async function checkBiometricStatus() {
   if (!getToken()) return;
 
@@ -289,60 +289,43 @@ async function checkBiometricStatus() {
       if (loginBtn) loginBtn.style.display = 'none';
     }
   } catch(e) {
-    console.log('Biometric check failed:', e);
     if (statusEl) statusEl.innerText = 'Check failed';
   }
 }
 
 async function enableBiometric() {
   if (!window.PublicKeyCredential) {
-    logToScreen('ERROR: WebAuthn not supported');
     return showMsg('Biometric not supported on this device/browser', 'error');
   }
 
   try {
-    logToScreen('1. Starting...');
-    logToScreen('2. Hostname: ' + window.location.hostname);
-    logToScreen('3. Protocol: ' + window.location.protocol);
-    
     const start = await fetch(API + '/api/auth/webauthn/register-start', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + getToken() }
     }).then(r => r.json());
 
     if (start.error) throw new Error(start.error);
-    
-    logToScreen('4. Got options from server');
-    logToScreen('5. rpId from server: ' + start.rpId);
-    logToScreen('6. excludeCreds count: ' + (start.excludeCredentials?.length || 0));
-    logToScreen('7. challenge type: ' + typeof start.challenge);
 
     const options = {
-    ...start,
+     ...start,
       challenge: bufferDecode(start.challenge),
       user: {...start.user, id: bufferDecode(start.user.id) }
     };
 
     if (options.excludeCredentials && options.excludeCredentials.length > 0) {
-      logToScreen('8. Decoding excludeCredentials...');
       options.excludeCredentials = options.excludeCredentials.map(cred => ({
-      ...cred,
+       ...cred,
         id: bufferDecode(cred.id)
       }));
     } else {
-      logToScreen('8. No excludeCredentials, deleting field');
       delete options.excludeCredentials;
     }
 
-    logToScreen('9. Calling navigator.credentials.create...');
-    
     const cred = await navigator.credentials.create({
       publicKey: options,
       signal: AbortSignal.timeout(60000)
     });
-    
-    logToScreen('10. SUCCESS: Fingerprint created!');
-    
+
     showLoader('Saving credential...');
 
     const credential = {
@@ -364,17 +347,13 @@ async function enableBiometric() {
 
     hideLoader();
     if (finish.verified) {
-      logToScreen('11. Backend verified!');
       showMsg('Fingerprint enabled successfully!', 'success');
       checkBiometricStatus();
     } else {
-      logToScreen('11. Backend error: ' + (finish.error || 'Unknown'));
       showMsg('Failed: ' + (finish.error || 'Unknown'), 'error');
     }
   } catch (e) {
     hideLoader();
-    logToScreen('ERROR: ' + e.name + ' - ' + e.message);
-    console.error('Biometric error:', e);
     if (e.name === 'NotAllowedError') {
       showMsg('Biometric cancelled or timed out', 'error');
     } else if (e.name === 'InvalidStateError') {
@@ -386,88 +365,74 @@ async function enableBiometric() {
 }
 
 async function loginWithBiometric() {
-  const email = prompt('Enter your email:');
-  if (!email) return;
+  showInputModal('Biometric Login', 'Enter your email', async (email) => {
+    try {
+      showLoader('Starting biometric login...');
+      const start = await fetch(API + '/api/auth/webauthn/login-start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      }).then(r => r.json());
 
-  try {
-    showLoader('Starting biometric login...');
-    const start = await fetch(API + '/api/auth/webauthn/login-start', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    }).then(r => r.json());
+      if (start.error) throw new Error(start.error);
 
-    if (start.error) throw new Error(start.error);
+      hideLoader();
+      showLoader('Touch fingerprint sensor...');
 
-    hideLoader();
-    showLoader('Touch fingerprint sensor...');
+      const options = {
+       ...start,
+        challenge: bufferDecode(start.challenge),
+        allowCredentials: start.allowCredentials.map(cred => ({
+         ...cred,
+          id: bufferDecode(cred.id)
+        }))
+      };
 
-    const options = {
-    ...start,
-      challenge: bufferDecode(start.challenge),
-      allowCredentials: start.allowCredentials.map(cred => ({
-      ...cred,
-        id: bufferDecode(cred.id)
-      }))
-    };
+      const assertion = await navigator.credentials.get({
+        publicKey: options,
+        signal: AbortSignal.timeout(60000)
+      });
 
-    const assertion = await navigator.credentials.get({
-      publicKey: options,
-      signal: AbortSignal.timeout(60000)
-    });
+      showLoader('Verifying...');
 
-    showLoader('Verifying...');
+      const credential = {
+        id: assertion.id,
+        rawId: bufferEncode(assertion.rawId),
+        response: {
+          authenticatorData: bufferEncode(assertion.response.authenticatorData),
+          clientDataJSON: bufferEncode(assertion.response.clientDataJSON),
+          signature: bufferEncode(assertion.response.signature),
+          userHandle: assertion.response.userHandle? bufferEncode(assertion.response.userHandle) : null
+        },
+        type: assertion.type,
+        clientExtensionResults: assertion.getClientExtensionResults()
+      };
 
-    const credential = {
-      id: assertion.id,
-      rawId: bufferEncode(assertion.rawId),
-      response: {
-        authenticatorData: bufferEncode(assertion.response.authenticatorData),
-        clientDataJSON: bufferEncode(assertion.response.clientDataJSON),
-        signature: bufferEncode(assertion.response.signature),
-        userHandle: assertion.response.userHandle? bufferEncode(assertion.response.userHandle) : null
-      },
-      type: assertion.type,
-      clientExtensionResults: assertion.getClientExtensionResults()
-    };
+      const finish = await fetch(API + '/api/auth/webauthn/login-finish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({...credential, email })
+      }).then(r => r.json());
 
-    const finish = await fetch(API + '/api/auth/webauthn/login-finish', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({...credential, email })
-    }).then(r => r.json());
-
-    hideLoader();
-    if (finish.token) {
-      localStorage.setItem('token', finish.token);
-      location.reload();
-    } else {
-      showMsg('Biometric login failed: ' + (finish.error || 'Unknown'), 'error');
+      hideLoader();
+      if (finish.token) {
+        localStorage.setItem('token', finish.token);
+        location.reload();
+      } else {
+        showMsg('Biometric login failed: ' + (finish.error || 'Unknown'), 'error');
+      }
+    } catch (e) {
+      hideLoader();
+      if (e.name === 'NotAllowedError') {
+        showMsg('Biometric cancelled or timed out', 'error');
+      } else {
+        showMsg('Biometric error: ' + e.message, 'error');
+      }
     }
-  } catch (e) {
-    hideLoader();
-    console.error('Biometric login error:', e);
-    if (e.name === 'NotAllowedError') {
-      showMsg('Biometric cancelled or timed out', 'error');
-    } else {
-      showMsg('Biometric error: ' + e.message, 'error');
-    }
-  }
+  });
 }
 
-// Helper functions you should already have
-function el(id) { return document.getElementById(id); }
-function getToken() { return localStorage.getItem('token'); }
-function showMsg(msg, type) { alert(msg); }
-function showLoader(msg) { console.log('Loader:', msg); }
-function hideLoader() { console.log('Loader hidden'); }
-
-// Run on page load if user is logged in
-document.addEventListener('DOMContentLoaded', () => {
-  if (getToken()) checkBiometricStatus();
-});
-
-/* ================= PURCHASE MODAL - NULL SAFE ================= */
+/* ================= PURCHASE MODAL ================= */
 async function openPurchaseModal(planId, planName, planPrice) {
   selectedPlanId = planId;
   selectedPhone = el('dataPhone')?.value;
@@ -546,17 +511,15 @@ async function purchaseWithBiometric() {
     }).then(r => r.json());
 
     hideLoader();
-    
-    // FIX: Convert challenge and allowCredentials to ArrayBuffer
+
     start.challenge = bufferDecode(start.challenge);
     start.allowCredentials = start.allowCredentials.map(cred => ({
-     ...cred,
+    ...cred,
       id: bufferDecode(cred.id)
     }));
 
     const assertion = await navigator.credentials.get({ publicKey: start });
 
-    // FIX: Convert back to base64url for sending
     const credential = {
       id: assertion.id,
       rawId: bufferEncode(assertion.rawId),
@@ -621,7 +584,6 @@ async function buyData(pin) {
     }
   } catch (err) {
     hideLoader();
-    console.log('Buy error:', err);
     showMsg("Network error. Try again.", "error");
   }
 }
@@ -666,8 +628,7 @@ function openFundModal() {
   el("msgBox").innerHTML = `
     <div style="text-align:center">
       <h3>Fund Wallet</h3>
-      <input id="fundAmount" type="number" placeholder="Enter amount" />
-      <br><br>
+      <input id="fundAmount" type="number" placeholder="Enter amount" style="width:100%;padding:10px;margin:12px 0" />
       <button onclick="confirmFund()" class="primaryBtn">Pay with Paystack</button>
     </div>`;
   openModal("msgModal");
@@ -983,6 +944,7 @@ async function toggleUserTop(id, is_top_user) {
     showMsg("Server error", "error");
   }
 }
+
 
 /* ================= ADMIN: WITHDRAWALS ================= */
 async function loadWithdrawals() {
