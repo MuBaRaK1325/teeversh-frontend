@@ -239,11 +239,28 @@ function renderPlans() {
   });
 }
 
-/* ================= BIOMETRIC AUTH ================= */
+/* ================= BIOMETRIC AUTH ================= *
+// Base64URL <-> ArrayBuffer helpers
+function bufferDecode(value) {
+  value = value.replace(/-/g, '+').replace(/_/g, '/');
+  const pad = value.length % 4;
+  if (pad) value += '='.repeat(4 - pad);
+  const str = atob(value);
+  const bytes = new Uint8Array(str.length);
+  for (let i = 0; i < str.length; i++) bytes[i] = str.charCodeAt(i);
+  return bytes.buffer;
+}
+
+function bufferEncode(value) {
+  const bytes = new Uint8Array(value);
+  let str = '';
+  for (let i = 0; i < bytes.byteLength; i++) str += String.fromCharCode(bytes[i]);
+  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
 async function checkBiometricStatus() {
   if (!getToken()) return;
 
-  // First check if browser supports it
   const browserSupports = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(() => false);
   const statusEl = el('biometricStatus');
   const enableBtn = el('enableBiometricBtn');
@@ -254,79 +271,7 @@ async function checkBiometricStatus() {
     if (enableBtn) enableBtn.style.display = 'none';
     return;
   }
-async function enableBiometric() {
-  if (!window.PublicKeyCredential) {
-    return showMsg('Biometric not supported on this device/browser', 'error');
-  }
 
-  try {
-    showLoader('Initializing biometric...');
-    const start = await fetch(API + '/api/auth/webauthn/register-start', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + getToken() }
-    }).then(r => r.json());
-
-    if (start.error) throw new Error(start.error);
-
-    hideLoader();
-    showLoader('Touch fingerprint sensor...');
-
-    const options = {
-    ...start,
-      challenge: bufferDecode(start.challenge),
-      user: {...start.user, id: bufferDecode(start.user.id) }
-    };
-
-    if (options.excludeCredentials) {
-      options.excludeCredentials = options.excludeCredentials.map(cred => ({
-      ...cred,
-        id: bufferDecode(cred.id)
-      }));
-    }
-
-    const cred = await navigator.credentials.create({ publicKey: options });
-
-    showLoader('Saving credential...');
-
-    const credential = {
-      id: cred.id,
-      rawId: bufferEncode(cred.rawId),
-      response: {
-        attestationObject: bufferEncode(cred.response.attestationObject),
-        clientDataJSON: bufferEncode(cred.response.clientDataJSON)
-      },
-      type: cred.type
-    };
-
-    // ADD THIS DEBUG BLOCK
-    console.log('Credential object:', credential);
-    console.log('rawId:', credential.rawId);
-    console.log('attestationObject:', credential.response.attestationObject);
-    console.log('clientDataJSON:', credential.response.clientDataJSON);
-
-    if (!credential.rawId ||!credential.response.attestationObject ||!credential.response.clientDataJSON) {
-      throw new Error('One of the credential fields is null/undefined');
-    }
-
-    const finish = await fetch(API + '/api/auth/webauthn/register-finish', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
-      body: JSON.stringify(credential)
-    }).then(r => r.json());
-
-    hideLoader();
-    if (finish.verified) {
-      showMsg('Fingerprint enabled successfully!', 'success');
-      checkBiometricStatus();
-    } else {
-      showMsg('Failed to enable fingerprint: ' + (finish.error || 'Unknown'), 'error');
-    }
-  } catch (e) {
-    hideLoader();
-    console.error('Biometric error:', e);
-    showMsg('Biometric error: ' + e.message, 'error');
-  }
-}
   try {
     const res = await fetch(API + '/api/auth/webauthn/check-enabled', {
       headers: { 'Authorization': 'Bearer ' + getToken() }
@@ -370,18 +315,25 @@ async function enableBiometric() {
       user: {...start.user, id: bufferDecode(start.user.id) }
     };
 
-    if (options.excludeCredentials) {
+    if (options.excludeCredentials && options.excludeCredentials.length > 0) {
       options.excludeCredentials = options.excludeCredentials.map(cred => ({
        ...cred,
         id: bufferDecode(cred.id)
       }));
+    } else {
+      delete options.excludeCredentials; // FIX: Don't send empty array
     }
 
-    const cred = await navigator.credentials.create({ publicKey: options });
+    console.log('PublicKey options:', options);
+    console.log('rpID:', options.rpId, 'vs hostname:', window.location.hostname);
+
+    const cred = await navigator.credentials.create({
+      publicKey: options,
+      signal: AbortSignal.timeout(60000) // FIX: 60s timeout prevents hang
+    });
 
     showLoader('Saving credential...');
 
-    // Convert back to base64url for sending
     const credential = {
       id: cred.id,
       rawId: bufferEncode(cred.rawId),
@@ -389,7 +341,8 @@ async function enableBiometric() {
         attestationObject: bufferEncode(cred.response.attestationObject),
         clientDataJSON: bufferEncode(cred.response.clientDataJSON)
       },
-      type: cred.type
+      type: cred.type,
+      clientExtensionResults: cred.getClientExtensionResults() // FIX: Required by v13
     };
 
     const finish = await fetch(API + '/api/auth/webauthn/register-finish', {
@@ -408,7 +361,13 @@ async function enableBiometric() {
   } catch (e) {
     hideLoader();
     console.error('Biometric error:', e);
-    showMsg('Biometric error: ' + e.message, 'error');
+    if (e.name === 'NotAllowedError') {
+      showMsg('Biometric cancelled or timed out', 'error');
+    } else if (e.name === 'InvalidStateError') {
+      showMsg('Biometric already enabled on this device. Clear site data and try again.', 'error');
+    } else {
+      showMsg('Biometric error: ' + e.message, 'error');
+    }
   }
 }
 
@@ -429,7 +388,6 @@ async function loginWithBiometric() {
     hideLoader();
     showLoader('Touch fingerprint sensor...');
 
-    // Convert challenge and allowCredentials to ArrayBuffer
     const options = {
      ...start,
       challenge: bufferDecode(start.challenge),
@@ -439,11 +397,13 @@ async function loginWithBiometric() {
       }))
     };
 
-    const assertion = await navigator.credentials.get({ publicKey: options });
+    const assertion = await navigator.credentials.get({
+      publicKey: options,
+      signal: AbortSignal.timeout(60000)
+    });
 
     showLoader('Verifying...');
 
-    // Convert back to base64url for sending
     const credential = {
       id: assertion.id,
       rawId: bufferEncode(assertion.rawId),
@@ -453,7 +413,8 @@ async function loginWithBiometric() {
         signature: bufferEncode(assertion.response.signature),
         userHandle: assertion.response.userHandle? bufferEncode(assertion.response.userHandle) : null
       },
-      type: assertion.type
+      type: assertion.type,
+      clientExtensionResults: assertion.getClientExtensionResults() // FIX: Required by v13
     };
 
     const finish = await fetch(API + '/api/auth/webauthn/login-finish', {
@@ -472,7 +433,11 @@ async function loginWithBiometric() {
   } catch (e) {
     hideLoader();
     console.error('Biometric login error:', e);
-    showMsg('Biometric error: ' + e.message, 'error');
+    if (e.name === 'NotAllowedError') {
+      showMsg('Biometric cancelled or timed out', 'error');
+    } else {
+      showMsg('Biometric error: ' + e.message, 'error');
+    }
   }
 }
 /* ================= PURCHASE MODAL - NULL SAFE ================= */
