@@ -347,7 +347,7 @@ padding:8px 16px;
 </head>
 <body>
 <!-- VERSION MARKER -->
-<div style="background:#00c853;padding:8px;text-align:center;font-weight:bold;font-size:14px">TEEVERSH DASH v2.1 - APR 26</div>
+<div style="background:#00c853;padding:8px;text-align:center;font-weight:bold;font-size:14px">TEEVERSH DASH v2.2 - BIOMETRIC</div>
 
 <!-- ADD PLAN MODAL -->
 <div id="addPlanModal" class="modal">
@@ -581,15 +581,17 @@ padding:8px 16px;
 <section id="profile" class="section">
 <button onclick="showSection('home')">⬅ Back</button>
 
-div class="adminSection" style="background:var(--card);">
+<div class="adminSection" style="background:var(--card);">
   <h3>Security</h3>
-  <button id="enableBiometricBtn" onclick="enableBiometric()">🫆 Enable Fingerprint</button>
-  <p id="biometricStatus" style="font-size:12px;opacity:0.8;margin-top:5px;">Not enabled</p>
+  <div id="biometricSection">
+    <p>Status: <span id="biometricStatus">Checking...</span></p>
+    <button id="enableBiometricBtn" onclick="enableBiometric()" style="display:none">🫆 Enable Fingerprint</button>
+    <button id="biometricLoginBtn" onclick="loginWithBiometric()" style="display:none">🫆 Login with Fingerprint</button>
+  </div>
 </div>
 
 <button onclick="openModal('passwordModal')">Change Password</button>
 <button onclick="openModal('pinModalBox')">Change PIN</button>
-<button onclick="loginWithBiometric()" id="biometricLoginBtn" style="display:none">Login with Fingerprint</button>
 <button onclick="logout()">Logout</button>
 
 <!-- ADMIN PANEL -->
@@ -618,7 +620,7 @@ div class="adminSection" style="background:var(--card);">
 </section>
 
 <!-- PIN MODAL - BNHABEEB + BIOMETRIC -->
-div id="pinModal" class="modal">
+<div id="pinModal" class="modal">
   <div class="modalBox">
     <h3 id="pinModalTitle">Enter PIN</h3>
     <p id="pinModalDetails" style="font-size:14px;opacity:0.8;margin:10px 0;"></p>
@@ -671,6 +673,6 @@ div id="pinModal" class="modal">
   <button id="closeBanner" class="dangerBtn">Later</button>
 </div>
 
-<script src="app.js?v=2.1.0"></script>
+<script src="app.js?v=2.2.0"></script>
 </body>
 </html>
