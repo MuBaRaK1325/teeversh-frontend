@@ -1,34 +1,105 @@
-const CACHE_NAME = 'teeversh-v2'; // bump version when you change SW
-const urlsToCache = [
+const CACHE_NAME = 'teeversh-v4'; // Bumped to force update
+const OFFLINE_URL = '/offline.html';
+
+// Static assets - cache first
+const STATIC_ASSETS = [
   '/',
   '/dashboard.html',
+  '/login.html',
+  '/offline.html',
+  '/images/TEEVERSH-72.png',
+  '/images/TEEVERSH-96.png',
+  '/images/TEEVERSH-128.png',
+  '/images/TEEVERSH-144.png',
+  '/images/TEEVERSH-152.png',
   '/images/TEEVERSH-192.png',
-  '/images/TEEVERSH-512.png'
+  '/images/TEEVERSH-384.png',
+  '/images/TEEVERSH-512.png',
+  '/css/style.css',
+  '/js/app.js'
 ];
 
+// Install - cache static assets
 self.addEventListener('install', event => {
+  self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
+    caches.open(CACHE_NAME).then(cache => {
+      return cache.addAll(STATIC_ASSETS).catch(err => {
+        console.log('Cache failed for some assets:', err);
+      });
+    })
   );
 });
 
+// Activate - delete old caches
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys => Promise.all(
       keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
-    ))
+    )).then(() => self.clients.claim())
   );
 });
 
+// Fetch - Network first for API/HTML, Cache first for assets
 self.addEventListener('fetch', event => {
-  // Don't cache API POST requests
-  if (event.request.method !== 'GET') return;
-  
+  const { request } = event;
+  const url = new URL(request.url);
+
+  // Skip: POST, external origins, Paystack
+  if (request.method !== 'GET' || 
+      url.origin !== location.origin ||
+      url.pathname.startsWith('/api/paystack/webhook') ||
+      url.hostname.includes('paystack')) {
+    return;
+  }
+
+  // API calls - Network first
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(
+      fetch(request)
+        .then(response => {
+          if (response.ok) {
+            const resClone = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(request, resClone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  // HTML pages - Network first, fallback to offline page
+  if (request.headers.get('accept').includes('text/html')) {
+    event.respondWith(
+      fetch(request)
+        .then(response => {
+          const resClone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(request, resClone));
+          return response;
+        })
+        .catch(() => caches.match(request).then(res => res || caches.match(OFFLINE_URL)))
+    );
+    return;
+  }
+
+  // Static assets - Cache first
   event.respondWith(
-    caches.match(event.request).then(response => response || fetch(event.request))
+    caches.match(request).then(response => {
+      return response || fetch(request).then(fetchRes => {
+        const resClone = fetchRes.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(request, resClone));
+        return fetchRes;
+      });
+    }).catch(() => {
+      if (request.destination === 'image') {
+        return caches.match('/images/TEEVERSH-192.png');
+      }
+    })
   );
 });
-// Handle push notifications
+
+// Push notifications
 self.addEventListener('push', event => {
   const data = event.data ? event.data.json() : {};
   const title = data.title || 'TEEVERSH';
@@ -37,12 +108,31 @@ self.addEventListener('push', event => {
     icon: '/images/TEEVERSH-192.png',
     badge: '/images/TEEVERSH-192.png',
     vibrate: [200, 100, 200],
-    data: data.url || '/dashboard.html'
+    tag: 'teeversh-notification',
+    renotify: true,
+    data: data.url || '/dashboard.html',
+    actions: [
+      { action: 'open', title: 'View' },
+      { action: 'close', title: 'Close' }
+    ]
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
+// Notification click
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  event.waitUntil(clients.openWindow(event.data || '/dashboard.html'));
+  if (event.action === 'close') return;
+  
+  const urlToOpen = event.notification.data || '/dashboard.html';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+      for (let client of windowClients) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) return clients.openWindow(urlToOpen);
+    })
+  );
 });
