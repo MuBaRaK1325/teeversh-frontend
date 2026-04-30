@@ -343,6 +343,7 @@ width:auto;
 margin:0 5px;
 padding:8px 16px;
 }
+
 </style>
 </head>
 <body>
@@ -411,6 +412,68 @@ padding:8px 16px;
     <button onclick="closeModal('editPlanModal')" class="dangerBtn">Cancel</button>
   </div>
 </div>
+</div>
+
+<!-- TEEVERSH RECEIPT MODAL -->
+<div id="receiptModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(8px); z-index:99999; align-items:center; justify-content:center; padding:1rem; font-family:system-ui, -apple-system, sans-serif;">
+  <div style="background:linear-gradient(135deg, #1a0b2e, #2d1b4e, #1a0b2e); border-radius:24px; max-width:28rem; width:100%; border:1px solid rgba(147,51,234,0.4); box-shadow:0 0 40px rgba(147,51,234,0.3);">
+
+    <div id="receiptContent" style="padding:1px;">
+      <div style="position:relative; padding:24px; border-bottom:1px solid rgba(147,51,234,0.3);">
+        <button onclick="closeReceipt()" style="position:absolute; right:16px; top:16px; color:#c4b5fd; background:rgba(147,51,234,0.2); border:none; cursor:pointer; padding:6px 10px; border-radius:8px; font-size:18px; line-height:1;">✕</button>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <img src="logo.png" alt="Teeversh" style="width:48px; height:48px; border-radius:12px; box-shadow:0 4px 12px rgba(147,51,234,0.5); object-fit:cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+          <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #9333ea, #7e22ce); display:none; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(147,51,234,0.5);">
+            <span style="color:white; font-weight:bold; font-size:24px;">T</span>
+          </div>
+          <div>
+            <h2 style="color:white; font-weight:bold; font-size:20px; margin:0;">Teeversh</h2>
+            <p style="color:rgba(196,181,253,0.8); font-size:12px; margin:0;">Transaction Receipt</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:24px 24px 0;">
+        <div id="statusBadge" style="background:rgba(34,197,94,0.15); color:#4ade80; border:1px solid rgba(34,197,94,0.3); border-radius:16px; padding:16px; display:flex; align-items:center; justify-content:center; gap:8px;">
+          <span style="font-weight:bold; font-size:14px; text-transform:uppercase; letter-spacing:0.05em;">SUCCESSFUL</span>
+        </div>
+      </div>
+
+      <div style="padding:24px; display:flex; flex-direction:column; gap:20px;">
+        <div style="background:rgba(0,0,0,0.4); border-radius:16px; padding:20px; border:1px solid rgba(147,51,234,0.2);">
+          <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
+            <span style="color:rgba(196,181,253,0.9); font-size:14px; font-weight:500;">Number</span>
+            <span id="receiptNumber" style="color:white; font-family:monospace; font-weight:bold; text-align:right;"></span>
+          </div>
+          <div style="height:1px; background:linear-gradient(90deg, transparent, rgba(147,51,234,0.3), transparent); margin:16px 0;"></div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
+            <span style="color:rgba(196,181,253,0.9); font-size:14px; font-weight:500;">Date & Time</span>
+            <span id="receiptDate" style="color:white; font-size:14px; text-align:right;"></span>
+          </div>
+          <div style="height:1px; background:linear-gradient(90deg, transparent, rgba(147,51,234,0.3), transparent); margin:16px 0;"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="color:rgba(196,181,253,0.9); font-size:14px; font-weight:500;">Amount</span>
+            <span id="receiptPrice" style="color:white; font-weight:bold; font-size:24px;"></span>
+          </div>
+        </div>
+
+        <div style="background:white; border-radius:16px; padding:16px; display:flex; flex-direction:column; align-items:center; gap:8px; border:1px solid rgba(147,51,234,0.2);">
+          <canvas id="qrCanvas"></canvas>
+          <p style="color:#1a0b2e; font-size:12px; font-family:monospace; font-weight:600; margin:0;">Scan to Verify</p>
+        </div>
+
+        <div style="text-align:center;">
+          <p style="color:rgba(196,181,253,0.4); font-size:10px; font-family:monospace; letter-spacing:0.2em; margin:0;">TEEVERSH PAYMENT GATEWAY</p>
+          <p id="txnId" style="color:rgba(196,181,253,0.3); font-size:9px; margin:4px 0 0; cursor:pointer;" onclick="copyTxnId()" title="Click to copy"></p>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:0 24px 24px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+      <button onclick="downloadReceipt()" style="background:rgba(147,51,234,0.2); color:#c4b5fd; font-weight:600; padding:12px; border-radius:12px; border:1px solid rgba(147,51,234,0.4); cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='rgba(147,51,234,0.3)'" onmouseout="this.style.background='rgba(147,51,234,0.2)'">Download</button>
+      <button onclick="shareReceipt()" style="background:linear-gradient(90deg, #9333ea, #7e22ce); color:white; font-weight:600; padding:12px; border-radius:12px; border:none; cursor:pointer; box-shadow:0 4px 12px rgba(147,51,234,0.4); transition:all 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">Share</button>
+    </div>
+  </div>
 </div>
 
 <header>
@@ -684,6 +747,96 @@ padding:8px 16px;
   <button id="closeBanner" class="dangerBtn">Later</button>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script>
+let currentTxnId = '';
+
+function showReceipt(data) {
+  document.getElementById('receiptNumber').textContent = data.number;
+  document.getElementById('receiptDate').textContent = data.date;
+  document.getElementById('receiptPrice').textContent = '₦' + data.price;
+  currentTxnId = data.txnId || 'TVS' + Date.now().toString().slice(-8);
+  document.getElementById('txnId').textContent = 'Transaction ID: ' + currentTxnId;
+
+  const statusColors = {
+    success: {bg: 'rgba(34,197,94,0.15)', color: '#4ade80', border: 'rgba(34,197,94,0.3)', text: 'SUCCESSFUL'},
+    failed: {bg: 'rgba(239,68,0.15)', color: '#f87171', border: 'rgba(239,68,68,0.3)', text: 'FAILED'},
+    pending: {bg: 'rgba(234,179,8,0.15)', color: '#facc15', border: 'rgba(234,179,8,0.3)', text: 'PENDING'}
+  };
+  const s = statusColors[data.status] || statusColors.pending;
+  const badge = document.getElementById('statusBadge');
+  badge.style.background = s.bg;
+  badge.style.color = s.color;
+  badge.style.borderColor = s.border;
+  badge.querySelector('span').textContent = s.text;
+
+  QRCode.toCanvas(document.getElementById('qrCanvas'), JSON.stringify({
+    id: currentTxnId,
+    number: data.number,
+    amount: data.price,
+    date: data.date,
+    status: data.status
+  }), {
+    width: 120,
+    margin: 0,
+    color: { dark: '#1a0b2e', light: '#ffffff' }
+  });
+
+  document.getElementById('receiptModal').style.display = 'flex';
+}
+
+function closeReceipt() {
+  document.getElementById('receiptModal').style.display = 'none';
+}
+
+function copyTxnId() {
+  navigator.clipboard.writeText(currentTxnId);
+  const el = document.getElementById('txnId');
+  const original = el.textContent;
+  el.textContent = 'Copied!';
+  setTimeout(() => el.textContent = original, 1000);
+}
+
+async function downloadReceipt() {
+  const canvas = await html2canvas(document.getElementById('receiptContent'), {
+    backgroundColor: '#1a0b2e',
+    scale: 2,
+    useCORS: true,
+    logging: false
+  });
+  const link = document.createElement('a');
+  link.download = `Teeversh-Receipt-${document.getElementById('receiptNumber').textContent}.png`;
+  link.href = canvas.toDataURL();
+  link.click();
+}
+
+async function shareReceipt() {
+  const canvas = await html2canvas(document.getElementById('receiptContent'), {
+    backgroundColor: '#1a0b2e',
+    scale: 2,
+    useCORS: true,
+    logging: false
+  });
+  canvas.toBlob(async (blob) => {
+    const file = new File([blob], 'receipt.png', {type: 'image/png'});
+    if (navigator.share && navigator.canShare({files: [file]})) {
+      await navigator.share({
+        files: [file],
+        title: 'Teeversh Receipt',
+        text: `Transaction ${document.getElementById('receiptPrice').textContent}`
+      });
+    } else {
+      downloadReceipt();
+    }
+  });
+}
+
+document.getElementById('receiptModal').addEventListener('click', function(e) {
+  if (e.target === this) closeReceipt();
+});
+</script>
 <script src="app.js?v=2.3.0"></script>
+
 </body>
 </html>
