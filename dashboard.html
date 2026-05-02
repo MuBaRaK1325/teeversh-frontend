@@ -717,20 +717,27 @@ padding:8px 16px;
 
   <div class="adminSection">
     <h4>Withdraw Admin Profit</h4>
+    
+    <label>Amount</label>
     <input id="withdrawAmount" type="number" placeholder="Amount (Min ₦100)" min="100">
     
-    <select id="withdrawBank" class="inputField">
+    <label>Bank</label>
+    <select id="withdrawBank">
       <option value="">Select Bank</option>
     </select>
     
-    <input id="withdrawAccountNumber" type="text" placeholder="Account Number" maxlength="10" pattern="[0-9]*">
-    <input id="withdrawAccountName" type="text" placeholder="Account Name">
+    <label>Account Number</label>
+    <input id="withdrawAccountNumber" type="text" placeholder="10-digit account number" maxlength="10" pattern="[0-9]*" inputmode="numeric">
+    
+    <label>Account Name</label>
+    <input id="withdrawAccountName" type="text" placeholder="Account name as shown on bank">
+    
     <button onclick="requestWithdrawal()" class="primaryBtn">Request Withdrawal</button>
   </div>
 
   <div class="adminSection">
     <h4>Withdrawal History</h4>
-    <div id="withdrawalsList" class="listContainer"></div>
+    <div id="withdrawalsList"></div>
   </div>
 </section>
 

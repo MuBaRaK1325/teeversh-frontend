@@ -139,7 +139,10 @@ function showSection(id) {
   el(id).style.display = "block";
   if (id === "profitDashboard") loadProfitDashboard();
   if (id === "topUsersManager") loadTopUsers();
-  if (id === "withdrawals") loadWithdrawals();
+  if (id === "withdrawals") {
+    populateBankDropdown(); // Add this line
+    loadWithdrawals();
+  }
   if (id === "plansManager") loadAdminPlans();
   if (id === "usersManager") loadAdminUsers();
 }
