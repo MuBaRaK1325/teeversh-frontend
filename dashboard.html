@@ -684,6 +684,18 @@ padding:8px 16px;
 </div>
 </section>
 
+<!-- ADMIN: REGULAR USERS MANAGER -->
+<section id="regularUsersManager" class="section adminOnly">
+<button onclick="showSection('profile')">⬅ Back</button>
+<h3>⭐ Regular Users Manager</h3>
+
+<div class="adminSection">
+  <input id="regularUserEmail" type="email" placeholder="User Email">
+  <button onclick="addRegularUser()" class="successBtn">Add Regular User</button>
+  <div id="regularUsersList"></div>
+</div>
+</section>
+
 <!-- ADMIN: PLANS MANAGER -->
 <section id="plansManager" class="section adminOnly">
 <button onclick="showSection('profile')">⬅ Back</button>
@@ -698,6 +710,55 @@ padding:8px 16px;
   <div id="adminPlansList"></div>
 </div>
 </section>
+
+<!-- ADD PLAN MODAL -->
+<div id="addPlanModal" class="modal">
+  <div class="modalContent">
+    <span class="close" onclick="closeModal('addPlanModal')">&times;</span>
+    <h3>Add New Plan</h3>
+    <input id="newPlanId" placeholder="Plan ID" required />
+    <select id="newPlanNetwork" required>
+      <option value="">Select Network</option>
+      <option value="MTN">MTN</option>
+      <option value="AIRTEL">AIRTEL</option>
+      <option value="GLO">GLO</option>
+      <option value="9MOBILE">9MOBILE</option>
+    </select>
+    <input id="newPlanName" placeholder="Plan Name" required />
+    <input id="newPlanPrice" type="number" step="0.01" placeholder="Default Price" required />
+    <input id="newPlanRegularPrice" type="number" step="0.01" placeholder="Regular Price" />
+    <input id="newPlanTopPrice" type="number" step="0.01" placeholder="Top Price" />
+    <input id="newPlanCost" type="number" step="0.01" placeholder="Cost" required />
+    <input id="newPlanValidity" placeholder="Validity e.g 30 Days" />
+    <label><input id="newPlanRestricted" type="checkbox" /> Restricted Plan</label>
+    <input id="newPlanProvider" placeholder="Provider" required />
+    <input id="newPlanNetworkId" placeholder="Network ID" required />
+    <input id="newPlanApiId" placeholder="API Plan ID" required />
+    <button onclick="addPlan()" class="successBtn">Add Plan</button>
+    <button onclick="closeModal('addPlanModal')" class="dangerBtn">Cancel</button>
+  </div>
+</div>
+
+<!-- EDIT PLAN MODAL -->
+<div id="editPlanModal" class="modal">
+  <div class="modalContent">
+    <span class="close" onclick="closeModal('editPlanModal')">&times;</span>
+    <h3>Edit Plan</h3>
+    <input id="editPlanName" placeholder="Plan Name" required />
+    <input id="editPlanPrice" type="number" step="0.01" placeholder="Default Price" required />
+    <input id="editPlanRegularPrice" type="number" step="0.01" placeholder="Regular Price" />
+    <input id="editPlanTopPrice" type="number" step="0.01" placeholder="Top Price" />
+    <input id="editPlanCost" type="number" step="0.01" placeholder="Cost" required />
+    <input id="editPlanValidity" placeholder="Validity e.g 30 Days" />
+    <label><input id="editPlanRestricted" type="checkbox" /> Restricted Plan</label>
+    <input id="editPlanProvider" placeholder="Provider" required />
+    <input id="editPlanNetworkId" placeholder="Network ID" required />
+    <input id="editPlanApiId" placeholder="API Plan ID" required />
+    <label><input id="editPlanActive" type="checkbox" /> Active</label>
+    <button onclick="savePlanEdit()" class="successBtn">Save Changes</button>
+    <button onclick="closeModal('editPlanModal')" class="dangerBtn">Cancel</button>
+  </div>
+</div>
 
 <!-- ADMIN: USERS MANAGER -->
 <section id="usersManager" class="section adminOnly">

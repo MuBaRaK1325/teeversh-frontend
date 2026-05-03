@@ -706,7 +706,7 @@ async function loadTopUsers() {
         list.innerHTML += `<div class="userCard">
           <strong>${u.username}</strong> - ${u.email}<br>
           Spent: ${formatNaira(u.total_spent)} | Profit: ${formatNaira(u.total_profit_generated)}
-          ${u.is_top_user? `<button onclick="removeTopUser('${u.email}')" class="dangerBtn">Remove</button>` : ''}
+          <button onclick="removeTopUser('${u.email}')" class="dangerBtn">Remove</button>
         </div>`;
       });
     }
@@ -727,7 +727,11 @@ async function addTopUser() {
     const data = await res.json();
     hideLoader();
     showMsg(data.message, res.ok? "success" : "error");
-    if (res.ok) loadTopUsers();
+    if (res.ok) {
+      loadTopUsers();
+      loadAdminUsers();
+      loadRegularUsers();
+    }
   } catch {
     hideLoader();
     showMsg("Server error", "error");
@@ -745,7 +749,77 @@ async function removeTopUser(email) {
     const data = await res.json();
     hideLoader();
     showMsg(data.message, res.ok? "success" : "error");
-    if (res.ok) loadTopUsers();
+    if (res.ok) {
+      loadTopUsers();
+      loadAdminUsers();
+    }
+  } catch {
+    hideLoader();
+    showMsg("Server error", "error");
+  }
+}
+
+/* ================= ADMIN: REGULAR USERS ================= */
+async function loadRegularUsers() {
+  try {
+    const res = await fetch(API + "/admin/regular-users", {
+      headers: { Authorization: "Bearer " + getToken() }
+    });
+    const users = await res.json();
+    const list = el("regularUsersList");
+    if (list) {
+      list.innerHTML = "";
+      users.forEach(u => {
+        list.innerHTML += `<div class="userCard">
+          <strong>${u.username}</strong> - ${u.email}<br>
+          Spent: ${formatNaira(u.total_spent)} | Profit: ${formatNaira(u.total_profit_generated)}
+          <button onclick="removeRegularUser('${u.email}')" class="dangerBtn">Remove</button>
+        </div>`;
+      });
+    }
+  } catch {}
+}
+
+async function addRegularUser() {
+  const email = el("regularUserEmail")?.value;
+  if (!email) return showMsg("Enter email", "error");
+
+  showLoader("Adding regular user...");
+  try {
+    const res = await fetch(API + "/admin/regular-users/add", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    hideLoader();
+    showMsg(data.message, res.ok? "success" : "error");
+    if (res.ok) {
+      loadRegularUsers();
+      loadAdminUsers();
+      loadTopUsers();
+    }
+  } catch {
+    hideLoader();
+    showMsg("Server error", "error");
+  }
+}
+
+async function removeRegularUser(email) {
+  showLoader("Removing...");
+  try {
+    const res = await fetch(API + "/admin/regular-users/remove", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    hideLoader();
+    showMsg(data.message, res.ok? "success" : "error");
+    if (res.ok) {
+      loadRegularUsers();
+      loadAdminUsers();
+    }
   } catch {
     hideLoader();
     showMsg("Server error", "error");
@@ -769,7 +843,7 @@ async function loadAdminPlans() {
         const providerBadge = p.provider? `<span class="badge">${p.provider.toUpperCase()}</span>` : '';
         list.innerHTML += `<div class="planCard">
           <strong>${p.name}</strong> - ${p.network} ${restrictBadge} ${providerBadge}<br>
-          Price: ${formatNaira(p.price)} | Top: ${formatNaira(p.top_price)} | Cost: ${formatNaira(p.cost)}<br>
+          Default: ${formatNaira(p.price)} | Regular: ${formatNaira(p.regular_price)} | Top: ${formatNaira(p.top_price)} | Cost: ${formatNaira(p.cost)}<br>
           Provider: ${p.provider || 'N/A'} | Net ID: ${p.network_id || 'N/A'} | API ID: ${p.api_plan_id || 'N/A'}<br>
           <span style="color:${statusColor}">${p.is_active? 'Active' : 'Disabled'}</span>
           <button onclick="editPlan(${p.id})" class="primaryBtn">Edit</button>
@@ -786,6 +860,7 @@ async function addPlan() {
     network: el("newPlanNetwork")?.value,
     name: el("newPlanName")?.value,
     price: el("newPlanPrice")?.value,
+    regular_price: el("newPlanRegularPrice")?.value,
     top_price: el("newPlanTopPrice")?.value,
     cost: el("newPlanCost")?.value,
     validity: el("newPlanValidity")?.value,
@@ -812,7 +887,7 @@ async function addPlan() {
     if (res.ok) {
       loadAdminPlans();
       loadPlans();
-      ["newPlanId","newPlanName","newPlanPrice","newPlanTopPrice","newPlanCost","newPlanValidity","newPlanProvider","newPlanNetworkId","newPlanApiId"].forEach(id => {
+      ["newPlanId","newPlanName","newPlanPrice","newPlanRegularPrice","newPlanTopPrice","newPlanCost","newPlanValidity","newPlanProvider","newPlanNetworkId","newPlanApiId"].forEach(id => {
         if (el(id)) el(id).value = "";
       });
       if (el("newPlanRestricted")) el("newPlanRestricted").checked = false;
@@ -852,6 +927,7 @@ async function editPlan(id) {
 
   if (el("editPlanName")) el("editPlanName").value = plan.name || "";
   if (el("editPlanPrice")) el("editPlanPrice").value = plan.price || "";
+  if (el("editPlanRegularPrice")) el("editPlanRegularPrice").value = plan.regular_price || "";
   if (el("editPlanTopPrice")) el("editPlanTopPrice").value = plan.top_price || "";
   if (el("editPlanCost")) el("editPlanCost").value = plan.cost || "";
   if (el("editPlanValidity")) el("editPlanValidity").value = plan.validity || "";
@@ -870,6 +946,7 @@ async function savePlanEdit() {
   const updated = {
     name: el("editPlanName")?.value,
     price: el("editPlanPrice")?.value,
+    regular_price: el("editPlanRegularPrice")?.value,
     top_price: el("editPlanTopPrice")?.value,
     cost: el("editPlanCost")?.value,
     validity: el("editPlanValidity")?.value,
@@ -917,31 +994,37 @@ async function loadAdminUsers() {
     if (list) {
       list.innerHTML = "";
       users.forEach(u => {
+        const tierBadge = `<span class="badge ${u.user_tier}">${u.user_tier.toUpperCase()}</span>`;
         list.innerHTML += `<div class="userCard">
-          <strong>${u.username}</strong> - ${u.email}<br>
+          <strong>${u.username}</strong> - ${u.email} ${tierBadge}<br>
           Wallet: ${formatNaira(u.wallet_balance)} | Phone: ${u.phone || 'N/A'}<br>
-          Top User: ${u.is_top_user? 'Yes' : 'No'}<br>
-          <button onclick="toggleUserTop(${u.id}, ${!u.is_top_user})" class="primaryBtn">
-            ${u.is_top_user? 'Remove Top' : 'Make Top'}
-          </button>
+          <select onchange="setUserTier(${u.id}, this.value)" class="tierSelect">
+            <option value="default" ${u.user_tier === 'default'? 'selected' : ''}>Default</option>
+            <option value="regular" ${u.user_tier === 'regular'? 'selected' : ''}>Regular</option>
+            <option value="top" ${u.user_tier === 'top'? 'selected' : ''}>Top</option>
+          </select>
         </div>`;
       });
     }
   } catch {}
 }
 
-async function toggleUserTop(id, is_top_user) {
-  showLoader("Updating...");
+async function setUserTier(id, tier) {
+  showLoader("Updating tier...");
   try {
-    const res = await fetch(`${API}/admin/users/${id}`, {
-      method: "PUT",
+    const res = await fetch(`${API}/admin/users/set-tier`, {
+      method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-      body: JSON.stringify({ is_top_user })
+      body: JSON.stringify({ user_id: id, tier })
     });
     const data = await res.json();
     hideLoader();
-    showMsg(data.message, res.ok? "success" : "error");
-    if (res.ok) loadAdminUsers();
+    showMsg(data.message || "Tier updated", res.ok? "success" : "error");
+    if (res.ok) {
+      loadAdminUsers();
+      loadTopUsers();
+      loadRegularUsers();
+    }
   } catch {
     hideLoader();
     showMsg("Server error", "error");
