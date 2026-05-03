@@ -13,6 +13,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="TEEVERSH">
 <link rel="apple-touch-icon" href="/images/TEEVERSH-192.png">
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 
 <style>
 :root{
@@ -513,12 +514,12 @@ padding:8px 16px;
       <div style="position:relative; padding:24px; border-bottom:1px solid rgba(147,51,234,0.3);">
         <button onclick="closeReceipt()" style="position:absolute; right:16px; top:16px; color:#c4b5fd; background:rgba(147,51,234,0.2); border:none; cursor:pointer; padding:6px 10px; border-radius:8px; font-size:18px; line-height:1;">✕</button>
         <div style="display:flex; align-items:center; gap:12px;">
-          <img src="logo.png" alt="Teeversh" style="width:48px; height:48px; border-radius:12px; box-shadow:0 4px 12px rgba(147,51,234,0.5); object-fit:cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+          <img src="images/teeversh-logo.png" alt="Teeversh" style="width:48px; height:48px; border-radius:12px; box-shadow:0 4px 12px rgba(147,51,234,0.5); object-fit:cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
           <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #9333ea, #7e22ce); display:none; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(147,51,234,0.5);">
             <span style="color:white; font-weight:bold; font-size:24px;">T</span>
           </div>
           <div>
-            <h2 style="color:white; font-weight:bold; font-size:20px; margin:0;">Teeversh</h2>
+            <h2 style="color:white; font-weight:bold; font-size:20px; margin:0;">TEEVERSH VTU</h2>
             <p style="color:rgba(196,181,253,0.8); font-size:12px; margin:0;">Transaction Receipt</p>
           </div>
         </div>
@@ -533,8 +534,18 @@ padding:8px 16px;
       <div style="padding:24px; display:flex; flex-direction:column; gap:20px;">
         <div style="background:rgba(0,0,0,0.4); border-radius:16px; padding:20px; border:1px solid rgba(147,51,234,0.2);">
           <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
-            <span style="color:rgba(196,181,253,0.9); font-size:14px; font-weight:500;">Number</span>
+            <span style="color:rgba(196,181,253,0.9); font-size:14px; font-weight:500;">Phone Number</span>
             <span id="receiptNumber" style="color:white; font-family:monospace; font-weight:bold; text-align:right;"></span>
+          </div>
+          <div style="height:1px; background:linear-gradient(90deg, transparent, rgba(147,51,234,0.3), transparent); margin:16px 0;"></div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
+            <span style="color:rgba(196,181,253,0.9); font-size:14px; font-weight:500;">Network</span>
+            <span id="receiptNetwork" style="color:white; font-size:14px; text-align:right;"></span>
+          </div>
+          <div style="height:1px; background:linear-gradient(90deg, transparent, rgba(147,51,234,0.3), transparent); margin:16px 0;"></div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
+            <span style="color:rgba(196,181,253,0.9); font-size:14px; font-weight:500;">Plan</span>
+            <span id="receiptPlan" style="color:white; font-size:14px; text-align:right;"></span>
           </div>
           <div style="height:1px; background:linear-gradient(90deg, transparent, rgba(147,51,234,0.3), transparent); margin:16px 0;"></div>
           <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
@@ -713,51 +724,70 @@ padding:8px 16px;
 
 <!-- ADD PLAN MODAL -->
 <div id="addPlanModal" class="modal">
-  <div class="modalContent">
-    <span class="close" onclick="closeModal('addPlanModal')">&times;</span>
-    <h3>Add New Plan</h3>
-    <input id="newPlanId" placeholder="Plan ID" required />
-    <select id="newPlanNetwork" required>
-      <option value="">Select Network</option>
-      <option value="MTN">MTN</option>
-      <option value="AIRTEL">AIRTEL</option>
-      <option value="GLO">GLO</option>
-      <option value="9MOBILE">9MOBILE</option>
-    </select>
-    <input id="newPlanName" placeholder="Plan Name" required />
-    <input id="newPlanPrice" type="number" step="0.01" placeholder="Default Price" required />
-    <input id="newPlanRegularPrice" type="number" step="0.01" placeholder="Regular Price" />
-    <input id="newPlanTopPrice" type="number" step="0.01" placeholder="Top Price" />
-    <input id="newPlanCost" type="number" step="0.01" placeholder="Cost" required />
-    <input id="newPlanValidity" placeholder="Validity e.g 30 Days" />
-    <label><input id="newPlanRestricted" type="checkbox" /> Restricted Plan</label>
-    <input id="newPlanProvider" placeholder="Provider" required />
-    <input id="newPlanNetworkId" placeholder="Network ID" required />
-    <input id="newPlanApiId" placeholder="API Plan ID" required />
+<div class="modalBox">
+  <h3>Add New Plan</h3>
+  <input id="newPlanId" type="number" placeholder="Plan ID (from provider)" />
+  <select id="newPlanNetwork">
+    <option value="">Select Network</option>
+    <option value="MTN">MTN</option>
+    <option value="GLO">GLO</option>
+    <option value="AIRTEL">AIRTEL</option>
+    <option value="9MOBILE">9MOBILE</option>
+  </select>
+  <input id="newPlanName" placeholder="Plan Name e.g 1GB SME" />
+  <input id="newPlanPrice" type="number" step="0.01" placeholder="Default Price" />
+  <input id="newPlanRegularPrice" type="number" step="0.01" placeholder="Regular User Price" />
+  <input id="newPlanTopPrice" type="number" step="0.01" placeholder="Top User Price" />
+  <input id="newPlanCost" type="number" step="0.01" placeholder="Your Cost" />
+  <input id="newPlanValidity" placeholder="Validity e.g 30 Days" />
+  <select id="newPlanProvider">
+    <option value="">Select Provider</option>
+    <option value="maitama">Maitama</option>
+    <option value="cheapdatahub">CheapDataHub</option>
+    <option value="subpadi">SubPadi</option>
+  </select>
+  <input id="newPlanNetworkId" placeholder="Network ID: 1=MTN, 2=Airtel, 3=Glo, 4=9mobile" />
+  <input id="newPlanApiId" placeholder="API Plan ID from provider dashboard" />
+  <label><input id="newPlanRestricted" type="checkbox"> Restricted to my company</label>
+  <div style="display:flex;gap:10px;margin-top:15px;">
     <button onclick="addPlan()" class="successBtn">Add Plan</button>
     <button onclick="closeModal('addPlanModal')" class="dangerBtn">Cancel</button>
   </div>
 </div>
+</div>
 
 <!-- EDIT PLAN MODAL -->
 <div id="editPlanModal" class="modal">
-  <div class="modalContent">
-    <span class="close" onclick="closeModal('editPlanModal')">&times;</span>
-    <h3>Edit Plan</h3>
-    <input id="editPlanName" placeholder="Plan Name" required />
-    <input id="editPlanPrice" type="number" step="0.01" placeholder="Default Price" required />
-    <input id="editPlanRegularPrice" type="number" step="0.01" placeholder="Regular Price" />
-    <input id="editPlanTopPrice" type="number" step="0.01" placeholder="Top Price" />
-    <input id="editPlanCost" type="number" step="0.01" placeholder="Cost" required />
-    <input id="editPlanValidity" placeholder="Validity e.g 30 Days" />
-    <label><input id="editPlanRestricted" type="checkbox" /> Restricted Plan</label>
-    <input id="editPlanProvider" placeholder="Provider" required />
-    <input id="editPlanNetworkId" placeholder="Network ID" required />
-    <input id="editPlanApiId" placeholder="API Plan ID" required />
-    <label><input id="editPlanActive" type="checkbox" /> Active</label>
-    <button onclick="savePlanEdit()" class="successBtn">Save Changes</button>
+<div class="modalBox">
+  <h3>Edit Plan</h3>
+  <input type="hidden" id="editPlanId" />
+  <select id="editPlanNetwork">
+    <option value="MTN">MTN</option>
+    <option value="AIRTEL">AIRTEL</option>
+    <option value="GLO">GLO</option>
+    <option value="9MOBILE">9MOBILE</option>
+  </select>
+  <input id="editPlanName" placeholder="Plan Name" />
+  <input id="editPlanPrice" type="number" step="0.01" placeholder="Default Price" />
+  <input id="editPlanRegularPrice" type="number" step="0.01" placeholder="Regular User Price" />
+  <input id="editPlanTopPrice" type="number" step="0.01" placeholder="Top User Price" />
+  <input id="editPlanCost" type="number" step="0.01" placeholder="Your Cost" />
+  <input id="editPlanValidity" placeholder="Validity" />
+  <select id="editPlanProvider">
+    <option value="">Select Provider</option>
+    <option value="maitama">Maitama</option>
+    <option value="cheapdatahub">CheapDataHub</option>
+    <option value="subpadi">SubPadi</option>
+  </select>
+  <input id="editPlanNetworkId" placeholder="Network ID" />
+  <input id="editPlanApiId" placeholder="API Plan ID" />
+  <label><input id="editPlanRestricted" type="checkbox"> Restricted to my company</label>
+  <label><input id="editPlanActive" type="checkbox"> Active</label>
+  <div style="display:flex;gap:10px;margin-top:15px;">
+    <button onclick="savePlanEdit()" class="successBtn">Update Plan</button>
     <button onclick="closeModal('editPlanModal')" class="dangerBtn">Cancel</button>
   </div>
+</div>
 </div>
 
 <!-- ADMIN: USERS MANAGER -->

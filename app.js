@@ -194,7 +194,59 @@ function txCard(t) {
     <small style="float:right">${formatDate(t.created_at)}</small>`;
   return div;
 }
+function renderPlans() {
+  const list = el("planList");
+  if (!list) return;
 
+  list.innerHTML = "";
+
+  if (!selectedNetwork) {
+    list.innerHTML = "<p>Select a network first</p>";
+    return;
+  }
+
+  const filtered = cachedPlans.filter(p => (p.network || "").toLowerCase() === selectedNetwork);
+
+  if (!filtered.length) {
+    list.innerHTML = "<p>No plans available for this network</p>";
+    return;
+  }
+
+  filtered.forEach(p => {
+    const div = document.createElement("div");
+    div.className = "planItem";
+
+    let priceDisplay = p.price;
+    let badge = "";
+    let tierClass = "";
+
+    // Check user tier and apply correct price
+    if (currentUser?.is_top_user && p.top_price) {
+      priceDisplay = p.top_price;
+      badge = `<span class="topUserBadge">TOP</span>`;
+      tierClass = "topUserPlan";
+    } else if (p.regular_price &&!currentUser?.is_top_user) {
+      // If not top user, use regular_price if available, else default price
+      priceDisplay = p.regular_price;
+      badge = `<span class="regularUserBadge" style="position:absolute;top:8px;right:8px;background:#ffa000;padding:2px 6px;border-radius:4px;font-size:10px;">REGULAR</span>`;
+      tierClass = "regularUserPlan";
+    }
+
+    div.classList.add(tierClass);
+    div.innerHTML = `
+      <strong>${p.name}</strong> ${badge}<br>
+      ${p.validity || ""}<br>
+      <strong>${formatNaira(priceDisplay)}</strong>
+    `;
+
+    div.onclick = () => {
+      selectedPlan = {...p, price: priceDisplay};
+      openPurchaseModal(p.id, p.name, priceDisplay);
+    };
+
+    list.appendChild(div);
+  });
+}
 /* ================= PLANS ================= */
 async function loadPlans() {
   try {
@@ -243,9 +295,24 @@ function renderPlans() {
   filtered.forEach(p => {
     const div = document.createElement("div");
     div.className = "planItem";
-    const priceDisplay = currentUser?.is_top_user && p.top_price? p.top_price : p.price;
-    const badge = currentUser?.is_top_user && p.top_price? `<span class="topUserBadge">TOP</span>` : "";
 
+    let priceDisplay = p.price;
+    let badge = "";
+    let tierClass = "";
+
+    // Check user tier and apply correct price
+    if (currentUser?.is_top_user && p.top_price) {
+      priceDisplay = p.top_price;
+      badge = `<span class="topUserBadge">TOP</span>`;
+      tierClass = "topUserPlan";
+    } else if (p.regular_price &&!currentUser?.is_top_user) {
+      // If not top user, use regular_price if available, else default price
+      priceDisplay = p.regular_price;
+      badge = `<span class="regularUserBadge" style="position:absolute;top:8px;right:8px;background:#ffa000;padding:2px 6px;border-radius:4px;font-size:10px;">REGULAR</span>`;
+      tierClass = "regularUserPlan";
+    }
+
+    div.classList.add(tierClass);
     div.innerHTML = `
       <strong>${p.name}</strong> ${badge}<br>
       ${p.validity || ""}<br>
@@ -558,7 +625,7 @@ async function purchaseWithBiometric() {
   }
 }
 
-/* ================= BUY DATA ================= */
+/* ================= BUY DATA - WITH TEEVERSH RECEIPT ================= */
 async function buyData(pin) {
   const phone = selectedPhone || el("dataPhone")?.value;
 
@@ -578,9 +645,22 @@ async function buyData(pin) {
     hideLoader();
 
     if (res.ok && data.success!== false) {
-      showMsg("Data purchase successful ✅", "success");
       updateWallet(data.balance);
       fetchTransactions();
+      
+      // Show TEEVERSH receipt instead of toast
+      showReceipt({
+        reference: data.reference || data.transaction_id || 'TXN' + Date.now(),
+        created_at: data.created_at || new Date().toISOString(),
+        type: 'Data',
+        network: selectedNetwork?.toUpperCase(),
+        phone: phone,
+        plan_name: selectedPlan?.name,
+        amount: selectedPlan?.price,
+        status: data.status || 'SUCCESS',
+        balance_after: data.balance
+      });
+
       if (el("dataPhone")) el("dataPhone").value = '';
     } else {
       showMsg(data.message || "Purchase failed", "error");
@@ -591,7 +671,7 @@ async function buyData(pin) {
   }
 }
 
-/* ================= BUY AIRTIME ================= */
+/* ================= BUY AIRTIME - WITH TEEVERSH RECEIPT ================= */
 async function buyAirtime(pin) {
   const phone = selectedPhone || el("airtimePhone")?.value;
   const amount = el("airtimeAmount")?.value;
@@ -612,9 +692,22 @@ async function buyAirtime(pin) {
     hideLoader();
 
     if (res.ok && data.success!== false) {
-      showMsg("Airtime purchase successful ✅", "success");
       updateWallet(data.balance);
       fetchTransactions();
+
+      // Show TEEVERSH receipt instead of toast
+      showReceipt({
+        reference: data.reference || data.transaction_id || 'TXN' + Date.now(),
+        created_at: data.created_at || new Date().toISOString(),
+        type: 'Airtime',
+        network: airtimeNetwork?.toUpperCase(),
+        phone: phone,
+        plan_name: 'Airtime Top-up',
+        amount: amount,
+        status: data.status || 'SUCCESS',
+        balance_after: data.balance
+      });
+
       if (el("airtimePhone")) el("airtimePhone").value = '';
       if (el("airtimeAmount")) el("airtimeAmount").value = '';
     } else {
@@ -698,19 +791,26 @@ async function loadTopUsers() {
     const res = await fetch(API + "/admin/top-users", {
       headers: { Authorization: "Bearer " + getToken() }
     });
+    if (!res.ok) throw new Error("Failed");
     const users = await res.json();
     const list = el("topUsersList");
     if (list) {
       list.innerHTML = "";
+      if (!users.length) {
+        list.innerHTML = `<p style="text-align:center;opacity:0.6">No top users yet</p>`;
+        return;
+      }
       users.forEach(u => {
         list.innerHTML += `<div class="userCard">
           <strong>${u.username}</strong> - ${u.email}<br>
-          Spent: ${formatNaira(u.total_spent)} | Profit: ${formatNaira(u.total_profit_generated)}
-          <button onclick="removeTopUser('${u.email}')" class="dangerBtn">Remove</button>
+          Spent: ${formatNaira(u.total_spent)} | Profit: ${formatNaira(u.total_profit_generated)}<br>
+          <button onclick="removeTopUser('${u.email}')" class="dangerBtn">Remove from Top</button>
         </div>`;
       });
     }
-  } catch {}
+  } catch(e) {
+    console.error("Load top users error:", e);
+  }
 }
 
 async function addTopUser() {
@@ -728,9 +828,11 @@ async function addTopUser() {
     hideLoader();
     showMsg(data.message, res.ok? "success" : "error");
     if (res.ok) {
+      el("topUserEmail").value = "";
       loadTopUsers();
       loadAdminUsers();
       loadRegularUsers();
+      broadcastTopUserUpdate(currentUser.company);
     }
   } catch {
     hideLoader();
@@ -752,6 +854,7 @@ async function removeTopUser(email) {
     if (res.ok) {
       loadTopUsers();
       loadAdminUsers();
+      broadcastTopUserUpdate(currentUser.company);
     }
   } catch {
     hideLoader();
@@ -765,19 +868,26 @@ async function loadRegularUsers() {
     const res = await fetch(API + "/admin/regular-users", {
       headers: { Authorization: "Bearer " + getToken() }
     });
+    if (!res.ok) throw new Error("Failed");
     const users = await res.json();
     const list = el("regularUsersList");
     if (list) {
       list.innerHTML = "";
+      if (!users.length) {
+        list.innerHTML = `<p style="text-align:center;opacity:0.6">No regular users yet</p>`;
+        return;
+      }
       users.forEach(u => {
         list.innerHTML += `<div class="userCard">
           <strong>${u.username}</strong> - ${u.email}<br>
-          Spent: ${formatNaira(u.total_spent)} | Profit: ${formatNaira(u.total_profit_generated)}
-          <button onclick="removeRegularUser('${u.email}')" class="dangerBtn">Remove</button>
+          Spent: ${formatNaira(u.total_spent)} | Profit: ${formatNaira(u.total_profit_generated)}<br>
+          <button onclick="removeRegularUser('${u.email}')" class="dangerBtn">Remove from Regular</button>
         </div>`;
       });
     }
-  } catch {}
+  } catch(e) {
+    console.error("Load regular users error:", e);
+  }
 }
 
 async function addRegularUser() {
@@ -795,9 +905,11 @@ async function addRegularUser() {
     hideLoader();
     showMsg(data.message, res.ok? "success" : "error");
     if (res.ok) {
+      el("regularUserEmail").value = "";
       loadRegularUsers();
       loadAdminUsers();
       loadTopUsers();
+      broadcastTopUserUpdate(currentUser.company);
     }
   } catch {
     hideLoader();
@@ -819,6 +931,7 @@ async function removeRegularUser(email) {
     if (res.ok) {
       loadRegularUsers();
       loadAdminUsers();
+      broadcastTopUserUpdate(currentUser.company);
     }
   } catch {
     hideLoader();
@@ -843,7 +956,7 @@ async function loadAdminPlans() {
         const providerBadge = p.provider? `<span class="badge">${p.provider.toUpperCase()}</span>` : '';
         list.innerHTML += `<div class="planCard">
           <strong>${p.name}</strong> - ${p.network} ${restrictBadge} ${providerBadge}<br>
-          Default: ${formatNaira(p.price)} | Regular: ${formatNaira(p.regular_price)} | Top: ${formatNaira(p.top_price)} | Cost: ${formatNaira(p.cost)}<br>
+          Default: ${formatNaira(p.price)} | Regular: ${formatNaira(p.regular_price || p.price)} | Top: ${formatNaira(p.top_price || p.price)} | Cost: ${formatNaira(p.cost)}<br>
           Provider: ${p.provider || 'N/A'} | Net ID: ${p.network_id || 'N/A'} | API ID: ${p.api_plan_id || 'N/A'}<br>
           <span style="color:${statusColor}">${p.is_active? 'Active' : 'Disabled'}</span>
           <button onclick="editPlan(${p.id})" class="primaryBtn">Edit</button>
@@ -851,7 +964,9 @@ async function loadAdminPlans() {
         </div>`;
       });
     }
-  } catch {}
+  } catch(e) {
+    console.error("Load admin plans error:", e);
+  }
 }
 
 async function addPlan() {
@@ -860,8 +975,8 @@ async function addPlan() {
     network: el("newPlanNetwork")?.value,
     name: el("newPlanName")?.value,
     price: el("newPlanPrice")?.value,
-    regular_price: el("newPlanRegularPrice")?.value,
-    top_price: el("newPlanTopPrice")?.value,
+    regular_price: el("newPlanRegularPrice")?.value || null,
+    top_price: el("newPlanTopPrice")?.value || null,
     cost: el("newPlanCost")?.value,
     validity: el("newPlanValidity")?.value,
     restricted: el("newPlanRestricted")?.checked,
@@ -891,6 +1006,7 @@ async function addPlan() {
         if (el(id)) el(id).value = "";
       });
       if (el("newPlanRestricted")) el("newPlanRestricted").checked = false;
+      broadcastTopUserUpdate(currentUser.company);
     }
   } catch {
     hideLoader();
@@ -912,6 +1028,7 @@ async function togglePlan(id, is_active) {
     if (res.ok) {
       loadAdminPlans();
       loadPlans();
+      broadcastTopUserUpdate(currentUser.company);
     }
   } catch {
     hideLoader();
@@ -946,8 +1063,8 @@ async function savePlanEdit() {
   const updated = {
     name: el("editPlanName")?.value,
     price: el("editPlanPrice")?.value,
-    regular_price: el("editPlanRegularPrice")?.value,
-    top_price: el("editPlanTopPrice")?.value,
+    regular_price: el("editPlanRegularPrice")?.value || null,
+    top_price: el("editPlanTopPrice")?.value || null,
     cost: el("editPlanCost")?.value,
     validity: el("editPlanValidity")?.value,
     restricted: el("editPlanRestricted")?.checked,
@@ -975,6 +1092,7 @@ async function savePlanEdit() {
     if (res.ok) {
       loadAdminPlans();
       loadPlans();
+      broadcastTopUserUpdate(currentUser.company);
     }
   } catch {
     hideLoader();
@@ -994,7 +1112,8 @@ async function loadAdminUsers() {
     if (list) {
       list.innerHTML = "";
       users.forEach(u => {
-        const tierBadge = `<span class="badge ${u.user_tier}">${u.user_tier.toUpperCase()}</span>`;
+        const tierColor = u.user_tier === 'top'? '#00c853' : u.user_tier === 'regular'? '#ffa000' : '#888';
+        const tierBadge = `<span style="color:${tierColor};font-weight:bold">${u.user_tier.toUpperCase()}</span>`;
         list.innerHTML += `<div class="userCard">
           <strong>${u.username}</strong> - ${u.email} ${tierBadge}<br>
           Wallet: ${formatNaira(u.wallet_balance)} | Phone: ${u.phone || 'N/A'}<br>
@@ -1006,7 +1125,9 @@ async function loadAdminUsers() {
         </div>`;
       });
     }
-  } catch {}
+  } catch(e) {
+    console.error("Load users error:", e);
+  }
 }
 
 async function setUserTier(id, tier) {
@@ -1024,10 +1145,21 @@ async function setUserTier(id, tier) {
       loadAdminUsers();
       loadTopUsers();
       loadRegularUsers();
+      broadcastTopUserUpdate(currentUser.company);
     }
   } catch {
     hideLoader();
     showMsg("Server error", "error");
+  }
+}
+
+/* ================= BROADCAST - FIXED ================= */
+function broadcastTopUserUpdate(company) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ 
+      type: 'tier_update', 
+      company: company 
+    }));
   }
 }
 
