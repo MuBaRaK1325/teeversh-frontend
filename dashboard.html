@@ -7,33 +7,38 @@
 
 <!-- PWA TAGS -->
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#ca3be7">
+<meta name="theme-color" content="#9333ea">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="TEEVERSH">
 <link rel="apple-touch-icon" href="/images/TEEVERSH-192.png">
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
 <style>
 :root{
---primary:#b617b6;
---bg:#0f0510;
---card:#260b2a;
---accent:#c113d1;
+--primary:#9333ea;
+--bg:#1a0b2e;
+--bg2:#2d1b4e;
+--card:rgba(255, 255, 255, 0.1);
+--accent:#9333ea;
 --success:#00c853;
 --danger:#ff4d4d;
 --warning:#ffa000;
+--glass-border:rgba(255, 255, 255, 0.2);
+--text-muted:rgba(255, 255, 255, 0.7);
 }
 
 *{box-sizing:border-box}
 body{
 margin:0;
-background:var(--bg);
+background:linear-gradient(135deg, var(--bg), var(--bg2));
 color:white;
-font-family:Arial;
+font-family:system-ui, -apple-system, sans-serif;
 padding-bottom:120px;
 -webkit-tap-highlight-color:transparent;
+min-height:100vh;
 }
 
 /* HEADER */
@@ -43,6 +48,8 @@ justify-content:space-between;
 align-items:center;
 padding:15px;
 background:var(--card);
+backdrop-filter:blur(10px);
+border-bottom:1px solid var(--glass-border);
 }
 
 .logoContainer{
@@ -57,6 +64,7 @@ width:40px;
 border-radius:50%;
 border:2px solid var(--primary);
 object-fit:cover;
+box-shadow:0 0 20px rgba(147, 51, 234, 0.4);
 }
 
 .companyBadge{
@@ -73,7 +81,8 @@ margin:20px;
 padding:20px;
 border-radius:16px;
 text-align:center;
-background:linear-gradient(135deg,var(--primary),var(--accent));
+background:linear-gradient(135deg,var(--primary),var(--bg2));
+box-shadow:0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 .adminWalletCard{
@@ -81,8 +90,9 @@ margin:20px;
 padding:15px;
 border-radius:12px;
 text-align:center;
-background:linear-gradient(135deg,#0f1735,#1a237e);
-border:1px solid var(--primary);
+background:var(--card);
+backdrop-filter:blur(10px);
+border:1px solid var(--glass-border);
 }
 
 /* QUICK */
@@ -95,6 +105,8 @@ margin:20px;
 
 .quickCard{
 background:var(--card);
+backdrop-filter:blur(10px);
+border:1px solid var(--glass-border);
 padding:15px;
 border-radius:12px;
 text-align:center;
@@ -112,10 +124,17 @@ width:100%;
 padding:12px;
 margin-top:10px;
 border-radius:8px;
-border:none;
-background:#331a3a;
+border:1px solid var(--glass-border);
+background:rgba(255, 255, 255, 0.1);
 color:white;
 font-size:16px;
+backdrop-filter:blur(10px);
+}
+input::placeholder{color:var(--text-muted);}
+input:focus,select:focus{
+outline:none;
+border-color:var(--primary);
+background:rgba(255, 255, 255, 0.15);
 }
 
 label{
@@ -137,7 +156,9 @@ width:100%;
 cursor:pointer;
 font-weight:bold;
 font-size:16px;
+transition:all 0.2s;
 }
+button:hover{transform:translateY(-2px);}
 .primaryBtn{background:var(--primary);}
 .dangerBtn{background:var(--danger);}
 .successBtn{background:var(--success);}
@@ -162,6 +183,8 @@ margin-top:15px;
 
 .networkItem{
 background:var(--card);
+backdrop-filter:blur(10px);
+border:1px solid var(--glass-border);
 padding:12px;
 border-radius:50%;
 text-align:center;
@@ -177,6 +200,7 @@ transition:0.2s;
 .networkItem.active{
 border:3px solid var(--primary);
 transform:scale(1.05);
+box-shadow:0 0 20px rgba(147, 51, 234, 0.4);
 }
 
 .networkItem img{
@@ -189,6 +213,8 @@ object-fit:cover;
 /* PLAN */
 .planItem{
 background:var(--card);
+backdrop-filter:blur(10px);
+border:1px solid var(--glass-border);
 padding:12px;
 border-radius:10px;
 margin-top:10px;
@@ -196,7 +222,7 @@ cursor:pointer;
 position:relative;
 transition:0.2s;
 }
-.planItem:active{background:#32113a;}
+.planItem:active{background:rgba(255, 255, 255, 0.2);}
 
 .topUserBadge{
 position:absolute;
@@ -211,25 +237,31 @@ font-size:10px;
 /* TRANSACTION */
 .transactionCard{
 background:var(--card);
+backdrop-filter:blur(10px);
+border:1px solid var(--glass-border);
 padding:12px;
 border-radius:10px;
 margin-top:10px;
+cursor:pointer;
 }
 
 .userCard, .planCard{
 background:var(--card);
+backdrop-filter:blur(10px);
+border:1px solid var(--glass-border);
 padding:12px;
 border-radius:10px;
 margin-top:10px;
 }
 
-/* ADMIN: WITHDRAWALS - UPDATED */
+/* ADMIN */
 .adminSection{
-background:#320f35;
+background:var(--card);
+backdrop-filter:blur(10px);
+border:1px solid var(--glass-border);
 padding:15px;
 border-radius:10px;
 margin-top:15px;
-border:1px solid #3f1a45;
 }
 
 .adminSection h4{
@@ -242,9 +274,9 @@ font-size:16px;
 width:100%;
 padding:12px;
 margin:8px 0;
-border:1px solid #3f1a45;
+border:1px solid var(--glass-border);
 border-radius:8px;
-background:#331a3a;
+background:rgba(255, 255, 255, 0.1);
 color:white;
 font-size:14px;
 box-sizing:border-box;
@@ -253,11 +285,13 @@ box-sizing:border-box;
 .inputField:focus, #withdrawAmount:focus, #withdrawBank:focus, #withdrawAccountNumber:focus, #withdrawAccountName:focus{
 outline:none;
 border:1px solid var(--primary);
-background:#3a1d42;
+background:rgba(255, 255, 255, 0.15);
 }
 
 .withdrawCard{
 background:var(--card);
+backdrop-filter:blur(10px);
+border:1px solid var(--glass-border);
 padding:15px;
 border-radius:10px;
 margin-top:12px;
@@ -268,7 +302,7 @@ transition:0.2s;
 
 .withdrawCard:hover{
 transform:translateY(-2px);
-box-shadow:0 4px 12px rgba(182,23,182,0.2);
+box-shadow:0 4px 12px rgba(147, 51, 234, 0.2);
 }
 
 .listContainer{
@@ -282,15 +316,16 @@ width:100%;
 border-collapse:collapse;
 margin-top:15px;
 background:var(--card);
+backdrop-filter:blur(10px);
 border-radius:8px;
 overflow:hidden;
 }
 th,td{
 padding:10px;
 text-align:left;
-border-bottom:1px solid #361a3a;
+border-bottom:1px solid rgba(255, 255, 255, 0.1);
 }
-th{background:#39113a;}
+th{background:rgba(147, 51, 234, 0.3);}
 
 /* NAV */
 .bottomNav{
@@ -298,10 +333,11 @@ position:fixed;
 bottom:0;
 width:100%;
 background:var(--card);
+backdrop-filter:blur(10px);
+border-top:1px solid var(--glass-border);
 display:flex;
 justify-content:space-around;
 padding:8px 0;
-border-top:1px solid #391a3a;
 z-index:999;
 }
 
@@ -312,7 +348,7 @@ padding:8px;
 font-size:12px;
 }
 
-/* MODAL - FIXED Z-INDEX FOR ANDROID WEBVIEW */
+/* MODAL - FIXED FOR ANDROID WEBVIEW */
 .modal{
 position:fixed;
 top:0;left:0;width:100%;height:100%;
@@ -324,7 +360,8 @@ z-index:99999;
 }
 
 .modalBox{
-background:var(--card);
+background:linear-gradient(135deg, var(--bg), var(--bg2));
+border:1px solid var(--glass-border);
 padding:20px;
 border-radius:12px;
 width:85%;
@@ -332,6 +369,7 @@ max-width:400px;
 max-height:80vh;
 overflow-y:auto;
 text-align:center;
+box-shadow:0 8px 32px rgba(0, 0, 0, 0.6);
 }
 
 .modal-buttons{
@@ -347,11 +385,12 @@ flex:1;
 /* ADMIN */
 .adminOnly{
 display:none;
-background:#2f0f35;
+background:var(--card);
+backdrop-filter:blur(10px);
+border:1px solid var(--glass-border);
 padding:15px;
 border-radius:10px;
 margin-top:20px;
-border:1px solid var(--primary);
 }
 
 .badge{
@@ -364,13 +403,14 @@ font-weight:bold;
 .badgeDanger{background:var(--danger);}
 .badgeWarning{background:var(--warning);}
 
-/* FOOTER - UPDATED WITH PURPLE THEME */
+/* FOOTER */
 .footer{
 text-align:center;
 font-size:14px;
 margin-top:30px;
 padding:25px 20px;
 background:var(--card);
+backdrop-filter:blur(10px);
 border-top:2px solid var(--primary);
 }
 
@@ -381,7 +421,7 @@ color:#ddd;
 }
 
 .footer a{
-color:var(--accent);
+color:var(--primary);
 text-decoration:none;
 display:block;
 margin:8px 0;
@@ -390,8 +430,7 @@ transition:0.2s;
 }
 
 .footer a:hover{
-color:var(--primary);
-text-decoration:none;
+color:var(--accent);
 }
 
 .channelLink{
@@ -399,21 +438,20 @@ margin:18px 0;
 }
 
 .channelLink a{
-background:linear-gradient(135deg,var(--primary),var(--accent));
+background:linear-gradient(135deg,var(--primary),var(--bg2));
 color:white !important;
 padding:12px 24px;
 border-radius:25px;
 display:inline-block;
 font-weight:600;
 text-decoration:none !important;
-box-shadow:0 4px 12px rgba(182,23,182,0.4);
+box-shadow:0 4px 12px rgba(147, 51, 234, 0.4);
 transition:0.3s;
 }
 
 .channelLink a:hover{
 transform:translateY(-2px);
-box-shadow:0 6px 16px rgba(182,23,182,0.6);
-text-decoration:none !important;
+box-shadow:0 6px 16px rgba(147, 51, 234, 0.6);
 }
 
 /* INSTALL BANNER */
@@ -436,11 +474,32 @@ margin:0 5px;
 padding:8px 16px;
 }
 
+/* RECEIPT MODAL */
+#receiptModal{
+display:none;
+position:fixed;
+inset:0;
+background:rgba(0,0,0,0.7);
+backdrop-filter:blur(8px);
+z-index:99999;
+align-items:center;
+justify-content:center;
+padding:1rem;
+}
+
+.receiptBox{
+background:linear-gradient(135deg, #1a0b2e, #2d1b4e);
+border-radius:24px;
+max-width:28rem;
+width:100%;
+border:1px solid rgba(147,51,234,0.4);
+box-shadow:0 0 40px rgba(147,51,234,0.3);
+}
 </style>
 </head>
 <body>
 
-<!-- ADD PLAN MODAL -->
+<!-- ADD PLAN MODAL - WITH USER PRICE FIELD -->
 <div id="addPlanModal" class="modal">
 <div class="modalBox">
   <h3>Add New Plan</h3>
@@ -453,7 +512,8 @@ padding:8px 16px;
     <option value="9MOBILE">9MOBILE</option>
   </select>
   <input id="newPlanName" placeholder="Plan Name e.g 1GB SME" />
-  <input id="newPlanPrice" type="number" step="0.01" placeholder="Selling Price" />
+  <input id="newPlanPrice" type="number" step="0.01" placeholder="Default Price" />
+  <input id="newPlanUserPrice" type="number" step="0.01" placeholder="Regular User Price" />
   <input id="newPlanTopPrice" type="number" step="0.01" placeholder="Top User Price" />
   <input id="newPlanCost" type="number" step="0.01" placeholder="Your Cost" />
   <input id="newPlanValidity" placeholder="Validity e.g 30 Days" />
@@ -473,7 +533,7 @@ padding:8px 16px;
 </div>
 </div>
 
-<!-- EDIT PLAN MODAL -->
+<!-- EDIT PLAN MODAL - WITH USER PRICE FIELD -->
 <div id="editPlanModal" class="modal">
 <div class="modalBox">
   <h3>Edit Plan</h3>
@@ -485,7 +545,8 @@ padding:8px 16px;
     <option value="9MOBILE">9MOBILE</option>
   </select>
   <input id="editPlanName" placeholder="Plan Name" />
-  <input id="editPlanPrice" type="number" step="0.01" placeholder="Selling Price" />
+  <input id="editPlanPrice" type="number" step="0.01" placeholder="Default Price" />
+  <input id="editPlanUserPrice" type="number" step="0.01" placeholder="Regular User Price" />
   <input id="editPlanTopPrice" type="number" step="0.01" placeholder="Top User Price" />
   <input id="editPlanCost" type="number" step="0.01" placeholder="Your Cost" />
   <input id="editPlanValidity" placeholder="Validity" />
@@ -506,15 +567,14 @@ padding:8px 16px;
 </div>
 </div>
 
-<!-- TEEVERSH RECEIPT MODAL -->
-<div id="receiptModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(8px); z-index:99999; align-items:center; justify-content:center; padding:1rem; font-family:system-ui, -apple-system, sans-serif;">
-  <div style="background:linear-gradient(135deg, #1a0b2e, #2d1b4e, #1a0b2e); border-radius:24px; max-width:28rem; width:100%; border:1px solid rgba(147,51,234,0.4); box-shadow:0 0 40px rgba(147,51,234,0.3);">
-
+<!-- TEEVERSH RECEIPT MODAL - FIXED -->
+<div id="receiptModal">
+  <div class="receiptBox">
     <div id="receiptContent" style="padding:1px;">
       <div style="position:relative; padding:24px; border-bottom:1px solid rgba(147,51,234,0.3);">
         <button onclick="closeReceipt()" style="position:absolute; right:16px; top:16px; color:#c4b5fd; background:rgba(147,51,234,0.2); border:none; cursor:pointer; padding:6px 10px; border-radius:8px; font-size:18px; line-height:1;">✕</button>
         <div style="display:flex; align-items:center; gap:12px;">
-          <img src="images/teeversh-logo.png" alt="Teeversh" style="width:48px; height:48px; border-radius:12px; box-shadow:0 4px 12px rgba(147,51,234,0.5); object-fit:cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+          <img src="images/TEEVERSH.png" alt="Teeversh" style="width:48px; height:48px; border-radius:12px; box-shadow:0 4px 12px rgba(147,51,234,0.5); object-fit:cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
           <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #9333ea, #7e22ce); display:none; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(147,51,234,0.5);">
             <span style="color:white; font-weight:bold; font-size:24px;">T</span>
           </div>
@@ -572,8 +632,8 @@ padding:8px 16px;
     </div>
 
     <div style="padding:0 24px 24px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-      <button onclick="downloadReceipt()" style="background:rgba(147,51,234,0.2); color:#c4b5fd; font-weight:600; padding:12px; border-radius:12px; border:1px solid rgba(147,51,234,0.4); cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='rgba(147,51,234,0.3)'" onmouseout="this.style.background='rgba(147,51,234,0.2)'">Download</button>
-      <button onclick="shareReceipt()" style="background:linear-gradient(90deg, #9333ea, #7e22ce); color:white; font-weight:600; padding:12px; border-radius:12px; border:none; cursor:pointer; box-shadow:0 4px 12px rgba(147,51,234,0.4); transition:all 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">Share</button>
+      <button onclick="downloadReceipt()" style="background:rgba(147,51,234,0.2); color:#c4b5fd; font-weight:600; padding:12px; border-radius:12px; border:1px solid rgba(147,51,234,0.4); cursor:pointer;">Download</button>
+      <button onclick="shareReceipt()" style="background:linear-gradient(90deg, #9333ea, #7e22ce); color:white; font-weight:600; padding:12px; border-radius:12px; border:none; cursor:pointer; box-shadow:0 4px 12px rgba(147,51,234,0.4);">Share</button>
     </div>
   </div>
 </div>
@@ -625,12 +685,12 @@ padding:8px 16px;
 </div>
 
 <button onclick="openFundModal()">💳 Fund via Paystack</button>
-<button onclick="showSection('home')">⬅ Back</button>
+<button onclick="showSection('home')" class="backBtn">⬅ Back</button>
 </section>
 
 <!-- DATA -->
 <section id="data" class="section">
-<button onclick="showSection('home')">⬅ Back</button>
+<button onclick="showSection('home')" class="backBtn">⬅ Back</button>
 <h3>Select Network</h3>
 <div class="networkGrid">
 <div class="networkItem" onclick="selectNetwork('mtn', this)"><img src="images/mtn.png" alt="MTN"></div>
@@ -644,7 +704,7 @@ padding:8px 16px;
 
 <!-- AIRTIME -->
 <section id="airtime" class="section">
-<button onclick="showSection('home')">⬅ Back</button>
+<button onclick="showSection('home')" class="backBtn">⬅ Back</button>
 <h3>Select Network</h3>
 
 <div class="networkGrid">
@@ -660,14 +720,14 @@ padding:8px 16px;
 
 <!-- TRANSACTIONS -->
 <section id="transactions" class="section">
-<button onclick="showSection('home')">⬅ Back</button>
+<button onclick="showSection('home')" class="backBtn">⬅ Back</button>
 <h3>All Transactions</h3>
 <div id="allTransactions"></div>
 </section>
 
 <!-- ADMIN: PROFIT DASHBOARD -->
 <section id="profitDashboard" class="section adminOnly">
-<button onclick="showSection('home')">⬅ Back</button>
+<button onclick="showSection('home')" class="backBtn">⬅ Back</button>
 <h3>📊 Profit Dashboard</h3>
 
 <div class="adminSection">
@@ -685,7 +745,7 @@ padding:8px 16px;
 
 <!-- ADMIN: TOP USERS MANAGER -->
 <section id="topUsersManager" class="section adminOnly">
-<button onclick="showSection('profile')">⬅ Back</button>
+<button onclick="showSection('profile')" class="backBtn">⬅ Back</button>
 <h3>🔥 Top Users Manager</h3>
 
 <div class="adminSection">
@@ -697,7 +757,7 @@ padding:8px 16px;
 
 <!-- ADMIN: REGULAR USERS MANAGER -->
 <section id="regularUsersManager" class="section adminOnly">
-<button onclick="showSection('profile')">⬅ Back</button>
+<button onclick="showSection('profile')" class="backBtn">⬅ Back</button>
 <h3>⭐ Regular Users Manager</h3>
 
 <div class="adminSection">
@@ -709,7 +769,7 @@ padding:8px 16px;
 
 <!-- ADMIN: PLANS MANAGER -->
 <section id="plansManager" class="section adminOnly">
-<button onclick="showSection('profile')">⬅ Back</button>
+<button onclick="showSection('profile')" class="backBtn">⬅ Back</button>
 <h3>📱 Plans Manager</h3>
 
 <div class="adminSection">
@@ -722,77 +782,9 @@ padding:8px 16px;
 </div>
 </section>
 
-<!-- ADD PLAN MODAL -->
-<div id="addPlanModal" class="modal">
-<div class="modalBox">
-  <h3>Add New Plan</h3>
-  <input id="newPlanId" type="number" placeholder="Plan ID (from provider)" />
-  <select id="newPlanNetwork">
-    <option value="">Select Network</option>
-    <option value="MTN">MTN</option>
-    <option value="GLO">GLO</option>
-    <option value="AIRTEL">AIRTEL</option>
-    <option value="9MOBILE">9MOBILE</option>
-  </select>
-  <input id="newPlanName" placeholder="Plan Name e.g 1GB SME" />
-  <input id="newPlanPrice" type="number" step="0.01" placeholder="Default Price" />
-  <input id="newPlanRegularPrice" type="number" step="0.01" placeholder="Regular User Price" />
-  <input id="newPlanTopPrice" type="number" step="0.01" placeholder="Top User Price" />
-  <input id="newPlanCost" type="number" step="0.01" placeholder="Your Cost" />
-  <input id="newPlanValidity" placeholder="Validity e.g 30 Days" />
-  <select id="newPlanProvider">
-    <option value="">Select Provider</option>
-    <option value="maitama">Maitama</option>
-    <option value="cheapdatahub">CheapDataHub</option>
-    <option value="subpadi">SubPadi</option>
-  </select>
-  <input id="newPlanNetworkId" placeholder="Network ID: 1=MTN, 2=Airtel, 3=Glo, 4=9mobile" />
-  <input id="newPlanApiId" placeholder="API Plan ID from provider dashboard" />
-  <label><input id="newPlanRestricted" type="checkbox"> Restricted to my company</label>
-  <div style="display:flex;gap:10px;margin-top:15px;">
-    <button onclick="addPlan()" class="successBtn">Add Plan</button>
-    <button onclick="closeModal('addPlanModal')" class="dangerBtn">Cancel</button>
-  </div>
-</div>
-</div>
-
-<!-- EDIT PLAN MODAL -->
-<div id="editPlanModal" class="modal">
-<div class="modalBox">
-  <h3>Edit Plan</h3>
-  <input type="hidden" id="editPlanId" />
-  <select id="editPlanNetwork">
-    <option value="MTN">MTN</option>
-    <option value="AIRTEL">AIRTEL</option>
-    <option value="GLO">GLO</option>
-    <option value="9MOBILE">9MOBILE</option>
-  </select>
-  <input id="editPlanName" placeholder="Plan Name" />
-  <input id="editPlanPrice" type="number" step="0.01" placeholder="Default Price" />
-  <input id="editPlanRegularPrice" type="number" step="0.01" placeholder="Regular User Price" />
-  <input id="editPlanTopPrice" type="number" step="0.01" placeholder="Top User Price" />
-  <input id="editPlanCost" type="number" step="0.01" placeholder="Your Cost" />
-  <input id="editPlanValidity" placeholder="Validity" />
-  <select id="editPlanProvider">
-    <option value="">Select Provider</option>
-    <option value="maitama">Maitama</option>
-    <option value="cheapdatahub">CheapDataHub</option>
-    <option value="subpadi">SubPadi</option>
-  </select>
-  <input id="editPlanNetworkId" placeholder="Network ID" />
-  <input id="editPlanApiId" placeholder="API Plan ID" />
-  <label><input id="editPlanRestricted" type="checkbox"> Restricted to my company</label>
-  <label><input id="editPlanActive" type="checkbox"> Active</label>
-  <div style="display:flex;gap:10px;margin-top:15px;">
-    <button onclick="savePlanEdit()" class="successBtn">Update Plan</button>
-    <button onclick="closeModal('editPlanModal')" class="dangerBtn">Cancel</button>
-  </div>
-</div>
-</div>
-
 <!-- ADMIN: USERS MANAGER -->
 <section id="usersManager" class="section adminOnly">
-<button onclick="showSection('profile')">⬅ Back</button>
+<button onclick="showSection('profile')" class="backBtn">⬅ Back</button>
 <h3>👥 Users Manager</h3>
 
 <div class="adminSection">
@@ -834,7 +826,7 @@ padding:8px 16px;
 
 <!-- PROFILE -->
 <section id="profile" class="section">
-<button onclick="showSection('home')">⬅ Back</button>
+<button onclick="showSection('home')" class="backBtn">⬅ Back</button>
 
 <div class="adminSection" style="background:var(--card);">
   <h3>Security</h3>
@@ -882,7 +874,7 @@ padding:8px 16px;
 
 </section>
 
-<!-- PIN MODAL - BNHABEEB + BIOMETRIC -->
+<!-- PIN MODAL -->
 <div id="pinModal" class="modal">
   <div class="modalBox">
     <h3 id="pinModalTitle">Enter PIN</h3>
@@ -916,6 +908,8 @@ padding:8px 16px;
 </div>
 </div>
 
+
+
 <!-- MESSAGE MODAL -->
 <div id="msgModal" class="modal">
 <div class="modalBox" id="msgBox"></div>
@@ -924,8 +918,8 @@ padding:8px 16px;
 <!-- CONFIRM MODAL -->
 <div id="confirmModal" class="modal">
 <div class="modalBox">
-  <h3 id="confirmTitle">Confirm</h3>
-  <p id="confirmMsg" style="margin:15px 0;"></p>
+  <h3 id="confirmTitle" style="color:var(--primary);margin-bottom:12px;">Confirm</h3>
+  <p id="confirmMsg" style="margin:15px 0;color:var(--text-muted);"></p>
   <div class="modal-buttons">
     <button id="confirmYes" class="successBtn">Yes</button>
     <button onclick="closeModal('confirmModal')" class="dangerBtn">Cancel</button>
@@ -935,17 +929,17 @@ padding:8px 16px;
 
 <!-- NAV -->
 <div class="bottomNav">
-<button onclick="showSection('home')">Home</button>
-<button onclick="showSection('data')">Data</button>
-<button onclick="showSection('transactions')">History</button>
-<button onclick="showSection('profile')">Profile</button>
+<button onclick="showSection('home')">🏠<br>Home</button>
+<button onclick="showSection('data')">📶<br>Data</button>
+<button onclick="showSection('transactions')">📊<br>History</button>
+<button onclick="showSection('profile')">👤<br>Profile</button>
 </div>
 
 <!-- INSTALL BANNER -->
 <div id="installBanner">
   <span>Install TEEVERSH for faster access</span>
-  <button id="installBtn" class="primaryBtn">Install</button>
-  <button id="closeBanner" class="dangerBtn">Later</button>
+  <button id="installBtn" class="primaryBtn" style="width:auto;margin:0 5px;">Install</button>
+  <button id="closeBanner" class="dangerBtn" style="width:auto;margin:0 5px;">Later</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -955,14 +949,16 @@ let currentTxnId = '';
 
 function showReceipt(data) {
   document.getElementById('receiptNumber').textContent = data.number;
+  document.getElementById('receiptNetwork').textContent = data.network || 'N/A';
+  document.getElementById('receiptPlan').textContent = data.plan || data.type;
   document.getElementById('receiptDate').textContent = data.date;
   document.getElementById('receiptPrice').textContent = '₦' + data.price;
-  currentTxnId = data.txnId || 'TVS' + Date.now().toString().slice(-8);
+  currentTxnId = data.txnId || data.id || 'TVS' + Date.now().toString().slice(-8);
   document.getElementById('txnId').textContent = 'Transaction ID: ' + currentTxnId;
 
   const statusColors = {
     success: {bg: 'rgba(34,197,94,0.15)', color: '#4ade80', border: 'rgba(34,197,94,0.3)', text: 'SUCCESSFUL'},
-    failed: {bg: 'rgba(239,68,0.15)', color: '#f87171', border: 'rgba(239,68,68,0.3)', text: 'FAILED'},
+    failed: {bg: 'rgba(239,68,68,0.15)', color: '#f87171', border: 'rgba(239,68,68,0.3)', text: 'FAILED'},
     pending: {bg: 'rgba(234,179,8,0.15)', color: '#facc15', border: 'rgba(234,179,8,0.3)', text: 'PENDING'}
   };
   const s = statusColors[data.status] || statusColors.pending;
@@ -977,7 +973,8 @@ function showReceipt(data) {
     number: data.number,
     amount: data.price,
     date: data.date,
-    status: data.status
+    status: data.status,
+    company: 'TEEVERSh'
   }), {
     width: 120,
     margin: 0,
@@ -1004,7 +1001,9 @@ async function downloadReceipt() {
     backgroundColor: '#1a0b2e',
     scale: 2,
     useCORS: true,
-    logging: false
+    logging: false,
+    windowWidth: document.getElementById('receiptContent').scrollWidth,
+    windowHeight: document.getElementById('receiptContent').scrollHeight
   });
   const link = document.createElement('a');
   link.download = `Teeversh-Receipt-${document.getElementById('receiptNumber').textContent}.png`;
@@ -1020,13 +1019,17 @@ async function shareReceipt() {
     logging: false
   });
   canvas.toBlob(async (blob) => {
-    const file = new File([blob], 'receipt.png', {type: 'image/png'});
-    if (navigator.share && navigator.canShare({files: [file]})) {
-      await navigator.share({
-        files: [file],
-        title: 'Teeversh Receipt',
-        text: `Transaction ${document.getElementById('receiptPrice').textContent}`
-      });
+    const file = new File([blob], 'teeversh-receipt.png', {type: 'image/png'});
+    if (navigator.share && navigator.canShare && navigator.canShare({files: [file]})) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: 'Teeversh Receipt',
+          text: `Transaction ${document.getElementById('receiptPrice').textContent} - ${document.getElementById('receiptNumber').textContent}`
+        });
+      } catch(e) {
+        downloadReceipt();
+      }
     } else {
       downloadReceipt();
     }
@@ -1036,8 +1039,26 @@ async function shareReceipt() {
 document.getElementById('receiptModal').addEventListener('click', function(e) {
   if (e.target === this) closeReceipt();
 });
+
+// Show message modal helper
+function showMsg(msg, isError = false){
+  const box = document.getElementById('msgBox');
+  box.innerHTML = `<p style="margin-bottom:16px;color:${isError ? '#ff4d4d' : 'white'}">${msg}</p><button onclick="closeModal('msgModal')" class="primaryBtn">OK</button>`;
+  document.getElementById('msgModal').style.display = 'flex';
+}
+
+// Show confirm modal helper
+function showConfirm(title, msg, onYes){
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMsg').textContent = msg;
+  document.getElementById('confirmYes').onclick = () => {
+    closeModal('confirmModal');
+    onYes();
+  };
+  document.getElementById('confirmModal').style.display = 'flex';
+}
 </script>
-<script src="app.js?v=2.3.0"></script>
+<script src="app.js?v=2.3.1"></script>
 
 </body>
 </html>
