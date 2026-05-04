@@ -3,49 +3,135 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login</title>
+  <title>TEEVERSH DATA PLUG - Login</title>
   <link rel="manifest" href="/manifest.json">
-  <link rel="stylesheet" href="css/theme.css">
-  <script src="js/theme.js"></script>
+  <meta name="theme-color" content="#9333ea">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1a0b2e, #2d1b4e);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+   .container { max-width: 28rem; width: 100%; text-align: center; }
+   .glass-card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+   .logo {
+      width: 96px;
+      height: 96px;
+      border-radius: 24px;
+      margin: 0 auto 24px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      object-fit: cover;
+    }
+   .h1 {
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+   .tagline {
+      font-size: 18px;
+      opacity: 0.9;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+   .input {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      font-size: 16px;
+      backdrop-filter: blur(10px);
+      margin-bottom: 12px;
+    }
+   .input::placeholder { color: rgba(255, 255, 255, 0.7); }
+   .input:focus {
+      outline: none;
+      border-color: #9333ea;
+      background: rgba(255, 255, 255, 0.15);
+    }
+   .btn {
+      width: 100%;
+      padding: 16px;
+      border-radius: 16px;
+      font-weight: 700;
+      font-size: 16px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: block;
+      margin-bottom: 12px;
+    }
+   .btn-primary {
+      background: white;
+      color: #9333ea;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    }
+   .btn-primary:hover { transform: translateY(-2px); }
+   .btn-secondary {
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+   .btn-ghost {
+      background: transparent;
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+   .showBtn {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #9333ea;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+  </style>
 </head>
-<body class="centered">
+<body>
   <div id="loginLoader" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:none;align-items:center;justify-content:center;z-index:9999;flex-direction:column;">
-    <div style="width:70px;height:70px;border:6px solid #2c0526;border-top:6px solid var(--accent);border-radius:50%;animation:spin 1s linear infinite;"></div>
+    <div style="width:70px;height:70px;border:6px solid #2c0526;border-top:6px solid #9333ea;border-radius:50%;animation:spin 1s linear infinite;"></div>
     <p style="margin-top:15px">Logging in...</p>
   </div>
 
   <div class="container">
     <div class="glass-card">
-      <img id="companyLogo" class="logo" alt="Logo" onerror="this.style.display='none'; document.getElementById('logoFallback').style.display='flex';">
-      <div id="logoFallback" class="logo-fallback" style="display:none;">
-        <span id="logoLetter" style="font-size: 48px; font-weight: bold;"></span>
+      <img src="images/TEEVERSH.png" class="logo" alt="Logo">
+      <h1 class="h1">Welcome Back</h1>
+      <p class="tagline">Cheap, Affordable, Fast</p>
+
+      <input id="loginUsername" class="input" placeholder="Username or Email">
+
+      <div style="position:relative;">
+        <input id="loginPassword" type="password" class="input" placeholder="Password">
+        <button class="showBtn" onclick="togglePassword()">Show</button>
       </div>
 
-      <h1 class="h1 text-center" id="companyName">Welcome Back</h1>
-      <p class="tagline text-center">Cheap, Affordable, Fast</p>
-
-      <div class="flex flex-col gap-2 mt-3">
-        <input id="loginUsername" class="input" placeholder="Username or Email">
-
-        <div style="position:relative;">
-          <input id="loginPassword" type="password" class="input" placeholder="Password">
-          <button class="showBtn" onclick="togglePassword()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--accent);cursor:pointer;">Show</button>
-        </div>
-
-        <button id="loginBtn" class="btn btn-primary mt-1">Login</button>
-
-        <button onclick="biometricLogin()" class="btn btn-ghost mt-1">
-          🔐 Login with Fingerprint / Face ID
-        </button>
-
-        <a href="signup.html" class="btn btn-secondary mt-2">Create Account</a>
-      </div>
+      <button id="loginBtn" class="btn btn-primary">Login</button>
+      <button onclick="biometricLogin()" class="btn btn-ghost">🔐 Login with Fingerprint / Face ID</button>
+      <a href="signup.html" class="btn btn-secondary">Create Account</a>
     </div>
   </div>
-
-<style>
-@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
-</style>
 
 <script>
 const API = "https://mayconnect-backend-1.onrender.com";
@@ -55,14 +141,9 @@ const loginBtn = document.getElementById("loginBtn");
 const loader = document.getElementById("loginLoader");
 const welcomeSound = new Audio("sounds/welcome.mp3");
 
-document.addEventListener("DOMContentLoaded", () => {
-  if (localStorage.getItem("token")) {
-    window.location.href = "dashboard.html";
-  }
-});
+if (localStorage.getItem("token")) window.location.href = "dashboard.html";
 
 function togglePassword(){
-  if(!passwordInput) return;
   passwordInput.type = passwordInput.type === "password"? "text" : "password";
   document.querySelector(".showBtn").innerText = passwordInput.type === "password"? "Show" : "Hide";
 }
@@ -72,36 +153,23 @@ loginBtn.addEventListener("click", login);
 async function login(){
   const username = usernameInput.value.trim();
   const password = passwordInput.value.trim();
-
-  if(!username ||!password){
-    alert("Enter username and password");
-    return;
-  }
-
+  if(!username ||!password) return alert("Enter username and password");
   loginBtn.disabled = true;
   loader.style.display = "flex";
-
   try{
     const res = await fetch(API + "/api/login",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
       body:JSON.stringify({ username, password })
     });
-
-    let data;
-    try{ data = await res.json(); }catch{ throw new Error("Invalid server response"); }
+    const data = await res.json();
     if(!res.ok) throw new Error(data.message || "Login failed");
-    if(!data.token) throw new Error("No token received");
-
     localStorage.setItem("token", data.token);
     localStorage.setItem("username", data.username);
     if(data.is_admin) alert("Welcome Admin");
-
     welcomeSound.play().catch(()=>{});
     setTimeout(()=>{ window.location.href = "dashboard.html"; },600);
-
   }catch(err){
-    console.error(err);
     alert(err.message || "Server error");
     loader.style.display = "none";
     loginBtn.disabled = false;
@@ -123,45 +191,30 @@ async function bufferToBase64URL(buffer) {
   const bytes = new Uint8Array(buffer);
   let str = '';
   for (const charCode of bytes) str += String.fromCharCode(charCode);
-  const base64 = btoa(str);
-  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
 async function biometricLogin(){
   const usernameOrEmail = usernameInput.value.trim();
   if(!usernameOrEmail) return alert("Enter your username or email first");
-  if(!window.PublicKeyCredential) return alert("Biometric not supported on this device");
-
+  if(!window.PublicKeyCredential) return alert("Biometric not supported");
   loader.style.display="flex";
-
   try{
     const startRes = await fetch(API + "/api/auth/webauthn/login-start", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
+      method:"POST", headers:{ "Content-Type":"application/json" },
       body:JSON.stringify({ email: usernameOrEmail })
     });
-
-    if(!startRes.ok){
-      const err = await startRes.json();
-      throw new Error(err.error || "No biometric registered for this account");
-    }
-
+    if(!startRes.ok) throw new Error("No biometric registered");
     const options = await startRes.json();
     options.challenge = await base64URLToBuffer(options.challenge);
     if(options.allowCredentials){
-      options.allowCredentials = await Promise.all(
-        options.allowCredentials.map(async cred => ({
-        ...cred,
-          id: await base64URLToBuffer(cred.id)
-        }))
-      );
+      options.allowCredentials = await Promise.all(options.allowCredentials.map(async cred => ({
+      ...cred, id: await base64URLToBuffer(cred.id)
+      })));
     }
-
     const credential = await navigator.credentials.get({ publicKey: options });
-
     const finishRes = await fetch(API + "/api/auth/webauthn/login-finish", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
+      method:"POST", headers:{ "Content-Type":"application/json" },
       body:JSON.stringify({
         email: usernameOrEmail,
         id: credential.id,
@@ -172,31 +225,17 @@ async function biometricLogin(){
           signature: await bufferToBase64URL(credential.response.signature),
           userHandle: credential.response.userHandle? await bufferToBase64URL(credential.response.userHandle) : null,
         },
-        type: credential.type,
-        clientExtensionResults: credential.getClientExtensionResults()
+        type: credential.type
       })
     });
-
-    if(!finishRes.ok){
-      const err = await finishRes.json();
-      throw new Error(err.error || "Authentication failed");
-    }
-
-    const { token, username, is_admin } = await finishRes.json();
+    if(!finishRes.ok) throw new Error("Authentication failed");
+    const { token, username } = await finishRes.json();
     localStorage.setItem("token", token);
     localStorage.setItem("username", username);
-    if(is_admin) alert("Welcome Admin");
-    welcomeSound.play().catch(()=>{});
-    setTimeout(()=>{ window.location.href = "dashboard.html"; },600);
-
+    window.location.href = "dashboard.html";
   }catch(e){
-    console.error(e);
     loader.style.display="none";
-    if (e.name === 'NotAllowedError') {
-      alert('Fingerprint cancelled or failed');
-    } else {
-      alert('Biometric login failed: ' + e.message);
-    }
+    alert('Biometric login failed: ' + e.message);
   }
 }
 </script>
