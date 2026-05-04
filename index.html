@@ -3,67 +3,65 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VTU Services</title>
+  <title>TEEVERSH DATA PLUG - Cheap Data, Airtime & Bills Payment</title>
+  <meta name="description" content="TEEVERSH DATA PLUG - Buy cheap MTN, GLO, Airtel, 9mobile data, airtime and pay electricity bills instantly in Nigeria">
   <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#6B46C1">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TEEVERSH">
+  <link rel="apple-touch-icon" href="/images/TEEVERSH-192.png">
+  <link rel="icon" href="/images/TEEVERSH.png">
+  
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: system-ui, -apple-system, sans-serif;
       min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
+      background: linear-gradient(135deg, #1a0b2e, #2d1b4e);
       color: white;
-      overflow-x: hidden;
+      padding: 1rem;
     }
-  .container {
-      max-width: 28rem;
-      width: 100%;
-      text-align: center;
+    .container { 
+      max-width: 28rem; 
+      margin: 0 auto; 
     }
-  .logo {
+    .glass-card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      margin-bottom: 16px;
+    }
+    .logo {
       width: 96px;
       height: 96px;
       border-radius: 24px;
       margin: 0 auto 24px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
       object-fit: cover;
+      display: block;
     }
-  .logoFallback {
-      width: 96px;
-      height: 96px;
-      border-radius: 24px;
-      margin: 0 auto 24px;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-    }
-    h1 {
+    .h1 {
       font-size: 32px;
       font-weight: 800;
       margin-bottom: 8px;
-      text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      text-align: center;
     }
-  .tagline {
+    .tagline {
       font-size: 18px;
       opacity: 0.9;
       margin-bottom: 4px;
       font-weight: 600;
+      text-align: center;
     }
-  .subtitle {
-      font-size: 14px;
-      opacity: 0.7;
-      margin-bottom: 32px;
-    }
-  .btnGroup {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-  .btn {
+    .btn {
+      width: 100%;
       padding: 16px;
       border-radius: 16px;
       font-weight: 700;
@@ -73,136 +71,96 @@
       transition: all 0.2s;
       text-decoration: none;
       display: block;
+      text-align: center;
+      margin-bottom: 12px;
     }
-  .btnPrimary {
+    .btn-primary {
       background: white;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      color: #6B46C1;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
     }
-  .btnPrimary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-    }
-  .btnSecondary {
-      background: rgba(255,255,255,0.15);
+    .btn-primary:hover { transform: translateY(-2px); }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.15);
       color: white;
-      border: 2px solid rgba(255,255,255,0.3);
-      backdrop-filter: blur(10px);
+      border: 2px solid rgba(255, 255, 255, 0.3);
     }
-  .btnSecondary:hover {
-      background: rgba(255,255,255,0.25);
-      transform: translateY(-2px);
-    }
-  .features {
+    .service-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
-      font-size: 12px;
-      opacity: 0.8;
+      margin: 16px 0;
     }
-  .feature {
-      background: rgba(255,255,255,0.1);
-      padding: 12px;
+    .service-item {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 16px;
       border-radius: 12px;
-      backdrop-filter: blur(10px);
+      text-align: center;
+      font-size: 14px;
     }
-  .footer {
-      margin-top: 32px;
-      font-size: 11px;
-      opacity: 0.6;
+    .contact-info {
+      font-size: 14px;
+      opacity: 0.9;
+      line-height: 1.8;
+    }
+    .contact-info a {
+      color: #6B46C1;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .contact-info strong {
+      display: block;
+      margin-bottom: 8px;
+      color: white;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <img id="logo" class="logo" alt="Logo" onerror="this.style.display='none'; document.getElementById('logoFallback').style.display='flex';">
-    <div id="logoFallback" class="logoFallback">
-      <span id="logoLetter" style="font-size: 48px; font-weight: bold;"></span>
+    <div class="glass-card" style="text-align:center;">
+      <img src="images/TEEVERSH.png" class="logo" alt="Teeversh Logo">
+      <h1 class="h1">TEEVERSH DATA PLUG</h1>
+      <p class="tagline">Cheap, Affordable, Fast</p>
+      <p style="opacity:0.8;margin-top:8px;">Nigeria's Trusted VTU & Bills Payment Platform</p>
     </div>
 
-    <h1 id="companyName">VTU Services</h1>
-    <p class="tagline">Cheap, Affordable, Fast</p>
-    <p class="subtitle">Data • Airtime • Bills Payment</p>
-
-    <div class="btnGroup">
-      <a href="login.html" class="btn btnPrimary" id="loginBtn">Login</a>
-      <a href="signup.html" class="btn btnSecondary">Create Account</a>
+    <div class="glass-card">
+      <h3 style="margin-bottom:12px;font-size:18px;">Our Services</h3>
+      <div class="service-grid">
+        <div class="service-item">📱<br>Data Bundles<br><small>MTN, GLO, Airtel, 9mobile</small></div>
+        <div class="service-item">📞<br>Airtime Topup<br><small>All Networks</small></div>
+        <div class="service-item">⚡<br>Electricity<br><small>KAEDCO, AEDC, EKEDC</small></div>
+        <div class="service-item">📺<br>Cable TV<br><small>DSTV, GOTV, Startimes</small></div>
+      </div>
+      <p style="font-size:13px;opacity:0.8;margin-top:12px;">We provide instant delivery of data, airtime and bill payments at discounted rates for individuals and resellers across Nigeria.</p>
     </div>
 
-    <div class="features">
-      <div class="feature">⚡ Instant Delivery</div>
-      <div class="feature">💰 Best Prices</div>
-      <div class="feature">🔒 100% Secure</div>
-      <div class="feature">📞 24/7 Support</div>
+    <div class="glass-card">
+      <a href="login.html" class="btn btn-primary">Login to Dashboard</a>
+      <a href="signup.html" class="btn btn-secondary">Create Free Account</a>
     </div>
 
-    <div class="footer" id="footerText">
-      © 2026 All Rights Reserved
+    <div class="glass-card">
+      <h3 style="margin-bottom:12px;font-size:18px;">Contact Information</h3>
+      <div class="contact-info">
+        <strong>TEEVERSH GLOBAL RESOURCES NIG LTD</strong>
+        <p>📧 Email: <a href="mailto:bashirahmadt11696@gmail.com">bashirahmadt11696@gmail.com</a></p>
+        <p>📞 Phone: <a href="tel:+2347047457735">+234 704 745 7735</a></p>
+        <p>📱 WhatsApp: <a href="https://wa.me/2347047457735" target="_blank">+234 704 745 7735</a></p>
+        <p>📍 Address: No. 8G Zaria Road, Funtua, Katsina State</p>
+        <p>🕐 Customer Support: 8:00 AM - 10:00 PM Daily</p>
+        <p>🏢 RC Number: 9136449</p>
+      </div>
+    </div>
+
+    <div class="glass-card" style="text-align:center;font-size:12px;opacity:0.7;">
+      <p>© 2026 TEEVERSH GLOBAL RESOURCES NIG LTD</p>
+      <p>Licensed VTU & Bills Payment Service Provider</p>
+      <p style="margin-top:8px;">Powered by MAYCONNECT TECHNOLOGIES</p>
     </div>
   </div>
 
   <script>
-    const COMPANY_CONFIG = {
-      'mayconnect-frontend.onrender.com': {
-        name: 'MAYCONNECT VTU',
-        logo: 'images/mayconnect-logo.png',
-        letter: 'M',
-        color1: '#0066cc',
-        color2: '#004499',
-        textColor: '#0066cc',
-        loginColor: '#0066cc'
-      },
-      'teeversh-frontend.onrender.com': {
-        name: 'TEEVERSH VTU',
-        logo: 'images/teeversh-logo.png',
-        letter: 'T',
-        color1: '#1a0b2e',
-        color2: '#2d1b4e',
-        textColor: '#9333ea',
-        loginColor: '#9333ea'
-      },
-      'sadeeq-frontend.onrender.com': {
-        name: 'SADEEQ DATA HUB',
-        logo: 'images/sadeeq-logo.png',
-        letter: 'S',
-        color1: '#064e3b',
-        color2: '#065f46',
-        textColor: '#059669',
-        loginColor: '#059669'
-      },
-      'bnhabeeb-frontend.onrender.com': {
-        name: 'BN HABEEB DATA HUB',
-        logo: 'images/bnhabeeb-logo.png',
-        letter: 'B',
-        color1: '#1a1a1a',
-        color2: '#2d2d2d',
-        textColor: '#FFD700',
-        loginColor: '#FFD700'
-      },
-      'localhost': {
-        name: 'TEEVERSH VTU',
-        logo: 'images/teeversh-logo.png',
-        letter: 'T',
-        color1: '#1a0b2e',
-        color2: '#2d1b4e',
-        textColor: '#9333ea',
-        loginColor: '#9333ea'
-      }
-    };
-
-    const hostname = window.location.hostname;
-    const config = COMPANY_CONFIG[hostname] || COMPANY_CONFIG['teeversh-frontend.onrender.com'];
-
-    document.title = config.name + ' - Cheap Data & Airtime';
-    document.body.style.background = `linear-gradient(135deg, ${config.color1}, ${config.color2})`;
-    document.getElementById('logo').src = config.logo;
-    document.getElementById('logoFallback').style.background = `linear-gradient(135deg, ${config.textColor}, ${config.color2})`;
-    document.getElementById('logoLetter').textContent = config.letter;
-    document.getElementById('logoLetter').style.color = config.name.includes('BN HABEEB')? '#1a1a1a' : 'white';
-    document.getElementById('companyName').textContent = config.name;
-    document.getElementById('loginBtn').style.color = config.loginColor;
-    document.getElementById('footerText').textContent = `© 2026 ${config.name}. All Rights Reserved`;
-
-    // If user already logged in, send to dashboard
     if (localStorage.getItem('token')) {
       window.location.href = 'dashboard.html';
     }
