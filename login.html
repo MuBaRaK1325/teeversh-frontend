@@ -1,227 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="css/theme.css">
+  <script src="js/theme.js"></script>
+</head>
+<body class="centered">
+  <div id="loginLoader" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:none;align-items:center;justify-content:center;z-index:9999;flex-direction:column;">
+    <div style="width:70px;height:70px;border:6px solid #2c0526;border-top:6px solid var(--accent);border-radius:50%;animation:spin 1s linear infinite;"></div>
+    <p style="margin-top:15px">Logging in...</p>
+  </div>
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <div class="container">
+    <div class="glass-card">
+      <img id="companyLogo" class="logo" alt="Logo" onerror="this.style.display='none'; document.getElementById('logoFallback').style.display='flex';">
+      <div id="logoFallback" class="logo-fallback" style="display:none;">
+        <span id="logoLetter" style="font-size: 48px; font-weight: bold;"></span>
+      </div>
 
-<title>TEEVERSH DATA PLUG - Login</title>
+      <h1 class="h1 text-center" id="companyName">Welcome Back</h1>
+      <p class="tagline text-center">Cheap, Affordable, Fast</p>
+
+      <div class="flex flex-col gap-2 mt-3">
+        <input id="loginUsername" class="input" placeholder="Username or Email">
+
+        <div style="position:relative;">
+          <input id="loginPassword" type="password" class="input" placeholder="Password">
+          <button class="showBtn" onclick="togglePassword()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--accent);cursor:pointer;">Show</button>
+        </div>
+
+        <button id="loginBtn" class="btn btn-primary mt-1">Login</button>
+
+        <button onclick="biometricLogin()" class="btn btn-ghost mt-1">
+          🔐 Login with Fingerprint / Face ID
+        </button>
+
+        <a href="signup.html" class="btn btn-secondary mt-2">Create Account</a>
+      </div>
+    </div>
+  </div>
 
 <style>
-
-*{
-margin:0;
-padding:0;
-box-sizing:border-box;
-font-family:Arial;
-}
-
-body{
-background:#1a0313;
-color:white;
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-flex-direction:column;
-}
-
-/* LOADER */
-#loginLoader{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:#18031a;
-display:none;
-align-items:center;
-justify-content:center;
-z-index:9999;
-flex-direction:column;
-}
-
-.loaderRing{
-width:70px;
-height:70px;
-border:6px solid #2c0526;
-border-top:6px solid rgb(255, 0, 234);
-border-radius:50%;
-animation:spin 1s linear infinite;
-}
-
-@keyframes spin{
-0%{transform:rotate(0deg)}
-100%{transform:rotate(360deg)}
-}
-
-/* LOGO */
-.logo{
-width:110px;
-height:110px;
-border-radius:50%;
-border:4px solid rgb(255, 0, 242);
-padding:8px;
-margin-bottom:40px;
-box-shadow:0 0 20px rgb(255, 0, 221);
-}
-
-/* CARD */
-.card{
-background:#2c0527;
-padding:30px;
-border-radius:20px;
-width:90%;
-max-width:380px;
-box-shadow:0 0 30px rgba(175, 12, 140, 0.2);
-}
-
-.title{
-text-align:center;
-font-size:26px;
-margin-bottom:25px;
-}
-
-/* INPUT */
-.inputBox{
-margin-bottom:18px;
-position:relative;
-}
-
-input{
-width:100%;
-padding:14px;
-border-radius:12px;
-border:none;
-background:#0d020d;
-color:white;
-font-size:16px;
-outline:none;
-}
-
-/* SHOW BUTTON */
-.showBtn{
-position:absolute;
-right:12px;
-top:50%;
-transform:translateY(-50%);
-background:none;
-border:none;
-color:rgb(255, 0, 242);
-cursor:pointer;
-}
-
-/* BUTTON */
-.loginBtn{
-width:100%;
-padding:14px;
-border:none;
-border-radius:12px;
-background:rgb(255, 0, 221);
-color:black;
-font-size:17px;
-margin-top:10px;
-cursor:pointer;
-}
-
-.loginBtn:disabled{
-opacity:0.6;
-}
-
-/* BIOMETRIC */
-.biometric{
-margin-top:16px;
-border:2px dashed rgb(233, 32, 223);
-padding:16px;
-border-radius:12px;
-text-align:center;
-cursor:pointer;
-}
-
-/* SIGNUP */
-.signup{
-margin-top:15px;
-border:2px solid rgb(221, 13, 228);
-padding:14px;
-border-radius:12px;
-text-align:center;
-}
-
-a{
-color:white;
-text-decoration:none;
-display:block;
-}
-
+@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
 </style>
-
-</head>
-
-<body>
-
-<div id="loginLoader">
-<div class="loaderRing"></div>
-<p style="margin-top:15px">Logging in...</p>
-</div>
-
-<img src="images/TEEVERSH.png" class="logo">
-
-<div class="card">
-
-<div class="title">Welcome Back</div>
-
-<div class="inputBox">
-<input id="loginUsername" placeholder="Username or Email">
-</div>
-
-<div class="inputBox">
-<input id="loginPassword" type="password" placeholder="Password">
-<button class="showBtn" onclick="togglePassword()">Show</button>
-</div>
-
-<button id="loginBtn" class="loginBtn">Login</button>
-
-<div class="biometric" onclick="biometricLogin()">
-🔐 Login with Fingerprint / Face ID
-</div>
-
-<a href="signup.html">
-<div class="signup">Create Account</div>
-</a>
-
-</div>
 
 <script>
 const API = "https://mayconnect-backend-1.onrender.com";
-
-/* ELEMENTS */
 const usernameInput = document.getElementById("loginUsername");
 const passwordInput = document.getElementById("loginPassword");
 const loginBtn = document.getElementById("loginBtn");
 const loader = document.getElementById("loginLoader");
-
-/* SOUND */
 const welcomeSound = new Audio("sounds/welcome.mp3");
 
-/* AUTO LOGIN */
 document.addEventListener("DOMContentLoaded", () => {
-  const token = localStorage.getItem("token");
-  if (token) {
+  if (localStorage.getItem("token")) {
     window.location.href = "dashboard.html";
   }
 });
 
-/* PASSWORD TOGGLE */
 function togglePassword(){
   if(!passwordInput) return;
   passwordInput.type = passwordInput.type === "password"? "text" : "password";
   document.querySelector(".showBtn").innerText = passwordInput.type === "password"? "Show" : "Hide";
 }
 
-/* LOGIN CLICK */
 loginBtn.addEventListener("click", login);
 
-/* LOGIN FUNCTION */
 async function login(){
   const username = usernameInput.value.trim();
   const password = passwordInput.value.trim();
@@ -242,36 +89,16 @@ async function login(){
     });
 
     let data;
-    try{
-      data = await res.json();
-    }catch{
-      throw new Error("Invalid server response");
-    }
+    try{ data = await res.json(); }catch{ throw new Error("Invalid server response"); }
+    if(!res.ok) throw new Error(data.message || "Login failed");
+    if(!data.token) throw new Error("No token received");
 
-    if(!res.ok){
-      throw new Error(data.message || "Login failed");
-    }
-
-    if(!data.token){
-      throw new Error("No token received");
-    }
-
-    /* SAVE SESSION */
     localStorage.setItem("token", data.token);
     localStorage.setItem("username", data.username);
+    if(data.is_admin) alert("Welcome Admin");
 
-    /* ADMIN */
-    if(data.is_admin){
-      alert("Welcome Admin");
-    }
-
-    /* SOUND */
     welcomeSound.play().catch(()=>{});
-
-    /* REDIRECT */
-    setTimeout(()=>{
-      window.location.href = "dashboard.html";
-    },600);
+    setTimeout(()=>{ window.location.href = "dashboard.html"; },600);
 
   }catch(err){
     console.error(err);
@@ -281,7 +108,6 @@ async function login(){
   }
 }
 
-/* WEBAUTHN HELPERS */
 async function base64URLToBuffer(base64URL) {
   const base64 = base64URL.replace(/-/g, '+').replace(/_/g, '/');
   const padLen = (4 - (base64.length % 4)) % 4;
@@ -289,40 +115,26 @@ async function base64URLToBuffer(base64URL) {
   const binary = atob(padded);
   const buffer = new ArrayBuffer(binary.length);
   const bytes = new Uint8Array(buffer);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return buffer;
 }
 
 async function bufferToBase64URL(buffer) {
   const bytes = new Uint8Array(buffer);
   let str = '';
-  for (const charCode of bytes) {
-    str += String.fromCharCode(charCode);
-  }
+  for (const charCode of bytes) str += String.fromCharCode(charCode);
   const base64 = btoa(str);
   return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
-/* BIOMETRIC LOGIN */
 async function biometricLogin(){
   const usernameOrEmail = usernameInput.value.trim();
-  
-  if(!usernameOrEmail){
-    alert("Enter your username or email first");
-    return;
-  }
-
-  if(!window.PublicKeyCredential){
-    alert("Biometric not supported on this device");
-    return;
-  }
+  if(!usernameOrEmail) return alert("Enter your username or email first");
+  if(!window.PublicKeyCredential) return alert("Biometric not supported on this device");
 
   loader.style.display="flex";
 
   try{
-    // 1. Get auth options from server - backend expects email
     const startRes = await fetch(API + "/api/auth/webauthn/login-start", {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
@@ -335,22 +147,18 @@ async function biometricLogin(){
     }
 
     const options = await startRes.json();
-
-    // 2. Convert challenge + allowCredentials
     options.challenge = await base64URLToBuffer(options.challenge);
     if(options.allowCredentials){
       options.allowCredentials = await Promise.all(
         options.allowCredentials.map(async cred => ({
-         ...cred,
+        ...cred,
           id: await base64URLToBuffer(cred.id)
         }))
       );
     }
 
-    // 3. Call fingerprint sensor
     const credential = await navigator.credentials.get({ publicKey: options });
 
-    // 4. Send result to server
     const finishRes = await fetch(API + "/api/auth/webauthn/login-finish", {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
@@ -362,9 +170,7 @@ async function biometricLogin(){
           authenticatorData: await bufferToBase64URL(credential.response.authenticatorData),
           clientDataJSON: await bufferToBase64URL(credential.response.clientDataJSON),
           signature: await bufferToBase64URL(credential.response.signature),
-          userHandle: credential.response.userHandle
-           ? await bufferToBase64URL(credential.response.userHandle)
-            : null,
+          userHandle: credential.response.userHandle? await bufferToBase64URL(credential.response.userHandle) : null,
         },
         type: credential.type,
         clientExtensionResults: credential.getClientExtensionResults()
@@ -377,28 +183,15 @@ async function biometricLogin(){
     }
 
     const { token, username, is_admin } = await finishRes.json();
-
-    /* SAVE SESSION */
     localStorage.setItem("token", token);
     localStorage.setItem("username", username);
-
-    /* ADMIN */
-    if(is_admin){
-      alert("Welcome Admin");
-    }
-
-    /* SOUND */
+    if(is_admin) alert("Welcome Admin");
     welcomeSound.play().catch(()=>{});
-
-    /* REDIRECT */
-    setTimeout(()=>{
-      window.location.href = "dashboard.html";
-    },600);
+    setTimeout(()=>{ window.location.href = "dashboard.html"; },600);
 
   }catch(e){
     console.error(e);
     loader.style.display="none";
-    
     if (e.name === 'NotAllowedError') {
       alert('Fingerprint cancelled or failed');
     } else {
@@ -407,6 +200,5 @@ async function biometricLogin(){
   }
 }
 </script>
-
 </body>
 </html>

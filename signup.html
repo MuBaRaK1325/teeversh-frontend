@@ -1,146 +1,89 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="css/theme.css">
+  <script src="js/theme.js"></script>
+</head>
+<body class="centered">
+  <div id="signupLoader" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:none;align-items:center;justify-content:center;z-index:9999;flex-direction:column;">
+    <div style="width:70px;height:70px;border:6px solid #2c0526;border-top:6px solid var(--accent);border-radius:50%;animation:spin 1s linear infinite;"></div>
+    <p style="margin-top:15px">Creating account...</p>
+  </div>
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <div class="container">
+    <div class="glass-card">
+      <img id="companyLogo" class="logo" alt="Logo" onerror="this.style.display='none'; document.getElementById('logoFallback').style.display='flex';">
+      <div id="logoFallback" class="logo-fallback" style="display:none;">
+        <span id="logoLetter" style="font-size: 48px; font-weight: bold;"></span>
+      </div>
 
-<title>TEEVERSH - Signup</title>
+      <h1 class="h1 text-center" id="companyName">Create Account</h1>
+      <p class="tagline text-center">Cheap, Affordable, Fast</p>
+
+      <div id="error" style="color:#f87171;text-align:center;margin-bottom:12px;font-size:14px;"></div>
+
+      <div class="flex flex-col gap-2 mt-2">
+        <input id="username" class="input" placeholder="Username">
+        <input id="email" class="input" placeholder="Email" type="email">
+        <input id="phone" class="input" placeholder="Phone e.g 08012345678" type="tel">
+
+        <div style="position:relative;">
+          <input id="password" type="password" class="input" placeholder="Password">
+          <button class="showBtn" onclick="toggleField('password',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--accent);cursor:pointer;">Show</button>
+        </div>
+
+        <div style="position:relative;">
+          <input id="pin" type="password" class="input" placeholder="Transaction PIN (4 digits)" maxlength="4" inputmode="numeric">
+          <button class="showBtn" onclick="toggleField('pin',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--accent);cursor:pointer;">Show</button>
+        </div>
+
+        <button id="signupBtn" class="btn btn-primary mt-1">Create Account</button>
+        <a href="login.html" class="btn btn-secondary mt-2">Already have an account? Login</a>
+      </div>
+    </div>
+  </div>
 
 <style>
-
-*{margin:0;padding:0;box-sizing:border-box;font-family:Arial;}
-
-body{
-background:#03121a;
-color:white;
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-flex-direction:column;
-}
-
-.logo{
-width:110px;
-height:110px;
-border-radius:50%;
-border:4px solid #b222c5;
-padding:8px;
-margin-bottom:40px;
-box-shadow:0 0 20px #b222c5;
-}
-
-.card{
-background:#2e052a;
-padding:30px;
-border-radius:20px;
-width:90%;
-max-width:380px;
-box-shadow:0 0 30px rgba(184, 34, 197, 0.2);
-}
-
-.title{text-align:center;font-size:26px;margin-bottom:25px;}
-
-.inputBox{margin-bottom:18px;position:relative;}
-
-input{
-width:100%;
-padding:14px;
-border-radius:12px;
-border:none;
-background:#120214;
-color:white;
-}
-
-.showBtn{
-position:absolute;
-right:12px;
-top:50%;
-transform:translateY(-50%);
-background:none;
-border:none;
-color:#d24ade;
-cursor:pointer;
-}
-
-.signupBtn{
-width:100%;
-padding:14px;
-border:none;
-border-radius:12px;
-background:#a522c5;
-color:white;
-margin-top:10px;
-cursor:pointer;
-}
-
-.signupBtn:disabled{
-opacity:0.6;
-cursor:not-allowed;
-}
-
-.loginLink{
-margin-top:16px;
-border:2px solid #a522c5;
-padding:14px;
-border-radius:12px;
-text-align:center;
-}
-
-a{color:white;text-decoration:none;}
-
-.error{color:#ff6b6b;text-align:center;margin-bottom:10px;font-size:14px;}
-
+@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
 </style>
-</head>
-
-<body>
-
-<img src="images/TEEVERSH.png" class="logo">
-
-<div class="card">
-
-<div class="title">Create Account</div>
-<div id="error" class="error"></div>
-
-<div class="inputBox"><input id="username" placeholder="Username"></div>
-<div class="inputBox"><input id="email" placeholder="Email" type="email"></div>
-<div class="inputBox"><input id="phone" placeholder="Phone e.g 08012345678" type="tel"></div>
-
-<div class="inputBox">
-<input id="password" type="password" placeholder="Password">
-<button class="showBtn" onclick="toggleField('password',this)">Show</button>
-</div>
-
-<div class="inputBox">
-<input id="pin" type="password" placeholder="PIN" maxlength="4" inputmode="numeric">
-<button class="showBtn" onclick="toggleField('pin',this)">Show</button>
-</div>
-
-<button id="signupBtn" class="signupBtn">Create Account</button>
-
-<a href="login.html"><div class="loginLink">Already have account</div></a>
-
-</div>
 
 <script>
 const API = "https://mayconnect-backend-1.onrender.com";
+const btn = document.getElementById("signupBtn");
+const loader = document.getElementById("signupLoader");
+const errorDiv = document.getElementById("error");
+
+// Company detection for backend
+const COMPANY_MAP = {
+  'mayconnect-frontend.onrender.com': 'mayconnect',
+  'teeversh-frontend.onrender.com': 'teeversh',
+  'sadeeq-frontend.onrender.com': 'sadeeq',
+  'bnhabeeb-frontend.onrender.com': 'bnhabeeb',
+  'localhost': 'teeversh'
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+  if (localStorage.getItem("token")) {
+    window.location.href = "dashboard.html";
+  }
+});
 
 function toggleField(id,btn){
-  const i=document.getElementById(id)
+  const i = document.getElementById(id);
   if(i.type==="password"){i.type="text";btn.innerText="Hide"}
   else{i.type="password";btn.innerText="Show"}
 }
 
-document.getElementById("signupBtn").onclick = async () => {
+btn.onclick = async () => {
   const username = document.getElementById("username").value.trim();
   const email = document.getElementById("email").value.trim();
   const phone = document.getElementById("phone").value.trim();
   const password = document.getElementById("password").value;
   const pin = document.getElementById("pin").value;
-  const errorDiv = document.getElementById("error");
-  const btn = document.getElementById("signupBtn");
 
   errorDiv.innerText = "";
 
@@ -155,8 +98,11 @@ document.getElementById("signupBtn").onclick = async () => {
 
   btn.disabled = true;
   btn.innerText = "Creating...";
+  loader.style.display = "flex";
 
   try {
+    const company = COMPANY_MAP[window.location.hostname] || 'teeversh';
+    
     const res = await fetch(API + "/api/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -166,7 +112,7 @@ document.getElementById("signupBtn").onclick = async () => {
         phone, 
         password, 
         pin, 
-        company: "teeversh" 
+        company: company 
       })
     });
 
@@ -174,19 +120,21 @@ document.getElementById("signupBtn").onclick = async () => {
 
     if (res.ok) {
       localStorage.setItem("token", data.token);
+      localStorage.setItem("username", data.username);
       window.location.href = "dashboard.html";
     } else {
       errorDiv.innerText = data.message || "Signup failed";
       btn.disabled = false;
       btn.innerText = "Create Account";
+      loader.style.display = "none";
     }
   } catch (e) {
     errorDiv.innerText = "Network error. Try again.";
     btn.disabled = false;
     btn.innerText = "Create Account";
+    loader.style.display = "none";
   }
 };
 </script>
-
 </body>
 </html>
