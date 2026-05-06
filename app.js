@@ -1,4 +1,4 @@
-const API = "https://mayconnect-backend-1.onrender.com"; // CHANGE THIS to your actual Sadeeq backend
+const API = "https://mayconnect-backend-1.onrender.com"; // One backend for all companies
 
 let cachedPlans = [];
 let cachedAdminPlans = [];
@@ -29,10 +29,7 @@ function bufferEncode(value) {
   for (let i = 0; i < uint8Array.byteLength; i++) {
     binary += String.fromCharCode(uint8Array[i]);
   }
-  return btoa(binary)
-   .replace(/\+/g, '-')
-   .replace(/\//g, '_')
-   .replace(/=+$/, '');
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 function bufferDecode(value) {
@@ -104,6 +101,7 @@ async function loadDashboard() {
     const res = await fetch(API + "/api/me", { headers: { Authorization: "Bearer " + getToken() } });
     currentUser = await res.json();
     window.CURRENT_USER_ID = currentUser.id;
+    console.log("Current user tier:", currentUser.user_tier); // Debug tier
   } catch {
     logout();
     return;
@@ -120,7 +118,7 @@ async function loadDashboard() {
 
   initNavigation();
   await loadAccount();
-  await loadPlans();
+  await loadPlans(); // Load plans AFTER currentUser is set so tier pricing works
   fetchTransactions();
   if (currentUser.is_admin) loadAdminData();
   checkBiometricStatus();
@@ -252,12 +250,14 @@ function renderPlans() {
     return;
   }
 
+  const tier = currentUser?.user_tier || 'default';
+  console.log("Rendering plans for tier:", tier);
+
   filtered.forEach(p => {
     const div = document.createElement("div");
     div.className = "planItem";
 
     const priceDisplay = getPlanPrice(p);
-    const tier = currentUser?.user_tier || 'default';
     let badge = "";
 
     if (tier === 'top') {
@@ -284,74 +284,62 @@ function renderPlans() {
 /* ================= BIOMETRIC STATUS ================= */
 async function checkBiometricStatus() {
   const elStatus = el("biometricStatus");
-  const btn = el("biometricPurchaseBtn");
+  const enableBtn = el("enableBiometricBtn");
+  const loginBtn = el("biometricLoginBtn");
   if (!elStatus) return;
 
   if (!window.isSecureContext) {
     elStatus.innerText = "Status: HTTPS required for biometric";
     elStatus.style.color = "var(--warning)";
+    if (enableBtn) enableBtn.style.display = "none";
+    if (loginBtn) loginBtn.style.display = "none";
     return;
   }
 
   if (!window.PublicKeyCredential) {
     elStatus.innerText = "Status: Not supported on this device/browser";
     elStatus.style.color = "var(--danger)";
+    if (enableBtn) enableBtn.style.display = "none";
+    if (loginBtn) loginBtn.style.display = "none";
     return;
   }
 
   try {
     const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-    if (available) {
-      elStatus.innerText = "Status: Active - Fingerprint login enabled";
-      elStatus.style.color = "var(--success)";
-      if (btn) btn.style.display = "block";
-    } else {
+    if (!available) {
       elStatus.innerText = "Status: No fingerprint/passkey enrolled on device";
       elStatus.style.color = "var(--warning)";
-      if (btn) btn.style.display = "none";
+      if (enableBtn) enableBtn.style.display = "none";
+      if (loginBtn) loginBtn.style.display = "none";
+      return;
     }
-  } catch (e) {
-    elStatus.innerText = "Status: Check failed - " + e.message;
-    elStatus.style.color = "var(--danger)";
-    console.error("Biometric check error:", e);
-  }
-}
 
-/* ================= WEBAUTHN ================= */
-async function checkBiometricStatus() {
-  if (!getToken()) return;
-
-  const browserSupports = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(() => false);
-  const statusEl = el('biometricStatus');
-  const enableBtn = el('enableBiometricBtn');
-  const loginBtn = el('biometricLoginBtn');
-
-  if (!browserSupports) {
-    if (statusEl) statusEl.innerText = 'Not supported on this device';
-    if (enableBtn) enableBtn.style.display = 'none';
-    if (loginBtn) loginBtn.style.display = 'none';
-    return;
-  }
-
-  try {
+    // Check if user has biometric enabled in backend
     const res = await fetch(API + '/api/auth/webauthn/check-enabled', {
       headers: { 'Authorization': 'Bearer ' + getToken() }
     }).then(r => r.json());
 
     if (res.enabled) {
-      if (statusEl) statusEl.innerText = 'Enabled ✓';
-      if (enableBtn) enableBtn.style.display = 'none';
-      if (loginBtn) loginBtn.style.display = 'inline-block';
+      elStatus.innerText = "Status: Enabled ✓";
+      elStatus.style.color = "var(--success)";
+      if (enableBtn) enableBtn.style.display = "none";
+      if (loginBtn) loginBtn.style.display = "inline-block";
     } else {
-      if (statusEl) statusEl.innerText = 'Available - click to enable';
-      if (enableBtn) enableBtn.style.display = 'block';
-      if (loginBtn) loginBtn.style.display = 'none';
+      elStatus.innerText = "Status: Available - click to enable";
+      elStatus.style.color = "var(--warning)";
+      if (enableBtn) enableBtn.style.display = "block";
+      if (loginBtn) loginBtn.style.display = "none";
     }
-  } catch(e) {
-    if (statusEl) statusEl.innerText = 'Check failed';
+  } catch (e) {
+    elStatus.innerText = "Status: Check failed - " + e.message;
+    elStatus.style.color = "var(--danger)";
+    console.error("Biometric check error:", e);
+    if (enableBtn) enableBtn.style.display = "none";
+    if (loginBtn) loginBtn.style.display = "none";
   }
 }
 
+/* ================= WEBAUTHN ================= */
 async function enableBiometric() {
   if (!window.PublicKeyCredential) {
     return showMsg('Biometric not supported on this device/browser', 'error');
@@ -366,14 +354,14 @@ async function enableBiometric() {
     if (start.error) throw new Error(start.error);
 
     const options = {
-     ...start,
+    ...start,
       challenge: bufferDecode(start.challenge),
       user: {...start.user, id: bufferDecode(start.user.id) }
     };
 
     if (options.excludeCredentials && options.excludeCredentials.length > 0) {
       options.excludeCredentials = options.excludeCredentials.map(cred => ({
-       ...cred,
+      ...cred,
         id: bufferDecode(cred.id)
       }));
     } else {
@@ -439,10 +427,10 @@ async function loginWithBiometric() {
       showLoader('Touch fingerprint sensor...');
 
       const options = {
-       ...start,
+      ...start,
         challenge: bufferDecode(start.challenge),
         allowCredentials: start.allowCredentials.map(cred => ({
-         ...cred,
+        ...cred,
           id: bufferDecode(cred.id)
         }))
       };
