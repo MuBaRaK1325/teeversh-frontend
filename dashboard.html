@@ -743,6 +743,46 @@ box-shadow:0 0 40px rgba(147,51,234,0.3);
 </div>
 </section>
 
+<!-- ADMIN: TRANSACTIONS MANAGER -->
+<section id="transactionsManager" class="section adminOnly">
+<button onclick="showSection('profile')" class="backBtn">⬅ Back</button>
+<h3>🧾 Transaction Manager</h3>
+<p style="opacity:0.7;margin-bottom:15px">Handle failed transactions and process manual deductions or refunds</p>
+
+<div class="adminSection">
+  <!-- Filters -->
+  <div class="filtersRow" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px">
+    <select id="txStatusFilter" onchange="loadAdminTransactions()" style="padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);min-width:140px">
+      <option value="">All Status</option>
+      <option value="SUCCESS">Success</option>
+      <option value="FAILED">Failed</option>
+      <option value="PENDING">Pending</option>
+      <option value="REVERSED">Reversed</option>
+    </select>
+
+    <select id="txProviderFilter" onchange="loadAdminTransactions()" style="padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);min-width:140px">
+      <option value="">All Providers</option>
+      <option value="maitama">Maitama</option>
+      <option value="cheapdatahub">CheapDataHub</option>
+      <option value="subpadi">SubPadi</option>
+      <option value="monnify">Monnify</option>
+      <option value="flutterwave">Flutterwave</option>
+    </select>
+
+    <input id="txSearch" type="text" placeholder="Search reference or email" 
+           onkeyup="loadAdminTransactions()" 
+           style="flex:1;min-width:200px;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card-bg);color:var(--text)" />
+    
+    <button onclick="loadAdminTransactions()" class="primaryBtn">Refresh</button>
+  </div>
+
+  <!-- Transactions List -->
+  <div id="transactionsList" class="transactionsGrid" style="display:flex;flex-direction:column;gap:12px">
+    <p style="text-align:center;opacity:0.6">Loading transactions...</p>
+  </div>
+</div>
+</section>
+
 <!-- ADMIN: TOP USERS MANAGER -->
 <section id="topUsersManager" class="section adminOnly">
 <button onclick="showSection('profile')" class="backBtn">⬅ Back</button>
@@ -824,6 +864,75 @@ box-shadow:0 0 40px rgba(147,51,234,0.3);
   </div>
 </section>
 
+<style>
+.transactionCard {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 15px;
+  transition: all 0.2s;
+}
+.transactionCard:hover {
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 6px;
+}
+.badgeWarning {
+  background: rgba(255, 160, 0, 0.15);
+  color: #ffa000;
+  border: 1px solid #ffa000;
+}
+.badgeDanger {
+  background: rgba(255, 77, 77, 0.15);
+  color: #ff4d4d;
+  border: 1px solid #ff4d4d;
+}
+.badgeSuccess {
+  background: rgba(0, 200, 83, 0.15);
+  color: #00c853;
+  border: 1px solid #00c853;
+}
+.warningBtn {
+  background: #ffa000;
+  color: #000;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+}
+.warningBtn:hover {
+  background: #ffb733;
+}
+.dangerBtn {
+  background: #ff4d4d;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+}
+.dangerBtn:hover {
+  background: #ff6666;
+}
+.filtersRow select, .filtersRow input {
+  outline: none;
+}
+.filtersRow select:focus, .filtersRow input:focus {
+  border-color: var(--primary);
+}
+</style>
+
 <!-- PROFILE -->
 <section id="profile" class="section">
 <button onclick="showSection('home')" class="backBtn">⬅ Back</button>
@@ -849,7 +958,7 @@ box-shadow:0 0 40px rgba(147,51,234,0.3);
 <button onclick="showSection('usersManager')">👥 Users Manager</button>
 <button onclick="showSection('topUsersManager')">🔥 Top Users Manager</button>
 <button onclick="showSection('withdrawals')">💸 Withdrawals</button>
-
+<button onclick="showSection('transactionsManager'); loadAdminTransactions();" class="adminNavBtn">🧾 Transactions</button>
 <hr>
 
 <h3>Transaction Reversal</h3>
