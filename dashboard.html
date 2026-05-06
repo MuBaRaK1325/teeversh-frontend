@@ -833,6 +833,51 @@ box-shadow:0 0 40px rgba(147,51,234,0.3);
 </div>
 </section>
 
+<!-- MODAL: ADD PLAN -->
+<div id="addPlanModal" class="modal">
+  <div class="modalContent">
+    <span class="closeBtn" onclick="closeModal('addPlanModal')">&times;</span>
+    <h3>Add New Plan</h3>
+    <div class="formGrid">
+      <input id="newPlanId" placeholder="Plan ID">
+      <input id="newPlanName" placeholder="Plan Name">
+      <input id="newPlanNetwork" placeholder="Network">
+      <input id="newPlanPrice" type="number" placeholder="Default Price">
+      <input id="newPlanRegularPrice" type="number" placeholder="Regular Price">
+      <input id="newPlanTopPrice" type="number" placeholder="Top Price">
+      <input id="newPlanCost" type="number" placeholder="Cost">
+      <input id="newPlanValidity" type="number" placeholder="Validity Days">
+      <input id="newPlanProvider" placeholder="Provider">
+      <input id="newPlanNetworkId" type="number" placeholder="Network ID">
+      <input id="newPlanApiId" placeholder="API Plan ID">
+      <label><input id="newPlanRestricted" type="checkbox"> Restricted</label>
+    </div>
+    <button onclick="addPlan()" class="successBtn">Add Plan</button>
+  </div>
+</div>
+
+<!-- MODAL: EDIT PLAN -->
+<div id="editPlanModal" class="modal">
+  <div class="modalContent">
+    <span class="closeBtn" onclick="closeModal('editPlanModal')">&times;</span>
+    <h3>Edit Plan</h3>
+    <div class="formGrid">
+      <input id="editPlanName" placeholder="Plan Name">
+      <input id="editPlanPrice" type="number" placeholder="Default Price">
+      <input id="editPlanRegularPrice" type="number" placeholder="Regular Price">
+      <input id="editPlanTopPrice" type="number" placeholder="Top Price">
+      <input id="editPlanCost" type="number" placeholder="Cost">
+      <input id="editPlanValidity" type="number" placeholder="Validity Days">
+      <input id="editPlanProvider" placeholder="Provider">
+      <input id="editPlanNetworkId" type="number" placeholder="Network ID">
+      <input id="editPlanApiId" placeholder="API Plan ID">
+      <label><input id="editPlanRestricted" type="checkbox"> Restricted</label>
+      <label><input id="editPlanActive" type="checkbox"> Active</label>
+    </div>
+    <button onclick="savePlanEdit()" class="successBtn">Save Changes</button>
+  </div>
+</div>
+
 <!-- ADMIN: WITHDRAWALS -->
 <section id="withdrawals" class="section adminOnly">
   <button onclick="showSection('profile')" class="backBtn">⬅ Back</button>

@@ -1035,6 +1035,82 @@ async function removeTopUser(email) {
   }
 }
 
+/* ================= ADMIN: REGULAR USERS ================= */
+async function loadRegularUsers() {
+  try {
+    const res = await fetch(API + "/admin/regular-users", {
+      headers: { Authorization: "Bearer " + getToken() }
+    });
+    if (!res.ok) throw new Error("Failed");
+    const users = await res.json();
+    const list = el("regularUsersList");
+    if (list) {
+      list.innerHTML = "";
+      if (!users.length) {
+        list.innerHTML = `<p style="text-align:center;opacity:0.6">No regular users yet</p>`;
+        return;
+      }
+      users.forEach(u => {
+        list.innerHTML += `<div class="userCard">
+          <strong>${u.username}</strong> - ${u.email}<br>
+          Spent: ${formatNaira(u.total_spent)} | Profit: ${formatNaira(u.total_profit_generated)}<br>
+          <button onclick="removeRegularUser('${u.email}')" class="dangerBtn">Remove from Regular</button>
+        </div>`;
+      });
+    }
+  } catch(e) {
+    console.error("Load regular users error:", e);
+  }
+}
+
+async function addRegularUser() {
+  const email = el("regularUserEmail")?.value;
+  if (!email) return showMsg("Enter email", "error");
+
+  showLoader("Adding regular user...");
+  try {
+    const res = await fetch(API + "/admin/regular-users/add", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    hideLoader();
+    showMsg(data.message, res.ok? "success" : "error");
+    if (res.ok) {
+      el("regularUserEmail").value = "";
+      loadRegularUsers();
+      loadAdminUsers();
+      broadcastTopUserUpdate(currentUser.company);
+    }
+  } catch {
+    hideLoader();
+    showMsg("Server error", "error");
+  }
+}
+
+async function removeRegularUser(email) {
+  showLoader("Removing...");
+  try {
+    const res = await fetch(API + "/admin/regular-users/remove", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    hideLoader();
+    showMsg(data.message, res.ok? "success" : "error");
+    if (res.ok) {
+      loadRegularUsers();
+      loadAdminUsers();
+      broadcastTopUserUpdate(currentUser.company);
+    }
+  } catch {
+    hideLoader();
+    showMsg("Server error", "error");
+  }
+}
+
 /* ================= ADMIN: USERS MANAGER ================= */
 async function loadAdminUsers() {
   const search = el("userSearch")?.value || "";
@@ -1054,6 +1130,7 @@ async function loadAdminUsers() {
           Wallet: ${formatNaira(u.wallet_balance)} | Phone: ${u.phone || 'N/A'}<br>
           <select onchange="setUserTier(${u.id}, this.value)" class="tierSelect">
             <option value="default" ${u.user_tier === 'default'? 'selected' : ''}>Default</option>
+            <option value="regular" ${u.user_tier === 'regular'? 'selected' : ''}>Regular</option>
             <option value="top" ${u.user_tier === 'top'? 'selected' : ''}>Top</option>
           </select>
         </div>`;
@@ -1078,6 +1155,7 @@ async function setUserTier(id, tier) {
     if (res.ok) {
       loadAdminUsers();
       loadTopUsers();
+      loadRegularUsers();
       broadcastTopUserUpdate(currentUser.company);
     }
   } catch {
@@ -1103,7 +1181,7 @@ async function loadAdminPlans() {
         const providerBadge = p.provider? `<span class="badge">${p.provider.toUpperCase()}</span>` : '';
         list.innerHTML += `<div class="planCard">
           <strong>${p.name}</strong> - ${p.network} ${restrictBadge} ${providerBadge}<br>
-          Default: ${formatNaira(p.price)} | Regular: ${formatNaira(p.regular_price || p.price)} | Top: ${formatNaira(p.top_price || p.price)} | Cost: ${formatNaira(p.cost)}<br>
+          Default: ${formatNaira(p.price)} | Regular: ${formatNaira(p.regular_price ?? p.price)} | Top: ${formatNaira(p.top_price ?? p.price)} | Cost: ${formatNaira(p.cost)}<br>
           Provider: ${p.provider || 'N/A'} | Net ID: ${p.network_id || 'N/A'} | API ID: ${p.api_plan_id || 'N/A'}<br>
           <span style="color:${statusColor}">${p.is_active? 'Active' : 'Disabled'}</span>
           <button onclick="editPlan(${p.id})" class="primaryBtn">Edit</button>
@@ -1191,8 +1269,8 @@ async function editPlan(id) {
 
   if (el("editPlanName")) el("editPlanName").value = plan.name || "";
   if (el("editPlanPrice")) el("editPlanPrice").value = plan.price || "";
-  if (el("editPlanRegularPrice")) el("editPlanRegularPrice").value = plan.regular_price || "";
-  if (el("editPlanTopPrice")) el("editPlanTopPrice").value = plan.top_price || "";
+  if (el("editPlanRegularPrice")) el("editPlanRegularPrice").value = plan.regular_price ?? "";
+  if (el("editPlanTopPrice")) el("editPlanTopPrice").value = plan.top_price ?? "";
   if (el("editPlanCost")) el("editPlanCost").value = plan.cost || "";
   if (el("editPlanValidity")) el("editPlanValidity").value = plan.validity || "";
   if (el("editPlanRestricted")) el("editPlanRestricted").checked = !!plan.restricted;
