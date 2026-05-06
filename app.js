@@ -1,4 +1,4 @@
-const API = "https://mayconnect-backend-1.onrender.com";
+const API = "https://mayconnect-backend-1.onrender.com"; // CHANGE THIS to your actual Sadeeq backend
 
 let cachedPlans = [];
 let cachedAdminPlans = [];
@@ -30,9 +30,9 @@ function bufferEncode(value) {
     binary += String.fromCharCode(uint8Array[i]);
   }
   return btoa(binary)
- .replace(/\+/g, '-')
- .replace(/\//g, '_')
- .replace(/=+$/, '');
+   .replace(/\+/g, '-')
+   .replace(/\//g, '_')
+   .replace(/=+$/, '');
 }
 
 function bufferDecode(value) {
@@ -140,11 +140,12 @@ function showSection(id) {
   if (id === "profitDashboard") loadProfitDashboard();
   if (id === "topUsersManager") loadTopUsers();
   if (id === "withdrawals") {
-    populateBankDropdown(); // Add this line
+    populateBankDropdown();
     loadWithdrawals();
   }
   if (id === "plansManager") loadAdminPlans();
   if (id === "usersManager") loadAdminUsers();
+  if (id === "profile") checkBiometricStatus(); // Check biometric when profile opens
 }
 
 /* ================= WALLET ================= */
@@ -180,7 +181,9 @@ async function fetchTransactions() {
       el("allTransactions").innerHTML = "";
       tx.forEach(t => el("allTransactions").appendChild(txCard(t)));
     }
-  } catch {}
+  } catch (e) {
+    console.error("Fetch transactions error:", e);
+  }
 }
 
 function txCard(t) {
@@ -194,59 +197,7 @@ function txCard(t) {
     <small style="float:right">${formatDate(t.created_at)}</small>`;
   return div;
 }
-function renderPlans() {
-  const list = el("planList");
-  if (!list) return;
 
-  list.innerHTML = "";
-
-  if (!selectedNetwork) {
-    list.innerHTML = "<p>Select a network first</p>";
-    return;
-  }
-
-  const filtered = cachedPlans.filter(p => (p.network || "").toLowerCase() === selectedNetwork);
-
-  if (!filtered.length) {
-    list.innerHTML = "<p>No plans available for this network</p>";
-    return;
-  }
-
-  filtered.forEach(p => {
-    const div = document.createElement("div");
-    div.className = "planItem";
-
-    let priceDisplay = p.price;
-    let badge = "";
-    let tierClass = "";
-
-    // Check user tier and apply correct price
-    if (currentUser?.is_top_user && p.top_price) {
-      priceDisplay = p.top_price;
-      badge = `<span class="topUserBadge">TOP</span>`;
-      tierClass = "topUserPlan";
-    } else if (p.regular_price &&!currentUser?.is_top_user) {
-      // If not top user, use regular_price if available, else default price
-      priceDisplay = p.regular_price;
-      badge = `<span class="regularUserBadge" style="position:absolute;top:8px;right:8px;background:#ffa000;padding:2px 6px;border-radius:4px;font-size:10px;">REGULAR</span>`;
-      tierClass = "regularUserPlan";
-    }
-
-    div.classList.add(tierClass);
-    div.innerHTML = `
-      <strong>${p.name}</strong> ${badge}<br>
-      ${p.validity || ""}<br>
-      <strong>${formatNaira(priceDisplay)}</strong>
-    `;
-
-    div.onclick = () => {
-      selectedPlan = {...p, price: priceDisplay};
-      openPurchaseModal(p.id, p.name, priceDisplay);
-    };
-
-    list.appendChild(div);
-  });
-}
 /* ================= PLANS ================= */
 async function loadPlans() {
   try {
@@ -255,6 +206,7 @@ async function loadPlans() {
     });
     const data = await res.json();
     cachedPlans = Array.isArray(data)? data : [];
+    renderPlans(); // Re-render after loading
   } catch (e) {
     console.log("PLANS ERROR", e);
   }
@@ -274,6 +226,14 @@ function selectAirtimeNetwork(network, element) {
   if (element) element.classList.add("active");
 }
 
+// Get correct price based on user tier
+function getPlanPrice(plan) {
+  const tier = currentUser?.user_tier || 'default';
+  if (tier === 'top' && plan.top_price) return Number(plan.top_price);
+  if (tier === 'regular' && plan.regular_price) return Number(plan.regular_price);
+  return Number(plan.price); // fallback to default price
+}
+
 function renderPlans() {
   const list = el("planList");
   if (!list) return;
@@ -285,7 +245,7 @@ function renderPlans() {
     return;
   }
 
-  const filtered = cachedPlans.filter(p => (p.network || "").toLowerCase() === selectedNetwork);
+  const filtered = cachedPlans.filter(p => (p.network || "").toLowerCase() === selectedNetwork && p.is_active!== false);
 
   if (!filtered.length) {
     list.innerHTML = "<p>No plans available for this network</p>";
@@ -296,23 +256,16 @@ function renderPlans() {
     const div = document.createElement("div");
     div.className = "planItem";
 
-    let priceDisplay = p.price;
+    const priceDisplay = getPlanPrice(p);
+    const tier = currentUser?.user_tier || 'default';
     let badge = "";
-    let tierClass = "";
 
-    // Check user tier and apply correct price
-    if (currentUser?.is_top_user && p.top_price) {
-      priceDisplay = p.top_price;
+    if (tier === 'top') {
       badge = `<span class="topUserBadge">TOP</span>`;
-      tierClass = "topUserPlan";
-    } else if (p.regular_price &&!currentUser?.is_top_user) {
-      // If not top user, use regular_price if available, else default price
-      priceDisplay = p.regular_price;
+    } else if (tier === 'regular' && p.regular_price) {
       badge = `<span class="regularUserBadge" style="position:absolute;top:8px;right:8px;background:#ffa000;padding:2px 6px;border-radius:4px;font-size:10px;">REGULAR</span>`;
-      tierClass = "regularUserPlan";
     }
 
-    div.classList.add(tierClass);
     div.innerHTML = `
       <strong>${p.name}</strong> ${badge}<br>
       ${p.validity || ""}<br>
@@ -320,12 +273,42 @@ function renderPlans() {
     `;
 
     div.onclick = () => {
-      selectedPlan = {...p, price: priceDisplay};
+      selectedPlan = {...p, price: priceDisplay };
       openPurchaseModal(p.id, p.name, priceDisplay);
     };
 
     list.appendChild(div);
   });
+}
+
+/* ================= BIOMETRIC STATUS ================= */
+async function checkBiometricStatus() {
+  const elStatus = el("biometricStatus");
+  const btn = el("biometricPurchaseBtn");
+  if (!elStatus) return;
+
+  if (!window.PublicKeyCredential) {
+    elStatus.innerText = "Status: Not supported on this device/browser";
+    elStatus.style.color = "var(--danger)";
+    return;
+  }
+
+  try {
+    const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    if (available) {
+      elStatus.innerText = "Status: Active - Fingerprint login enabled";
+      elStatus.style.color = "var(--success)";
+      if (btn) btn.style.display = "block";
+    } else {
+      elStatus.innerText = "Status: Device doesn’t support biometric auth";
+      elStatus.style.color = "var(--warning)";
+      if (btn) btn.style.display = "none";
+    }
+  } catch (e) {
+    elStatus.innerText = "Status: Check failed";
+    elStatus.style.color = "var(--danger)";
+    console.error("Biometric check error:", e);
+  }
 }
 
 /* ================= WEBAUTHN ================= */
