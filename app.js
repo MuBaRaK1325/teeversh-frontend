@@ -1089,7 +1089,7 @@ async function setUserTier(id, tier) {
 /* ================= ADMIN: PLANS MANAGER ================= */
 async function loadAdminPlans() {
   try {
-    const res = await fetch(API + "/admin/plans", {
+    const res = await fetch(API + "/admin/plans?t=" + Date.now(), { // cache bust
       headers: { Authorization: "Bearer " + getToken() }
     });
     const plans = await res.json();
@@ -1118,22 +1118,26 @@ async function loadAdminPlans() {
 
 async function addPlan() {
   const plan = {
-    plan_id: el("newPlanId")?.value,
-    network: el("newPlanNetwork")?.value,
-    name: el("newPlanName")?.value,
-    price: el("newPlanPrice")?.value,
-    regular_price: el("newPlanRegularPrice")?.value || null,
-    top_price: el("newPlanTopPrice")?.value || null,
-    cost: el("newPlanCost")?.value,
-    validity: el("newPlanValidity")?.value,
-    restricted: el("newPlanRestricted")?.checked,
-    provider: el("newPlanProvider")?.value,
-    network_id: el("newPlanNetworkId")?.value,
-    api_plan_id: el("newPlanApiId")?.value
+    plan_id: el("newPlanId")?.value?.trim(),
+    network: el("newPlanNetwork")?.value?.trim(),
+    name: el("newPlanName")?.value?.trim(),
+    price: Number(el("newPlanPrice")?.value),
+    regular_price: el("newPlanRegularPrice")?.value? Number(el("newPlanRegularPrice").value) : null,
+    top_price: el("newPlanTopPrice")?.value? Number(el("newPlanTopPrice").value) : null,
+    cost: Number(el("newPlanCost")?.value),
+    validity: el("newPlanValidity")?.value? Number(el("newPlanValidity").value) : null,
+    restricted: !!el("newPlanRestricted")?.checked,
+    provider: el("newPlanProvider")?.value?.trim(),
+    network_id: Number(el("newPlanNetworkId")?.value),
+    api_plan_id: el("newPlanApiId")?.value?.trim()
   };
 
   if (!plan.plan_id ||!plan.network ||!plan.name ||!plan.price ||!plan.cost ||!plan.provider ||!plan.network_id ||!plan.api_plan_id) {
     return showMsg("Fill all required fields including provider details", "error");
+  }
+
+  if (isNaN(plan.price) || isNaN(plan.cost) || isNaN(plan.network_id)) {
+    return showMsg("Price, Cost and Network ID must be valid numbers", "error");
   }
 
   showLoader("Adding plan...");
@@ -1191,7 +1195,7 @@ async function editPlan(id) {
   if (el("editPlanTopPrice")) el("editPlanTopPrice").value = plan.top_price || "";
   if (el("editPlanCost")) el("editPlanCost").value = plan.cost || "";
   if (el("editPlanValidity")) el("editPlanValidity").value = plan.validity || "";
-  if (el("editPlanRestricted")) el("editPlanRestricted").checked = plan.restricted || false;
+  if (el("editPlanRestricted")) el("editPlanRestricted").checked = !!plan.restricted;
   if (el("editPlanProvider")) el("editPlanProvider").value = plan.provider || "";
   if (el("editPlanNetworkId")) el("editPlanNetworkId").value = plan.network_id || "";
   if (el("editPlanApiId")) el("editPlanApiId").value = plan.api_plan_id || "";
@@ -1204,21 +1208,25 @@ async function savePlanEdit() {
   if (!editingPlanId) return;
 
   const updated = {
-    name: el("editPlanName")?.value,
-    price: el("editPlanPrice")?.value,
-    regular_price: el("editPlanRegularPrice")?.value || null,
-    top_price: el("editPlanTopPrice")?.value || null,
-    cost: el("editPlanCost")?.value,
-    validity: el("editPlanValidity")?.value,
-    restricted: el("editPlanRestricted")?.checked,
-    provider: el("editPlanProvider")?.value,
-    network_id: el("editPlanNetworkId")?.value,
-    api_plan_id: el("editPlanApiId")?.value,
-    is_active: el("editPlanActive")?.checked
+    name: el("editPlanName")?.value?.trim(),
+    price: Number(el("editPlanPrice")?.value),
+    regular_price: el("editPlanRegularPrice")?.value? Number(el("editPlanRegularPrice").value) : null,
+    top_price: el("editPlanTopPrice")?.value? Number(el("editPlanTopPrice").value) : null,
+    cost: Number(el("editPlanCost")?.value),
+    validity: el("editPlanValidity")?.value? Number(el("editPlanValidity").value) : null,
+    restricted: !!el("editPlanRestricted")?.checked,
+    provider: el("editPlanProvider")?.value?.trim(),
+    network_id: Number(el("editPlanNetworkId")?.value),
+    api_plan_id: el("editPlanApiId")?.value?.trim(),
+    is_active: !!el("editPlanActive")?.checked
   };
 
   if (!updated.name ||!updated.price ||!updated.cost ||!updated.provider ||!updated.network_id ||!updated.api_plan_id) {
     return showMsg("Name, Price, Cost, Provider, Network ID and API Plan ID are required", "error");
+  }
+
+  if (isNaN(updated.price) || isNaN(updated.cost) || isNaN(updated.network_id)) {
+    return showMsg("Price, Cost and Network ID must be valid numbers", "error");
   }
 
   showLoader("Updating plan...");
