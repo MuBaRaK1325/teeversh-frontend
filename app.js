@@ -959,169 +959,22 @@ async function reverseTransaction(reference) {
   }
 }
 
-/* ================= ADMIN: TOP USERS ================= */
-async function loadTopUsers() {
-  try {
-    const res = await fetch(API + "/admin/top-users", {
-      headers: { Authorization: "Bearer " + getToken() }
-    });
-    if (!res.ok) throw new Error("Failed");
-    const users = await res.json();
-    const list = el("topUsersList");
-    if (list) {
-      list.innerHTML = "";
-      if (!users.length) {
-        list.innerHTML = `<p style="text-align:center;opacity:0.6">No top users yet</p>`;
-        return;
-      }
-      users.forEach(u => {
-        list.innerHTML += `<div class="userCard">
-          <strong>${u.username}</strong> - ${u.email}<br>
-          Spent: ${formatNaira(u.total_spent)} | Profit: ${formatNaira(u.total_profit_generated)}<br>
-          <button onclick="removeTopUser('${u.email}')" class="dangerBtn">Remove from Top</button>
-        </div>`;
-      });
-    }
-  } catch(e) {
-    console.error("Load top users error:", e);
-  }
-}
-
-async function addTopUser() {
-  const email = el("topUserEmail")?.value;
-  if (!email) return showMsg("Enter email", "error");
-
-  showLoader("Adding top user...");
-  try {
-    const res = await fetch(API + "/admin/top-users/add", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-      body: JSON.stringify({ email })
-    });
-    const data = await res.json();
-    hideLoader();
-    showMsg(data.message, res.ok? "success" : "error");
-    if (res.ok) {
-      el("topUserEmail").value = "";
-      loadTopUsers();
-      loadAdminUsers();
-      broadcastTopUserUpdate(currentUser.company);
-    }
-  } catch {
-    hideLoader();
-    showMsg("Server error", "error");
-  }
-}
-
-async function removeTopUser(email) {
-  showLoader("Removing...");
-  try {
-    const res = await fetch(API + "/admin/top-users/remove", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-      body: JSON.stringify({ email })
-    });
-    const data = await res.json();
-    hideLoader();
-    showMsg(data.message, res.ok? "success" : "error");
-    if (res.ok) {
-      loadTopUsers();
-      loadAdminUsers();
-      broadcastTopUserUpdate(currentUser.company);
-    }
-  } catch {
-    hideLoader();
-    showMsg("Server error", "error");
-  }
-}
-
-/* ================= ADMIN: REGULAR USERS ================= */
-async function loadRegularUsers() {
-  try {
-    const res = await fetch(API + "/admin/regular-users", {
-      headers: { Authorization: "Bearer " + getToken() }
-    });
-    if (!res.ok) throw new Error("Failed");
-    const users = await res.json();
-    const list = el("regularUsersList");
-    if (list) {
-      list.innerHTML = "";
-      if (!users.length) {
-        list.innerHTML = `<p style="text-align:center;opacity:0.6">No regular users yet</p>`;
-        return;
-      }
-      users.forEach(u => {
-        list.innerHTML += `<div class="userCard">
-          <strong>${u.username}</strong> - ${u.email}<br>
-          Spent: ${formatNaira(u.total_spent)} | Profit: ${formatNaira(u.total_profit_generated)}<br>
-          <button onclick="removeRegularUser('${u.email}')" class="dangerBtn">Remove from Regular</button>
-        </div>`;
-      });
-    }
-  } catch(e) {
-    console.error("Load regular users error:", e);
-  }
-}
-
-async function addRegularUser() {
-  const email = el("regularUserEmail")?.value;
-  if (!email) return showMsg("Enter email", "error");
-
-  showLoader("Adding regular user...");
-  try {
-    const res = await fetch(API + "/admin/regular-users/add", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-      body: JSON.stringify({ email })
-    });
-    const data = await res.json();
-    hideLoader();
-    showMsg(data.message, res.ok? "success" : "error");
-    if (res.ok) {
-      el("regularUserEmail").value = "";
-      loadRegularUsers();
-      loadAdminUsers();
-      broadcastTopUserUpdate(currentUser.company);
-    }
-  } catch {
-    hideLoader();
-    showMsg("Server error", "error");
-  }
-}
-
-async function removeRegularUser(email) {
-  showLoader("Removing...");
-  try {
-    const res = await fetch(API + "/admin/regular-users/remove", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-      body: JSON.stringify({ email })
-    });
-    const data = await res.json();
-    hideLoader();
-    showMsg(data.message, res.ok? "success" : "error");
-    if (res.ok) {
-      loadRegularUsers();
-      loadAdminUsers();
-      broadcastTopUserUpdate(currentUser.company);
-    }
-  } catch {
-    hideLoader();
-    showMsg("Server error", "error");
-  }
-}
-
 /* ================= ADMIN: USERS MANAGER ================= */
 async function loadAdminUsers() {
   const search = el("userSearch")?.value || "";
   try {
-    const res = await fetch(`${API}/admin/users?search=${search}`, {
+    const res = await fetch(`${API}/admin/users?search=${encodeURIComponent(search)}`, {
       headers: { Authorization: "Bearer " + getToken() }
     });
+    if (!res.ok) throw new Error("Failed to load users");
     const users = await res.json();
     const list = el("adminUsersList");
     if (list) {
       list.innerHTML = "";
+      if (!users.length) {
+        list.innerHTML = `<p style="text-align:center;opacity:0.6">No users found</p>`;
+        return;
+      }
       users.forEach(u => {
         const tierColor = u.user_tier === 'top'? '#00c853' : u.user_tier === 'regular'? '#ffa000' : '#888';
         const tierBadge = `<span style="color:${tierColor};font-weight:bold">${u.user_tier.toUpperCase()}</span>`;
@@ -1138,6 +991,7 @@ async function loadAdminUsers() {
     }
   } catch(e) {
     console.error("Load users error:", e);
+    showMsg("Failed to load users", "error");
   }
 }
 
@@ -1153,15 +1007,167 @@ async function setUserTier(id, tier) {
     hideLoader();
     showMsg(data.message || "Tier updated", res.ok? "success" : "error");
     if (res.ok) {
-      loadAdminUsers();
-      loadTopUsers();
-      loadRegularUsers();
+      loadAdminUsers(); // Refresh users list
       broadcastTopUserUpdate(currentUser.company);
     }
   } catch {
     hideLoader();
     showMsg("Server error", "error");
   }
+}
+
+/* ================= ADMIN: PLANS MANAGER ================= */
+async function loadAdminPlans() {
+  try {
+    const res = await fetch(API + "/admin/plans", {
+      headers: { Authorization: "Bearer " + getToken() },
+      cache: "no-store"
+    });
+    if (!res.ok) throw new Error("Failed to load plans");
+    const plans = await res.json();
+    const list = el("adminPlansList");
+    if (list) {
+      list.innerHTML = "";
+      if (!plans.length) {
+        list.innerHTML = `<p style="text-align:center;opacity:0.6">No plans yet</p>`;
+        return;
+      }
+      plans.forEach(p => {
+        list.innerHTML += `<div class="planCard">
+          <strong>${p.name}</strong> - ${p.network}<br>
+          Default: ${formatNaira(p.price)} | Regular: ${formatNaira(p.regular_price || p.price)} | Top: ${formatNaira(p.top_price || p.price)}<br>
+          Provider: ${p.provider} | Active: ${p.is_active ? 'Yes' : 'No'}<br>
+          <button onclick="editPlan(${p.id})" class="editBtn">Edit</button>
+          <button onclick="deletePlan(${p.id})" class="dangerBtn">Deactivate</button>
+        </div>`;
+      });
+    }
+  } catch(e) {
+    console.error("Load plans error:", e);
+    showMsg("Failed to load plans", "error");
+  }
+}
+
+async function addPlan() {
+  const data = {
+    plan_id: el("planId")?.value,
+    network: el("planNetwork")?.value,
+    name: el("planName")?.value,
+    price: el("planPrice")?.value,
+    regular_price: el("planRegularPrice")?.value,
+    top_price: el("planTopPrice")?.value,
+    cost: el("planCost")?.value,
+    validity: el("planValidity")?.value,
+    restricted: el("planRestricted")?.checked || false,
+    provider: el("planProvider")?.value,
+    network_id: el("planNetworkId")?.value,
+    api_plan_id: el("planApiPlanId")?.value
+  };
+
+  if (!data.plan_id || !data.network || !data.name || !data.price || !data.cost || !data.provider || !data.network_id || !data.api_plan_id) {
+    return showMsg("Fill all required fields", "error");
+  }
+
+  showLoader("Adding plan...");
+  try {
+    const res = await fetch(API + "/admin/plans", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+      body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    hideLoader();
+    showMsg(result.message, res.ok ? "success" : "error");
+    if (res.ok) {
+      closeModal('addPlanModal');
+      loadAdminPlans();
+    }
+  } catch {
+    hideLoader();
+    showMsg("Server error", "error");
+  }
+}
+
+async function updatePlan(id) {
+  const data = {
+    plan_id: el("editPlanId")?.value,
+    network: el("editPlanNetwork")?.value,
+    name: el("editPlanName")?.value,
+    price: el("editPlanPrice")?.value,
+    regular_price: el("editPlanRegularPrice")?.value,
+    top_price: el("editPlanTopPrice")?.value,
+    cost: el("editPlanCost")?.value,
+    validity: el("editPlanValidity")?.value,
+    restricted: el("editPlanRestricted")?.checked || false,
+    provider: el("editPlanProvider")?.value,
+    network_id: el("editPlanNetworkId")?.value,
+    api_plan_id: el("editPlanApiPlanId")?.value,
+    is_active: el("editPlanActive")?.checked || false
+  };
+
+  showLoader("Updating plan...");
+  try {
+    const res = await fetch(`${API}/admin/plans/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+      body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    hideLoader();
+    showMsg(result.message, res.ok ? "success" : "error");
+    if (res.ok) {
+      closeModal('editPlanModal');
+      loadAdminPlans();
+    }
+  } catch {
+    hideLoader();
+    showMsg("Server error", "error");
+  }
+}
+
+async function deletePlan(id) {
+  if (!confirm("Deactivate this plan?")) return;
+  showLoader("Deactivating...");
+  try {
+    const res = await fetch(`${API}/admin/plans/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: "Bearer " + getToken() }
+    });
+    const result = await res.json();
+    hideLoader();
+    showMsg(result.message, res.ok ? "success" : "error");
+    if (res.ok) loadAdminPlans();
+  } catch {
+    hideLoader();
+    showMsg("Server error", "error");
+  }
+}
+
+function editPlan(id) {
+  fetch(`${API}/admin/plans`, {
+    headers: { Authorization: "Bearer " + getToken() }
+  })
+  .then(r => r.json())
+  .then(plans => {
+    const plan = plans.find(p => p.id === id);
+    if (!plan) return showMsg("Plan not found", "error");
+    
+    el("editPlanId").value = plan.plan_id;
+    el("editPlanNetwork").value = plan.network;
+    el("editPlanName").value = plan.name;
+    el("editPlanPrice").value = plan.price;
+    el("editPlanRegularPrice").value = plan.regular_price || "";
+    el("editPlanTopPrice").value = plan.top_price || "";
+    el("editPlanCost").value = plan.cost;
+    el("editPlanValidity").value = plan.validity || "";
+    el("editPlanRestricted").checked = plan.restricted;
+    el("editPlanProvider").value = plan.provider;
+    el("editPlanNetworkId").value = plan.network_id;
+    el("editPlanApiPlanId").value = plan.api_plan_id;
+    el("editPlanActive").checked = plan.is_active;
+    el("editPlanForm").dataset.planId = id;
+    openModal('editPlanModal');
+  });
 }
 
 /* ================= ADMIN: PLANS MANAGER ================= */

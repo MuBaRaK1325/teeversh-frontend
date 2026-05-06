@@ -783,54 +783,30 @@ box-shadow:0 0 40px rgba(147,51,234,0.3);
 </div>
 </section>
 
-<!-- ADMIN: TOP USERS MANAGER -->
-<section id="topUsersManager" class="section adminOnly">
-<button onclick="showSection('profile')" class="backBtn">⬅ Back</button>
-<h3>🔥 Top Users Manager</h3>
-
-<div class="adminSection">
-  <input id="topUserEmail" type="email" placeholder="User Email">
-  <button onclick="addTopUser()" class="successBtn">Add Top User</button>
-  <div id="topUsersList"></div>
-</div>
-</section>
-
-<!-- ADMIN: REGULAR USERS MANAGER -->
-<section id="regularUsersManager" class="section adminOnly">
-<button onclick="showSection('profile')" class="backBtn">⬅ Back</button>
-<h3>⭐ Regular Users Manager</h3>
-
-<div class="adminSection">
-  <input id="regularUserEmail" type="email" placeholder="User Email">
-  <button onclick="addRegularUser()" class="successBtn">Add Regular User</button>
-  <div id="regularUsersList"></div>
-</div>
-</section>
-
 <!-- ADMIN: PLANS MANAGER -->
 <section id="plansManager" class="section adminOnly">
-<button onclick="showSection('profile')" class="backBtn">⬅ Back</button>
-<h3>📱 Plans Manager</h3>
+  <button onclick="showSection('profile')" class="backBtn">⬅ Back</button>
+  <h3>📱 Plans Manager</h3>
 
-<div class="adminSection">
-  <button onclick="openModal('addPlanModal')" class="successBtn">+ Add New Plan</button>
-</div>
+  <div class="adminSection">
+    <button onclick="openModal('addPlanModal')" class="successBtn">+ Add New Plan</button>
+  </div>
 
-<div class="adminSection">
-  <h4>All Plans</h4>
-  <div id="adminPlansList"></div>
-</div>
+  <div class="adminSection">
+    <h4>All Plans</h4>
+    <div id="adminPlansList"></div>
+  </div>
 </section>
 
 <!-- ADMIN: USERS MANAGER -->
 <section id="usersManager" class="section adminOnly">
-<button onclick="showSection('profile')" class="backBtn">⬅ Back</button>
-<h3>👥 Users Manager</h3>
+  <button onclick="showSection('profile')" class="backBtn">⬅ Back</button>
+  <h3>👥 Users Manager</h3>
 
-<div class="adminSection">
-  <input id="userSearch" placeholder="Search username or email" oninput="loadAdminUsers()">
-  <div id="adminUsersList"></div>
-</div>
+  <div class="adminSection">
+    <input id="userSearch" placeholder="Search username or email" oninput="loadAdminUsers()">
+    <div id="adminUsersList"></div>
+  </div>
 </section>
 
 <!-- MODAL: ADD PLAN -->
