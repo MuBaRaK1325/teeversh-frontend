@@ -19,24 +19,31 @@ const STATIC_ASSETS = [
   '/js/app.js'
 ];
 
-// Install - cache static assets
+// Install - cache static assets immediately
 self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
+      console.log('[TEEVERSH SW] Caching static assets');
       return cache.addAll(STATIC_ASSETS).catch(err => {
-        console.log('Cache failed for some assets:', err);
+        console.log('[TEEVERSH SW] Cache failed for some assets:', err);
       });
     })
   );
 });
 
-// Activate - delete old caches
+// Activate - delete old caches and take control
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys => Promise.all(
-      keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
-    )).then(() => self.clients.claim())
+      keys.filter(k => k !== CACHE_NAME).map(k => {
+        console.log('[TEEVERSH SW] Deleting old cache:', k);
+        return caches.delete(k);
+      })
+    )).then(() => {
+      console.log('[TEEVERSH SW] Claiming clients');
+      return self.clients.claim();
+    })
   );
 });
 
@@ -45,7 +52,7 @@ self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip: POST, external origins, Paystack
+  // Skip: POST, external origins, Paystack webhooks
   if (request.method !== 'GET' || 
       url.origin !== location.origin ||
       url.pathname.startsWith('/api/paystack/webhook') ||
@@ -53,7 +60,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // API calls - Network first
+  // API calls - Network first, cache response for offline fallback
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(request)
@@ -70,7 +77,7 @@ self.addEventListener('fetch', event => {
   }
 
   // HTML pages - Network first, fallback to offline page
-  if (request.headers.get('accept').includes('text/html')) {
+  if (request.headers.get('accept') && request.headers.get('accept').includes('text/html')) {
     event.respondWith(
       fetch(request)
         .then(response => {
@@ -83,12 +90,14 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Static assets - Cache first
+  // Static assets - Cache first, then network
   event.respondWith(
     caches.match(request).then(response => {
       return response || fetch(request).then(fetchRes => {
-        const resClone = fetchRes.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(request, resClone));
+        if (fetchRes.ok) {
+          const resClone = fetchRes.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(request, resClone));
+        }
         return fetchRes;
       });
     }).catch(() => {
