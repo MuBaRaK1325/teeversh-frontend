@@ -724,14 +724,15 @@ function openFundModal() {
   el("msgBox").innerHTML = `
     <div style="text-align:center">
       <h3>Fund Wallet</h3>
-      <input id="fundAmount" type="number" placeholder="Enter amount" style="width:100%;padding:10px;margin:12px 0" />
-      <button onclick="confirmFund()" class="primaryBtn">Pay with Paystack</button>
+      <input id="fundAmount" type="number" placeholder="Minimum ₦100" style="width:100%;padding:10px;margin:12px 0" min="100" />
+      <p style="font-size:13px;opacity:0.7;margin-bottom:12px">Payment via ${currentUser.company === 'sadeeq'? 'Flutterwave' : 'Monnify Bank Transfer'}</p>
+      <button onclick="confirmFund()" class="primaryBtn">Continue to Payment</button>
     </div>`;
   openModal("msgModal");
 }
 
 async function confirmFund() {
-  const amount = el("fundAmount")?.value;
+  const amount = Number(el("fundAmount")?.value);
   if (!amount || amount < 100) return showMsg("Minimum funding is ₦100", "error");
 
   showLoader("Initializing payment...");
@@ -743,12 +744,48 @@ async function confirmFund() {
     });
     const data = await res.json();
     hideLoader();
-    if (data.url) window.location.href = data.url;
-    else showMsg(data.message || "Payment failed", "error");
+
+    if (data.url) {
+      // Flutterwave for Sadeeq
+      window.location.href = data.url;
+    } else if (data.account_number) {
+      // Monnify for Mayconnect/BnHabeeb/Teeversh
+      showMonnifyDetails(data, amount);
+    } else {
+      showMsg(data.message || "Payment failed", "error");
+    }
   } catch {
     hideLoader();
     showMsg("Server error", "error");
   }
+}
+
+function showMonnifyDetails(data, amount) {
+  el("msgBox").innerHTML = `
+    <div style="text-align:center">
+      <h3>Bank Transfer Details</h3>
+      <p style="opacity:0.8;margin-bottom:15px">Transfer ₦${formatNaira(amount)} to the account below. Your wallet will be credited automatically.</p>
+
+      <div style="background:var(--card-bg);padding:15px;border-radius:12px;margin:15px 0;text-align:left">
+        <div style="margin-bottom:10px">
+          <small style="opacity:0.6">Bank Name</small>
+          <h4 style="margin:5px 0">${data.bank_name}</h4>
+        </div>
+        <div style="margin-bottom:10px">
+          <small style="opacity:0.6">Account Number</small>
+          <h4 style="margin:5px 0;font-family:monospace;font-size:18px">${data.account_number}</h4>
+        </div>
+        <div>
+          <small style="opacity:0.6">Account Name</small>
+          <h4 style="margin:5px 0">${data.account_name}</h4>
+        </div>
+      </div>
+
+      <small style="color:#ffa000">Reference: ${data.reference}</small>
+      <br><br>
+      <button onclick="closeModal('msgModal')" class="secondaryBtn">I have made the transfer</button>
+    </div>`;
+  openModal("msgModal");
 }
 
 /* ================= ADMIN: PROFIT DASHBOARD ================= */
@@ -782,6 +819,123 @@ async function loadProfitDashboard() {
   } catch {
     hideLoader();
     showMsg("Failed to load profit data", "error");
+  }
+}
+
+/* ================= ADMIN: TRANSACTIONS MANAGER ================= */
+async function loadAdminTransactions() {
+  const status = el("txStatusFilter")?.value || "";
+  const provider = el("txProviderFilter")?.value || "";
+  const search = el("txSearch")?.value || "";
+
+  showLoader("Loading transactions...");
+  try {
+    const res = await fetch(`${API}/admin/transactions?status=${status}&provider=${provider}&search=${search}`, {
+      headers: { Authorization: "Bearer " + getToken() }
+    });
+    const transactions = await res.json();
+    hideLoader();
+
+    const list = el("transactionsList");
+    if (!list) return;
+
+    list.innerHTML = "";
+    if (!transactions.length) {
+      list.innerHTML = `<p style="text-align:center;opacity:0.6">No transactions found</p>`;
+      return;
+    }
+
+    transactions.forEach(tx => {
+      const statusColor = tx.status === "SUCCESS"? "#00c853" : tx.status === "PENDING"? "#ffa000" : "#ff4d4d";
+      const isManualDeductAllowed = (tx.provider === 'maitama') ||
+                                   (currentUser.company === 'mayconnect' && ['cheapdatahub', 'subpadi'].includes(tx.provider));
+      const isReversalAllowed = tx.status === 'SUCCESS';
+
+      const wasManual = tx.metadata?.manual_deducted? '<span class="badge badgeWarning">MANUAL</span>' : '';
+      const wasReversed = tx.metadata?.reversed? '<span class="badge badgeDanger">REVERSED</span>' : '';
+
+      list.innerHTML += `
+        <div class="transactionCard">
+          <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
+            <div>
+              <strong>${tx.type}</strong> ${wasManual} ${wasReversed}<br>
+              <small style="opacity:0.7">${tx.username} - ${tx.email}</small><br>
+              <small style="font-family:monospace">${tx.reference}</small>
+            </div>
+            <div style="text-align:right">
+              <strong style="font-size:18px">${formatNaira(tx.amount)}</strong><br>
+              <span style="color:${statusColor};font-weight:600">${tx.status}</span><br>
+              <small style="opacity:0.6">${tx.provider?.toUpperCase() || 'N/A'}</small>
+            </div>
+          </div>
+
+          <small style="opacity:0.5">${formatDate(tx.created_at)}</small>
+
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+            ${tx.status === 'FAILED' && isManualDeductAllowed?
+              `<button onclick="forceDeductTransaction('${tx.reference}', ${tx.amount})" class="warningBtn">Force Deduct</button>` : ''}
+
+            ${isReversalAllowed?
+              `<button onclick="reverseTransaction('${tx.reference}')" class="dangerBtn">Reverse</button>` : ''}
+          </div>
+        </div>`;
+    });
+  } catch (e) {
+    hideLoader();
+    console.error("Load transactions error:", e);
+    showMsg("Failed to load transactions", "error");
+  }
+}
+
+async function forceDeductTransaction(reference, amount) {
+  const reason = prompt(`Deduct ₦${formatNaira(amount)} from user wallet?\n\nEnter reason:`, "Maitama delivered but API returned failed");
+  if (!reason) return;
+
+  if (!confirm(`Confirm deduction of ₦${formatNaira(amount)} from user wallet? This cannot be undone.`)) return;
+
+  showLoader("Processing deduction...");
+  try {
+    const res = await fetch(API + "/admin/transactions/force-deduct", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+      body: JSON.stringify({ reference, reason })
+    });
+    const data = await res.json();
+    hideLoader();
+    showMsg(data.message, res.ok? "success" : "error");
+    if (res.ok) {
+      loadAdminTransactions();
+      loadAdminUsers(); // Refresh user balances
+    }
+  } catch {
+    hideLoader();
+    showMsg("Server error", "error");
+  }
+}
+
+async function reverseTransaction(reference) {
+  const reason = prompt("Enter reason for reversal:", "Admin reversal");
+  if (!reason) return;
+
+  if (!confirm(`Confirm reversal of transaction ${reference}? User wallet will be refunded.`)) return;
+
+  showLoader("Processing reversal...");
+  try {
+    const res = await fetch(API + "/admin/transactions/reverse", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+      body: JSON.stringify({ reference, reason })
+    });
+    const data = await res.json();
+    hideLoader();
+    showMsg(data.message, res.ok? "success" : "error");
+    if (res.ok) {
+      loadAdminTransactions();
+      loadAdminUsers(); // Refresh user balances
+    }
+  } catch {
+    hideLoader();
+    showMsg("Server error", "error");
   }
 }
 
@@ -831,7 +985,6 @@ async function addTopUser() {
       el("topUserEmail").value = "";
       loadTopUsers();
       loadAdminUsers();
-      loadRegularUsers();
       broadcastTopUserUpdate(currentUser.company);
     }
   } catch {
@@ -862,75 +1015,49 @@ async function removeTopUser(email) {
   }
 }
 
-/* ================= ADMIN: REGULAR USERS ================= */
-async function loadRegularUsers() {
+/* ================= ADMIN: USERS MANAGER ================= */
+async function loadAdminUsers() {
+  const search = el("userSearch")?.value || "";
   try {
-    const res = await fetch(API + "/admin/regular-users", {
+    const res = await fetch(`${API}/admin/users?search=${search}`, {
       headers: { Authorization: "Bearer " + getToken() }
     });
-    if (!res.ok) throw new Error("Failed");
     const users = await res.json();
-    const list = el("regularUsersList");
+    const list = el("adminUsersList");
     if (list) {
       list.innerHTML = "";
-      if (!users.length) {
-        list.innerHTML = `<p style="text-align:center;opacity:0.6">No regular users yet</p>`;
-        return;
-      }
       users.forEach(u => {
+        const tierColor = u.user_tier === 'top'? '#00c853' : u.user_tier === 'regular'? '#ffa000' : '#888';
+        const tierBadge = `<span style="color:${tierColor};font-weight:bold">${u.user_tier.toUpperCase()}</span>`;
         list.innerHTML += `<div class="userCard">
-          <strong>${u.username}</strong> - ${u.email}<br>
-          Spent: ${formatNaira(u.total_spent)} | Profit: ${formatNaira(u.total_profit_generated)}<br>
-          <button onclick="removeRegularUser('${u.email}')" class="dangerBtn">Remove from Regular</button>
+          <strong>${u.username}</strong> - ${u.email} ${tierBadge}<br>
+          Wallet: ${formatNaira(u.wallet_balance)} | Phone: ${u.phone || 'N/A'}<br>
+          <select onchange="setUserTier(${u.id}, this.value)" class="tierSelect">
+            <option value="default" ${u.user_tier === 'default'? 'selected' : ''}>Default</option>
+            <option value="top" ${u.user_tier === 'top'? 'selected' : ''}>Top</option>
+          </select>
         </div>`;
       });
     }
   } catch(e) {
-    console.error("Load regular users error:", e);
+    console.error("Load users error:", e);
   }
 }
 
-async function addRegularUser() {
-  const email = el("regularUserEmail")?.value;
-  if (!email) return showMsg("Enter email", "error");
-
-  showLoader("Adding regular user...");
+async function setUserTier(id, tier) {
+  showLoader("Updating tier...");
   try {
-    const res = await fetch(API + "/admin/regular-users/add", {
+    const res = await fetch(`${API}/admin/users/set-tier`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-      body: JSON.stringify({ email })
+      body: JSON.stringify({ user_id: id, tier })
     });
     const data = await res.json();
     hideLoader();
-    showMsg(data.message, res.ok? "success" : "error");
+    showMsg(data.message || "Tier updated", res.ok? "success" : "error");
     if (res.ok) {
-      el("regularUserEmail").value = "";
-      loadRegularUsers();
       loadAdminUsers();
       loadTopUsers();
-      broadcastTopUserUpdate(currentUser.company);
-    }
-  } catch {
-    hideLoader();
-    showMsg("Server error", "error");
-  }
-}
-
-async function removeRegularUser(email) {
-  showLoader("Removing...");
-  try {
-    const res = await fetch(API + "/admin/regular-users/remove", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-      body: JSON.stringify({ email })
-    });
-    const data = await res.json();
-    hideLoader();
-    showMsg(data.message, res.ok? "success" : "error");
-    if (res.ok) {
-      loadRegularUsers();
-      loadAdminUsers();
       broadcastTopUserUpdate(currentUser.company);
     }
   } catch {
@@ -1002,10 +1129,6 @@ async function addPlan() {
     if (res.ok) {
       loadAdminPlans();
       loadPlans();
-      ["newPlanId","newPlanName","newPlanPrice","newPlanRegularPrice","newPlanTopPrice","newPlanCost","newPlanValidity","newPlanProvider","newPlanNetworkId","newPlanApiId"].forEach(id => {
-        if (el(id)) el(id).value = "";
-      });
-      if (el("newPlanRestricted")) el("newPlanRestricted").checked = false;
       broadcastTopUserUpdate(currentUser.company);
     }
   } catch {
@@ -1100,73 +1223,7 @@ async function savePlanEdit() {
   }
 }
 
-/* ================= ADMIN: USERS MANAGER ================= */
-async function loadAdminUsers() {
-  const search = el("userSearch")?.value || "";
-  try {
-    const res = await fetch(`${API}/admin/users?search=${search}`, {
-      headers: { Authorization: "Bearer " + getToken() }
-    });
-    const users = await res.json();
-    const list = el("adminUsersList");
-    if (list) {
-      list.innerHTML = "";
-      users.forEach(u => {
-        const tierColor = u.user_tier === 'top'? '#00c853' : u.user_tier === 'regular'? '#ffa000' : '#888';
-        const tierBadge = `<span style="color:${tierColor};font-weight:bold">${u.user_tier.toUpperCase()}</span>`;
-        list.innerHTML += `<div class="userCard">
-          <strong>${u.username}</strong> - ${u.email} ${tierBadge}<br>
-          Wallet: ${formatNaira(u.wallet_balance)} | Phone: ${u.phone || 'N/A'}<br>
-          <select onchange="setUserTier(${u.id}, this.value)" class="tierSelect">
-            <option value="default" ${u.user_tier === 'default'? 'selected' : ''}>Default</option>
-            <option value="regular" ${u.user_tier === 'regular'? 'selected' : ''}>Regular</option>
-            <option value="top" ${u.user_tier === 'top'? 'selected' : ''}>Top</option>
-          </select>
-        </div>`;
-      });
-    }
-  } catch(e) {
-    console.error("Load users error:", e);
-  }
-}
-
-async function setUserTier(id, tier) {
-  showLoader("Updating tier...");
-  try {
-    const res = await fetch(`${API}/admin/users/set-tier`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-      body: JSON.stringify({ user_id: id, tier })
-    });
-    const data = await res.json();
-    hideLoader();
-    showMsg(data.message || "Tier updated", res.ok? "success" : "error");
-    if (res.ok) {
-      loadAdminUsers();
-      loadTopUsers();
-      loadRegularUsers();
-      broadcastTopUserUpdate(currentUser.company);
-    }
-  } catch {
-    hideLoader();
-    showMsg("Server error", "error");
-  }
-}
-
-/* ================= BROADCAST - FIXED ================= */
-function broadcastTopUserUpdate(company) {
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ 
-      type: 'tier_update', 
-      company: company 
-    }));
-  }
-}
-
-
 /* ================= ADMIN: WITHDRAWALS ================= */
-
-// Nigerian Banks List - matches backend codes
 const NIGERIAN_BANKS = [
   "Access Bank", "Citibank", "Ecobank", "Fidelity Bank", "First Bank", "FCMB",
   "GTBank", "Heritage Bank", "Keystone Bank", "Polaris Bank", "Stanbic IBTC",
@@ -1175,19 +1232,15 @@ const NIGERIAN_BANKS = [
   "VFD Microfinance", "Carbon", "Rubies MFB", "Sparkle"
 ];
 
-// Load bank dropdown on page init
 function populateBankDropdown() {
   const bankSelect = el("withdrawBank");
   if (!bankSelect) return;
-  
+
   bankSelect.innerHTML = '<option value="">Select Bank</option>';
   NIGERIAN_BANKS.forEach(bank => {
     bankSelect.innerHTML += `<option value="${bank}">${bank}</option>`;
   });
 }
-
-// Call this when dashboard loads
-// Add populateBankDropdown() inside your showDashboard() function
 
 async function loadWithdrawals() {
   try {
@@ -1195,29 +1248,29 @@ async function loadWithdrawals() {
       headers: { Authorization: "Bearer " + getToken() }
     });
     if (!res.ok) throw new Error("Failed to fetch");
-    
+
     const wds = await res.json();
     const list = el("withdrawalsList");
     if (!list) return;
-    
+
     list.innerHTML = "";
-    
+
     if (!wds.length) {
       list.innerHTML = `<p style="text-align:center;color:#888">No withdrawal requests yet</p>`;
       return;
     }
-    
+
     wds.forEach(w => {
       const statusColor = w.status === "PAID"? "#00c853" : w.status === "PENDING"? "#ffa000" : "#ff4d4d";
       const transferInfo = w.transfer_code? `<br><small>Transfer ID: ${w.transfer_code}</small>` : '';
       const dateStr = new Date(w.created_at).toLocaleString('en-NG', {
         day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
       });
-      
-      const approveBtn = w.status === "PENDING" 
-        ? `<button onclick="approveWithdrawal('${w.reference}')" class="successBtn" style="margin-top:8px">Approve & Send to Bank</button>` 
+
+      const approveBtn = w.status === "PENDING"
+       ? `<button onclick="approveWithdrawal('${w.reference}')" class="successBtn" style="margin-top:8px">Approve & Send to Bank</button>`
         : '';
-      
+
       list.innerHTML += `<div class="withdrawCard">
         <div style="display:flex;justify-content:space-between;align-items:start">
           <div>
@@ -1253,7 +1306,7 @@ async function requestWithdrawal() {
     return showMsg("Minimum withdrawal is ₦100", "error");
   }
 
-  if (account_number.length !== 10) {
+  if (account_number.length!== 10) {
     return showMsg("Account number must be 10 digits", "error");
   }
 
@@ -1262,18 +1315,17 @@ async function requestWithdrawal() {
     const res = await fetch(API + "/admin/withdraw-request", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-      body: JSON.stringify({ 
-        amount: Number(amount), 
-        bank_name, 
-        account_number, 
-        account_name 
+      body: JSON.stringify({
+        amount: Number(amount),
+        bank_name,
+        account_number,
+        account_name
       })
     });
     const data = await res.json();
     hideLoader();
     showMsg(data.message, res.ok? "success" : "error");
     if (res.ok) {
-      // Clear form
       el("withdrawAmount").value = '';
       el("withdrawBank").value = '';
       el("withdrawAccountNumber").value = '';
@@ -1289,9 +1341,9 @@ async function requestWithdrawal() {
 }
 
 async function approveWithdrawal(reference) {
-  if (!confirm("Send money to bank via Paystack? This cannot be reversed.")) return;
-  
-  showLoader("Sending money to bank via Paystack...");
+  if (!confirm("Send money to bank? This cannot be reversed.")) return;
+
+  showLoader("Processing withdrawal...");
   try {
     const res = await fetch(API + "/admin/withdraw/approve", {
       method: "POST",
@@ -1303,32 +1355,13 @@ async function approveWithdrawal(reference) {
     showMsg(data.message, res.ok? "success" : "error");
     if (res.ok) {
       loadWithdrawals();
-      loadDashboard(); // Updates admin_wallet balance
+      loadDashboard();
     }
   } catch (err) {
     hideLoader();
     console.log("Approve withdrawal error:", err);
     showMsg("Network error during transfer", "error");
   }
-}
-
-
-
-/* ================= REVERSAL ================= */
-async function reverseTransaction() {
-  const reference = el("reverseRef")?.value;
-  if (!reference) return showMsg("Enter transaction reference", "error");
-
-  showLoader("Reversing...");
-  const res = await fetch(API + "/api/admin/reverse", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-    body: JSON.stringify({ reference })
-  });
-  const data = await res.json();
-  hideLoader();
-  showMsg(data.message, res.ok? "success" : "error");
-  if (res.ok) fetchTransactions();
 }
 
 /* ================= ACCOUNT ================= */
@@ -1364,6 +1397,16 @@ async function generateAccount() {
   } catch {
     hideLoader();
     showMsg("Server error", "error");
+  }
+}
+
+/* ================= BROADCAST ================= */
+function broadcastTopUserUpdate(company) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({
+      type: 'tier_update',
+      company: company
+    }));
   }
 }
 
