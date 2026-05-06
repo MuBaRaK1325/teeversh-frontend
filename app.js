@@ -287,6 +287,12 @@ async function checkBiometricStatus() {
   const btn = el("biometricPurchaseBtn");
   if (!elStatus) return;
 
+  if (!window.isSecureContext) {
+    elStatus.innerText = "Status: HTTPS required for biometric";
+    elStatus.style.color = "var(--warning)";
+    return;
+  }
+
   if (!window.PublicKeyCredential) {
     elStatus.innerText = "Status: Not supported on this device/browser";
     elStatus.style.color = "var(--danger)";
@@ -300,12 +306,12 @@ async function checkBiometricStatus() {
       elStatus.style.color = "var(--success)";
       if (btn) btn.style.display = "block";
     } else {
-      elStatus.innerText = "Status: Device doesn’t support biometric auth";
+      elStatus.innerText = "Status: No fingerprint/passkey enrolled on device";
       elStatus.style.color = "var(--warning)";
       if (btn) btn.style.display = "none";
     }
   } catch (e) {
-    elStatus.innerText = "Status: Check failed";
+    elStatus.innerText = "Status: Check failed - " + e.message;
     elStatus.style.color = "var(--danger)";
     console.error("Biometric check error:", e);
   }
