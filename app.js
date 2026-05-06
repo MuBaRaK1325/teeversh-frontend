@@ -99,10 +99,12 @@ async function loadDashboard() {
 
   try {
     const res = await fetch(API + "/api/me", { headers: { Authorization: "Bearer " + getToken() } });
+    if (!res.ok) throw new Error("Failed to fetch user");
     currentUser = await res.json();
     window.CURRENT_USER_ID = currentUser.id;
-    console.log("Current user tier:", currentUser.user_tier); // Debug tier
-  } catch {
+    console.log("Current user tier:", currentUser.user_tier);
+  } catch (e) {
+    console.error("Load user error:", e);
     logout();
     return;
   }
@@ -118,7 +120,7 @@ async function loadDashboard() {
 
   initNavigation();
   await loadAccount();
-  await loadPlans(); // Load plans AFTER currentUser is set so tier pricing works
+  await loadPlans(); // Load plans AFTER currentUser is set
   fetchTransactions();
   if (currentUser.is_admin) loadAdminData();
   checkBiometricStatus();
@@ -143,7 +145,7 @@ function showSection(id) {
   }
   if (id === "plansManager") loadAdminPlans();
   if (id === "usersManager") loadAdminUsers();
-  if (id === "profile") checkBiometricStatus(); // Check biometric when profile opens
+  if (id === "profile") checkBiometricStatus();
 }
 
 /* ================= WALLET ================= */
@@ -168,6 +170,7 @@ async function fetchTransactions() {
     const res = await fetch(API + "/api/transactions", {
       headers: { Authorization: "Bearer " + getToken() }
     });
+    if (!res.ok) throw new Error("Failed to fetch transactions");
     const tx = await res.json();
 
     if (el("transactionHistory")) {
@@ -181,6 +184,9 @@ async function fetchTransactions() {
     }
   } catch (e) {
     console.error("Fetch transactions error:", e);
+    if (el("transactionHistory")) {
+      el("transactionHistory").innerHTML = "<p style='color:#ff4d4d'>Failed to load transactions</p>";
+    }
   }
 }
 
@@ -202,11 +208,14 @@ async function loadPlans() {
     const res = await fetch(API + "/api/plans", {
       headers: { Authorization: "Bearer " + getToken() }
     });
+    if (!res.ok) throw new Error("Failed to fetch plans");
     const data = await res.json();
     cachedPlans = Array.isArray(data)? data : [];
-    renderPlans(); // Re-render after loading
+    renderPlans();
   } catch (e) {
     console.log("PLANS ERROR", e);
+    const list = el("planList");
+    if (list) list.innerHTML = "<p style='color:#ff4d4d'>Failed to load plans. Please refresh.</p>";
   }
 }
 
@@ -229,7 +238,7 @@ function getPlanPrice(plan) {
   const tier = currentUser?.user_tier || 'default';
   if (tier === 'top' && plan.top_price) return Number(plan.top_price);
   if (tier === 'regular' && plan.regular_price) return Number(plan.regular_price);
-  return Number(plan.price); // fallback to default price
+  return Number(plan.price);
 }
 
 function renderPlans() {
@@ -314,7 +323,6 @@ async function checkBiometricStatus() {
       return;
     }
 
-    // Check if user has biometric enabled in backend
     const res = await fetch(API + '/api/auth/webauthn/check-enabled', {
       headers: { 'Authorization': 'Bearer ' + getToken() }
     }).then(r => r.json());
@@ -354,14 +362,14 @@ async function enableBiometric() {
     if (start.error) throw new Error(start.error);
 
     const options = {
-    ...start,
+   ...start,
       challenge: bufferDecode(start.challenge),
       user: {...start.user, id: bufferDecode(start.user.id) }
     };
 
     if (options.excludeCredentials && options.excludeCredentials.length > 0) {
       options.excludeCredentials = options.excludeCredentials.map(cred => ({
-      ...cred,
+     ...cred,
         id: bufferDecode(cred.id)
       }));
     } else {
@@ -427,10 +435,10 @@ async function loginWithBiometric() {
       showLoader('Touch fingerprint sensor...');
 
       const options = {
-      ...start,
+     ...start,
         challenge: bufferDecode(start.challenge),
         allowCredentials: start.allowCredentials.map(cred => ({
-        ...cred,
+       ...cred,
           id: bufferDecode(cred.id)
         }))
       };
