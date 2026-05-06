@@ -99,7 +99,11 @@ async function loadDashboard() {
 
   try {
     const res = await fetch(API + "/api/me", { headers: { Authorization: "Bearer " + getToken() } });
-    if (!res.ok) throw new Error("Failed to fetch user");
+    if (!res.ok) throw new Error("Failed to fetch user - " + res.status);
+    const contentType = res.headers.get("content-type");
+    if (!contentType ||!contentType.includes("application/json")) {
+      throw new Error("Server returned non-JSON response");
+    }
     currentUser = await res.json();
     window.CURRENT_USER_ID = currentUser.id;
     console.log("Current user tier:", currentUser.user_tier);
@@ -120,7 +124,7 @@ async function loadDashboard() {
 
   initNavigation();
   await loadAccount();
-  await loadPlans(); // Load plans AFTER currentUser is set
+  await loadPlans();
   fetchTransactions();
   if (currentUser.is_admin) loadAdminData();
   checkBiometricStatus();
@@ -170,7 +174,11 @@ async function fetchTransactions() {
     const res = await fetch(API + "/api/transactions", {
       headers: { Authorization: "Bearer " + getToken() }
     });
-    if (!res.ok) throw new Error("Failed to fetch transactions");
+    if (!res.ok) throw new Error("Failed to fetch transactions - " + res.status);
+    const contentType = res.headers.get("content-type");
+    if (!contentType ||!contentType.includes("application/json")) {
+      throw new Error("Server returned non-JSON response");
+    }
     const tx = await res.json();
 
     if (el("transactionHistory")) {
@@ -208,7 +216,11 @@ async function loadPlans() {
     const res = await fetch(API + "/api/plans", {
       headers: { Authorization: "Bearer " + getToken() }
     });
-    if (!res.ok) throw new Error("Failed to fetch plans");
+    if (!res.ok) throw new Error("Failed to fetch plans - " + res.status);
+    const contentType = res.headers.get("content-type");
+    if (!contentType ||!contentType.includes("application/json")) {
+      throw new Error("Server returned non-JSON response");
+    }
     const data = await res.json();
     cachedPlans = Array.isArray(data)? data : [];
     renderPlans();
@@ -323,11 +335,25 @@ async function checkBiometricStatus() {
       return;
     }
 
+    // Safe fetch with content-type check
     const res = await fetch(API + '/api/auth/webauthn/check-enabled', {
       headers: { 'Authorization': 'Bearer ' + getToken() }
-    }).then(r => r.json());
+    });
 
-    if (res.enabled) {
+    if (!res.ok) {
+      throw new Error("Server error " + res.status);
+    }
+
+    const contentType = res.headers.get("content-type");
+    if (!contentType ||!contentType.includes("application/json")) {
+      const text = await res.text();
+      console.error("Non-JSON response from check-enabled:", text);
+      throw new Error("Server returned HTML instead of JSON");
+    }
+
+    const data = await res.json();
+
+    if (data.enabled) {
       elStatus.innerText = "Status: Enabled ✓";
       elStatus.style.color = "var(--success)";
       if (enableBtn) enableBtn.style.display = "none";
@@ -354,11 +380,13 @@ async function enableBiometric() {
   }
 
   try {
-    const start = await fetch(API + '/api/auth/webauthn/register-start', {
+    const startRes = await fetch(API + '/api/auth/webauthn/register-start', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + getToken() }
-    }).then(r => r.json());
+    });
 
+    if (!startRes.ok) throw new Error("Failed to start registration - " + startRes.status);
+    const start = await startRes.json();
     if (start.error) throw new Error(start.error);
 
     const options = {
@@ -369,7 +397,7 @@ async function enableBiometric() {
 
     if (options.excludeCredentials && options.excludeCredentials.length > 0) {
       options.excludeCredentials = options.excludeCredentials.map(cred => ({
-     ...cred,
+    ...cred,
         id: bufferDecode(cred.id)
       }));
     } else {
@@ -394,11 +422,14 @@ async function enableBiometric() {
       clientExtensionResults: cred.getClientExtensionResults()
     };
 
-    const finish = await fetch(API + '/api/auth/webauthn/register-finish', {
+    const finishRes = await fetch(API + '/api/auth/webauthn/register-finish', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
       body: JSON.stringify(credential)
-    }).then(r => r.json());
+    });
+
+    if (!finishRes.ok) throw new Error("Failed to finish registration - " + finishRes.status);
+    const finish = await finishRes.json();
 
     hideLoader();
     if (finish.verified) {
@@ -423,22 +454,24 @@ async function loginWithBiometric() {
   showInputModal('Biometric Login', 'Enter your email', async (email) => {
     try {
       showLoader('Starting biometric login...');
-      const start = await fetch(API + '/api/auth/webauthn/login-start', {
+      const startRes = await fetch(API + '/api/auth/webauthn/login-start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
-      }).then(r => r.json());
+      });
 
+      if (!startRes.ok) throw new Error("Failed to start login - " + startRes.status);
+      const start = await startRes.json();
       if (start.error) throw new Error(start.error);
 
       hideLoader();
       showLoader('Touch fingerprint sensor...');
 
       const options = {
-     ...start,
+    ...start,
         challenge: bufferDecode(start.challenge),
         allowCredentials: start.allowCredentials.map(cred => ({
-       ...cred,
+      ...cred,
           id: bufferDecode(cred.id)
         }))
       };
@@ -463,11 +496,14 @@ async function loginWithBiometric() {
         clientExtensionResults: assertion.getClientExtensionResults()
       };
 
-      const finish = await fetch(API + '/api/auth/webauthn/login-finish', {
+      const finishRes = await fetch(API + '/api/auth/webauthn/login-finish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({...credential, email })
-      }).then(r => r.json());
+      });
+
+      if (!finishRes.ok) throw new Error("Failed to finish login - " + finishRes.status);
+      const finish = await finishRes.json();
 
       hideLoader();
       if (finish.token) {
@@ -486,7 +522,6 @@ async function loginWithBiometric() {
     }
   });
 }
-
 /* ================= PURCHASE MODAL ================= */
 async function openPurchaseModal(planId, planName, planPrice) {
   selectedPlanId = planId;
