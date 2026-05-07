@@ -1016,7 +1016,7 @@ async function setUserTier(id, tier) {
   }
 }
 /* ================= ADMIN: PLANS MANAGER ================= */
-let editingPlanId = null;
+
 let isModalOpen = false;
 
 async function loadAdminPlans() {
