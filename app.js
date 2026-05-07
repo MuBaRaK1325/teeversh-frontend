@@ -169,7 +169,7 @@ async function loadWallet() {
   // --- FIX: RENDER DVA BASED ON COMPANY ---
   const dvaContainer = el("dvaContainer");
   if (dvaContainer) {
-    if (dva.accountNumber && ["mayconnect", "teeversh", "bnhabeeb"].includes(currentUser.company)) {
+    if (dva.accountNumber && ["mayconnect", "Teeversh", "bnhabeeb"].includes(currentUser.company)) {
       // Monnify DVA for these 3 companies
       dvaContainer.innerHTML = `
         <div class="walletCard">
