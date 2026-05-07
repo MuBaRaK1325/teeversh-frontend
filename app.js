@@ -1017,9 +1017,7 @@ async function setUserTier(id, tier) {
 }
 
 /* ================= ADMIN: PLANS MANAGER ================= */
-// Declare these only once at the top of your admin section
-let cachedAdminPlans = [];
-let editingPlanId = null;
+let editingPlanId = null; // only this one here
 
 async function loadAdminPlans() {
   try {
@@ -1028,7 +1026,7 @@ async function loadAdminPlans() {
     });
     if (!res.ok) throw new Error("Failed to load plans");
     const plans = await res.json();
-    cachedAdminPlans = plans;
+    cachedAdminPlans = plans; // uses the one declared at top of app.js
     const list = el("adminPlansList");
     if (list) {
       list.innerHTML = "";
