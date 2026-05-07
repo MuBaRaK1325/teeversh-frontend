@@ -1015,18 +1015,15 @@ async function setUserTier(id, tier) {
     showMsg("Server error", "error");
   }
 }
-
 /* ================= ADMIN: PLANS MANAGER ================= */
-let editingPlanId = null; // only this one here
-
 async function loadAdminPlans() {
   try {
-    const res = await fetch(API + "/admin/plans?t=" + Date.now(), { // cache bust
+    const res = await fetch(API + "/admin/plans?t=" + Date.now(), {
       headers: { Authorization: "Bearer " + getToken() }
     });
     if (!res.ok) throw new Error("Failed to load plans");
     const plans = await res.json();
-    cachedAdminPlans = plans; // uses the one declared at top of app.js
+    cachedAdminPlans = plans;
     const list = el("adminPlansList");
     if (list) {
       list.innerHTML = "";
