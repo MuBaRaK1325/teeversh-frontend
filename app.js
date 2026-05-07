@@ -847,18 +847,36 @@ async function loadAdminTransactions() {
   const status = el("txStatusFilter")?.value || "";
   const provider = el("txProviderFilter")?.value || "";
   const search = el("txSearch")?.value || "";
+  const list = el("transactionsList");
+  if (!list) return;
 
+  list.innerHTML = `<p style="text-align:center;opacity:0.6">Loading transactions...</p>`;
   showLoader("Loading transactions...");
+  
   try {
-    const res = await fetch(`${API}/admin/transactions?status=${status}&provider=${provider}&search=${search}`, {
-      headers: { Authorization: "Bearer " + getToken() }
+    const token = getToken();
+    if (!token) {
+      hideLoader();
+      list.innerHTML = `<p style="color:red;text-align:center">Not authenticated. Please login again.</p>`;
+      return;
+    }
+
+    // CORRECT endpoint for admin wallet deduction log
+    const res = await fetch(`${API}/admin/wallet/transactions?status=${encodeURIComponent(status)}&provider=${encodeURIComponent(provider)}&search=${encodeURIComponent(search)}&t=${Date.now()}`, {
+      headers: { Authorization: "Bearer " + token }
     });
-    const transactions = await res.json();
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || `HTTP ${res.status}: ${res.statusText}`);
+    }
+
+    const data = await res.json();
     hideLoader();
 
-    const list = el("transactionsList");
-    if (!list) return;
-
+    // Handle both array or {transactions: array} response format
+    const transactions = Array.isArray(data) ? data : (data.transactions || data.data || []);
+    
     list.innerHTML = "";
     if (!transactions.length) {
       list.innerHTML = `<p style="text-align:center;opacity:0.6">No transactions found</p>`;
@@ -866,25 +884,25 @@ async function loadAdminTransactions() {
     }
 
     transactions.forEach(tx => {
-      const statusColor = tx.status === "SUCCESS"? "#00c853" : tx.status === "PENDING"? "#ffa000" : "#ff4d4d";
+      const statusColor = tx.status === "SUCCESS" ? "#00c853" : tx.status === "PENDING" ? "#ffa000" : "#ff4d4d";
       const isManualDeductAllowed = (tx.provider === 'maitama') ||
                                    (currentUser.company === 'mayconnect' && ['cheapdatahub', 'subpadi'].includes(tx.provider));
       const isReversalAllowed = tx.status === 'SUCCESS';
 
-      const wasManual = tx.metadata?.manual_deducted? '<span class="badge badgeWarning">MANUAL</span>' : '';
-      const wasReversed = tx.metadata?.reversed? '<span class="badge badgeDanger">REVERSED</span>' : '';
+      const wasManual = tx.metadata?.manual_deducted ? '<span class="badge badgeWarning">MANUAL</span>' : '';
+      const wasReversed = tx.metadata?.reversed ? '<span class="badge badgeDanger">REVERSED</span>' : '';
 
       list.innerHTML += `
         <div class="transactionCard">
           <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
             <div>
-              <strong>${tx.type}</strong> ${wasManual} ${wasReversed}<br>
-              <small style="opacity:0.7">${tx.username} - ${tx.email}</small><br>
-              <small style="font-family:monospace">${tx.reference}</small>
+              <strong>${tx.type || 'Transaction'}</strong> ${wasManual} ${wasReversed}<br>
+              <small style="opacity:0.7">${tx.username || 'N/A'} - ${tx.email || 'N/A'}</small><br>
+              <small style="font-family:monospace">${tx.reference || 'N/A'}</small>
             </div>
             <div style="text-align:right">
-              <strong style="font-size:18px">${formatNaira(tx.amount)}</strong><br>
-              <span style="color:${statusColor};font-weight:600">${tx.status}</span><br>
+              <strong style="font-size:18px">${formatNaira(tx.amount || 0)}</strong><br>
+              <span style="color:${statusColor};font-weight:600">${tx.status || 'UNKNOWN'}</span><br>
               <small style="opacity:0.6">${tx.provider?.toUpperCase() || 'N/A'}</small>
             </div>
           </div>
@@ -892,10 +910,10 @@ async function loadAdminTransactions() {
           <small style="opacity:0.5">${formatDate(tx.created_at)}</small>
 
           <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-            ${tx.status === 'FAILED' && isManualDeductAllowed?
+            ${tx.status === 'FAILED' && isManualDeductAllowed ?
               `<button onclick="forceDeductTransaction('${tx.reference}', ${tx.amount})" class="warningBtn">Force Deduct</button>` : ''}
 
-            ${isReversalAllowed?
+            ${isReversalAllowed ?
               `<button onclick="reverseTransaction('${tx.reference}')" class="dangerBtn">Reverse</button>` : ''}
           </div>
         </div>`;
@@ -903,7 +921,7 @@ async function loadAdminTransactions() {
   } catch (e) {
     hideLoader();
     console.error("Load transactions error:", e);
-    showMsg("Failed to load transactions", "error");
+    el("transactionsList").innerHTML = `<p style="color:red;text-align:center">Failed to load transactions: ${e.message}</p>`;
   }
 }
 
@@ -915,20 +933,21 @@ async function forceDeductTransaction(reference, amount) {
 
   showLoader("Processing deduction...");
   try {
-    const res = await fetch(API + "/admin/transactions/force-deduct", {
+    const res = await fetch(API + "/admin/wallet/force-deduct", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
       body: JSON.stringify({ reference, reason })
     });
     const data = await res.json();
     hideLoader();
-    showMsg(data.message, res.ok? "success" : "error");
+    showMsg(data.message, res.ok ? "success" : "error");
     if (res.ok) {
       loadAdminTransactions();
       loadAdminUsers(); // Refresh user balances
     }
-  } catch {
+  } catch (e) {
     hideLoader();
+    console.error("Force deduct error:", e);
     showMsg("Server error", "error");
   }
 }
@@ -941,20 +960,21 @@ async function reverseTransaction(reference) {
 
   showLoader("Processing reversal...");
   try {
-    const res = await fetch(API + "/admin/transactions/reverse", {
+    const res = await fetch(API + "/admin/wallet/reverse", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
       body: JSON.stringify({ reference, reason })
     });
     const data = await res.json();
     hideLoader();
-    showMsg(data.message, res.ok? "success" : "error");
+    showMsg(data.message, res.ok ? "success" : "error");
     if (res.ok) {
       loadAdminTransactions();
       loadAdminUsers(); // Refresh user balances
     }
-  } catch {
+  } catch (e) {
     hideLoader();
+    console.error("Reverse transaction error:", e);
     showMsg("Server error", "error");
   }
 }
