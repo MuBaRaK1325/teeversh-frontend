@@ -157,8 +157,103 @@ function updateWallet(balance) {
   if (el("walletBalance")) el("walletBalance").innerText = formatNaira(balance);
 }
 
-function loadWallet() {
-  loadAccount();
+async function loadWallet() {
+  const res = await fetch(API + "/api/me", { headers: { Authorization: "Bearer " + getToken() } });
+  const user = await res.json();
+
+  updateWallet(user.wallet_balance);
+
+  const wallet = user.wallet || {};
+  const dva = wallet.dva || {};
+
+  // --- FIX: RENDER DVA BASED ON COMPANY ---
+  const dvaContainer = el("dvaContainer");
+  if (dvaContainer) {
+    if (dva.accountNumber && ["mayconnect", "teeversh", "bnhabeeb"].includes(currentUser.company)) {
+      // Monnify DVA for these 3 companies
+      dvaContainer.innerHTML = `
+        <div class="walletCard">
+          <h4>Monnify Virtual Account</h4>
+          <p><strong>Bank:</strong> ${dva.bankName || 'N/A'}</p>
+          <p><strong>Account Number:</strong> ${dva.accountNumber} 
+            <button onclick="copyToClipboard('${dva.accountNumber}')" class="smallBtn">Copy</button>
+          </p>
+          <p><strong>Account Name:</strong> ${dva.accountName || user.username}</p>
+          <small style="opacity:0.7">Transfer to this account to fund your wallet instantly</small>
+        </div>`;
+    } else if (dva.accountNumber && currentUser.company === "sadeeq") {
+      // Flutterwave DVA for Sadeeq
+      dvaContainer.innerHTML = `
+        <div class="walletCard">
+          <h4>Flutterwave Virtual Account</h4>
+          <p><strong>Bank:</strong> ${dva.bankName || 'N/A'}</p>
+          <p><strong>Account Number:</strong> ${dva.accountNumber}
+            <button onclick="copyToClipboard('${dva.accountNumber}')" class="smallBtn">Copy</button>
+          </p>
+          <p><strong>Account Name:</strong> ${dva.accountName || user.username}</p>
+        </div>`;
+    } else {
+      // No DVA yet - show generate button
+      dvaContainer.innerHTML = `
+        <button onclick="generateDVA()" class="primaryBtn">Generate Virtual Account</button>`;
+    }
+  }
+
+  // --- RENDER TRANSACTIONS ---
+  const list = el("walletTransactionsList");
+  const transactions = wallet.transactions || [];
+  if (list) {
+    if (!transactions.length) {
+      list.innerHTML = `<p style="opacity:0.6;text-align:center;">No wallet transactions yet</p>`;
+      return;
+    }
+    list.innerHTML = "";
+    transactions.forEach(tx => {
+      const statusColor = tx.tx_status === "SUCCESS" ? "#00c853" : tx.tx_status === "PENDING" ? "#ffa000" : "#ff4d4d";
+      const wasManual = tx.metadata?.manual_deducted ? '<span class="badge badgeWarning">MANUAL</span>' : '';
+      const wasReversed = tx.metadata?.reversed ? '<span class="badge badgeDanger">REVERSED</span>' : '';
+
+      list.innerHTML += `
+        <div class="transactionCard">
+          <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
+            <div>
+              <strong>${tx.type || 'Wallet Tx'}</strong> ${wasManual} ${wasReversed}<br>
+              <small style="font-family:monospace">${tx.reference || 'N/A'}</small>
+            </div>
+            <div style="text-align:right">
+              <strong style="font-size:18px">${formatNaira(tx.amount || 0)}</strong><br>
+              <span style="color:${statusColor};font-weight:600">${tx.tx_status || tx.type.toUpperCase()}</span>
+            </div>
+          </div>
+          <small style="opacity:0.5">${formatDate(tx.created_at)}</small>
+        </div>`;
+    });
+  }
+}
+
+// New function to generate Monnify/Flutterwave DVA
+async function generateDVA() {
+  showLoader("Creating your dedicated account...");
+  try {
+    const endpoint = currentUser.company === "sadeeq" ? "/api/flutterwave/create-dva" : "/api/monnify/create-dva";
+    const res = await fetch(API + endpoint, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + getToken() }
+    });
+    const data = await res.json();
+    hideLoader();
+    showMsg(data.message, res.ok ? "success" : "error");
+    if (res.ok) await loadWallet();
+  } catch {
+    hideLoader();
+    showMsg("Server error", "error");
+  }
+}
+
+// Helper for copy button
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text);
+  showMsg("Copied to clipboard!", "success");
 }
 
 /* ================= COPY ACCOUNT ================= */
