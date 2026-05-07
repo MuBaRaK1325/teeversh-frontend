@@ -1016,7 +1016,8 @@ async function setUserTier(id, tier) {
   }
 }
 /* ================= ADMIN: PLANS MANAGER ================= */
-
+let editingPlanId = null;
+let isModalOpen = false;
 
 async function loadAdminPlans() {
   try {
@@ -1047,7 +1048,7 @@ async function loadAdminPlans() {
         </div>`;
       });
 
-      // Use pointerdown for Android compatibility instead of onclick
+      // pointerdown works on Android where onclick fails
       document.querySelectorAll(".editPlanBtn").forEach(btn => {
         btn.addEventListener("pointerdown", (e) => {
           e.preventDefault();
@@ -1076,23 +1077,19 @@ async function addPlan() {
     plan_id: el("newPlanId")?.value?.trim(),
     network: el("newPlanNetwork")?.value?.trim(),
     name: el("newPlanName")?.value?.trim(),
-    price: el("newPlanPrice")?.value ? Number(el("newPlanPrice").value) : null,
-    regular_price: el("newPlanRegularPrice")?.value ? Number(el("newPlanRegularPrice").value) : null,
-    top_price: el("newPlanTopPrice")?.value ? Number(el("newPlanTopPrice").value) : null,
-    cost: el("newPlanCost")?.value ? Number(el("newPlanCost").value) : null,
-    validity: el("newPlanValidity")?.value ? Number(el("newPlanValidity").value) : null,
+    price: el("newPlanPrice")?.value? Number(el("newPlanPrice").value) : null,
+    regular_price: el("newPlanUserPrice")?.value? Number(el("newPlanUserPrice").value) : null,
+    top_price: el("newPlanTopPrice")?.value? Number(el("newPlanTopPrice").value) : null,
+    cost: el("newPlanCost")?.value? Number(el("newPlanCost").value) : null,
+    validity: el("newPlanValidity")?.value?.trim(),
     restricted:!!el("newPlanRestricted")?.checked,
     provider: el("newPlanProvider")?.value?.trim(),
-    network_id: el("newPlanNetworkId")?.value ? Number(el("newPlanNetworkId").value) : null,
+    network_id: el("newPlanNetworkId")?.value? Number(el("newPlanNetworkId").value) : null,
     api_plan_id: el("newPlanApiId")?.value?.trim()
   };
 
   if (!plan.plan_id ||!plan.network ||!plan.name ||!plan.price ||!plan.cost ||!plan.provider ||!plan.network_id ||!plan.api_plan_id) {
     return showMsg("Fill all required fields including provider details", "error");
-  }
-
-  if (isNaN(plan.price) || isNaN(plan.cost) || isNaN(plan.network_id)) {
-    return showMsg("Price, Cost and Network ID must be valid numbers", "error");
   }
 
   showLoader("Adding plan...");
@@ -1118,7 +1115,7 @@ async function addPlan() {
 }
 
 async function togglePlan(id, is_active) {
-  if (isModalOpen) return; // prevent toggle while modal is open
+  if (isModalOpen) return;
   showLoader("Updating...");
   try {
     const res = await fetch(`${API}/admin/plans/${id}`, {
@@ -1155,48 +1152,45 @@ async function editPlan(id) {
     }
   };
 
+  safeSet("editPlanId", plan.id);
+  safeSet("editPlanNetwork", plan.network);
   safeSet("editPlanName", plan.name);
   safeSet("editPlanPrice", plan.price);
-  safeSet("editPlanRegularPrice", plan.regular_price);
+  safeSet("editPlanUserPrice", plan.regular_price);
   safeSet("editPlanTopPrice", plan.top_price);
   safeSet("editPlanCost", plan.cost);
   safeSet("editPlanValidity", plan.validity);
-  safeSet("editPlanRestricted", plan.restricted);
   safeSet("editPlanProvider", plan.provider);
   safeSet("editPlanNetworkId", plan.network_id);
   safeSet("editPlanApiId", plan.api_plan_id);
+  safeSet("editPlanRestricted", plan.restricted);
   safeSet("editPlanActive", plan.is_active!== false);
 
   openModal("editPlanModal");
 }
 
 async function savePlanEdit() {
-  console.log("[SAVE PLAN] editingPlanId:", editingPlanId, "isModalOpen:", isModalOpen);
-  if (!editingPlanId || !isModalOpen) {
+  if (!editingPlanId ||!isModalOpen) {
     console.warn("[SAVE PLAN] Aborted - no plan selected or modal closed");
     return;
   }
 
   const updated = {
     name: el("editPlanName")?.value?.trim(),
-    price: el("editPlanPrice")?.value ? Number(el("editPlanPrice").value) : null,
-    regular_price: el("editPlanRegularPrice")?.value ? Number(el("editPlanRegularPrice").value) : null,
-    top_price: el("editPlanTopPrice")?.value ? Number(el("editPlanTopPrice").value) : null,
-    cost: el("editPlanCost")?.value ? Number(el("editPlanCost").value) : null,
-    validity: el("editPlanValidity")?.value ? Number(el("editPlanValidity").value) : null,
+    price: el("editPlanPrice")?.value? Number(el("editPlanPrice").value) : null,
+    regular_price: el("editPlanUserPrice")?.value? Number(el("editPlanUserPrice").value) : null,
+    top_price: el("editPlanTopPrice")?.value? Number(el("editPlanTopPrice").value) : null,
+    cost: el("editPlanCost")?.value? Number(el("editPlanCost").value) : null,
+    validity: el("editPlanValidity")?.value?.trim(),
     restricted:!!el("editPlanRestricted")?.checked,
     provider: el("editPlanProvider")?.value?.trim(),
-    network_id: el("editPlanNetworkId")?.value ? Number(el("editPlanNetworkId").value) : null,
+    network_id: el("editPlanNetworkId")?.value? Number(el("editPlanNetworkId").value) : null,
     api_plan_id: el("editPlanApiId")?.value?.trim(),
     is_active:!!el("editPlanActive")?.checked
   };
 
   if (!updated.name ||!updated.price ||!updated.cost ||!updated.provider ||!updated.network_id ||!updated.api_plan_id) {
     return showMsg("Name, Price, Cost, Provider, Network ID and API Plan ID are required", "error");
-  }
-
-  if (isNaN(updated.price) || isNaN(updated.cost) || isNaN(updated.network_id)) {
-    return showMsg("Price, Cost and Network ID must be valid numbers", "error");
   }
 
   showLoader("Updating plan...");
@@ -1225,7 +1219,7 @@ async function savePlanEdit() {
 // Modal helpers
 function openModal(id) {
   document.getElementById(id).style.display = "block";
-  document.body.style.overflow = "hidden"; // lock background scroll on Android
+  document.body.style.overflow = "hidden";
 }
 
 function closeModal(id) {
@@ -1235,7 +1229,7 @@ function closeModal(id) {
   isModalOpen = false;
 }
 
-// Attach save button with pointerdown for Android
+// Attach button listeners for mobile compatibility
 document.addEventListener("DOMContentLoaded", () => {
   const saveBtn = document.getElementById("savePlanBtn");
   if (saveBtn) {
@@ -1244,7 +1238,15 @@ document.addEventListener("DOMContentLoaded", () => {
       e.stopPropagation();
       savePlanEdit();
     });
-    console.log("Save plan button listener attached");
+  }
+
+  const addBtn = document.getElementById("addPlanBtn");
+  if (addBtn) {
+    addBtn.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      addPlan();
+    });
   }
 });
 /* ================= ADMIN: WITHDRAWALS ================= */
