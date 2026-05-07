@@ -1016,6 +1016,8 @@ async function setUserTier(id, tier) {
   }
 }
 /* ================= ADMIN: PLANS MANAGER ================= */
+let editingPlanId = null; // declare once at top of app.js, not here
+
 async function loadAdminPlans() {
   try {
     const res = await fetch(API + "/admin/plans?t=" + Date.now(), {
@@ -1101,7 +1103,7 @@ async function editPlan(id) {
   const plan = cachedAdminPlans.find(p => p.id === id);
   if (!plan) return showMsg("Plan not found", "error");
 
-  editingPlanId = id;
+  editingPlanId = id; // set the ID before opening modal
 
   if (el("editPlanId")) el("editPlanId").value = plan.plan_id || "";
   if (el("editPlanNetwork")) el("editPlanNetwork").value = plan.network || "";
@@ -1121,7 +1123,10 @@ async function editPlan(id) {
 }
 
 async function updatePlan() {
-  if (!editingPlanId) return;
+  if (!editingPlanId) {
+    showMsg("No plan selected for editing", "error");
+    return;
+  }
 
   const updated = {
     plan_id: el("editPlanId")?.value?.trim(),
