@@ -832,12 +832,11 @@ box-shadow:0 0 40px rgba(147,51,234,0.3);
 
 <!-- MODAL: EDIT PLAN -->
 <div id="editPlanModal" class="modal">
+  <div class="modalBackdrop" onclick="closeModal('editPlanModal')"></div>
   <div class="modalContent">
     <span class="closeBtn" onclick="closeModal('editPlanModal')">&times;</span>
     <h3>Edit Plan</h3>
     <div class="formGrid">
-      <input id="editPlanId" placeholder="Plan ID">
-      <input id="editPlanNetwork" placeholder="Network">
       <input id="editPlanName" placeholder="Plan Name">
       <input id="editPlanPrice" type="number" step="0.01" placeholder="Default Price">
       <input id="editPlanRegularPrice" type="number" step="0.01" placeholder="Regular Price">
@@ -846,7 +845,7 @@ box-shadow:0 0 40px rgba(147,51,234,0.3);
       <input id="editPlanValidity" type="number" placeholder="Validity Days">
       <input id="editPlanProvider" placeholder="Provider">
       <input id="editPlanNetworkId" type="number" placeholder="Network ID">
-      <input id="editPlanApiPlanId" placeholder="API Plan ID">
+      <input id="editPlanApiId" placeholder="API Plan ID">
       <label><input id="editPlanRestricted" type="checkbox"> Restricted</label>
       <label><input id="editPlanActive" type="checkbox"> Active</label>
     </div>

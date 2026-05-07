@@ -1039,7 +1039,7 @@ async function loadAdminPlans() {
         const providerBadge = p.provider? `<span class="badge">${p.provider.toUpperCase()}</span>` : '';
         list.innerHTML += `<div class="planCard">
           <strong>${p.name}</strong> - ${p.network} ${restrictBadge} ${providerBadge}<br>
-          Default: ${formatNaira(p.price)} | Regular: ${formatNaira(p.regular_price?? p.price)} | Top: ${formatNaira(p.top_price?? p.price)} | Cost: ${formatNaira(p.cost)}<br>
+          Default: ${formatNaira(p.price)} | Regular: ${formatNaira(p.regular_price || p.price)} | Top: ${formatNaira(p.top_price || p.price)} | Cost: ${formatNaira(p.cost)}<br>
           Provider: ${p.provider || 'N/A'} | Net ID: ${p.network_id || 'N/A'} | API ID: ${p.api_plan_id || 'N/A'}<br>
           <span style="color:${statusColor}">${p.is_active? 'Active' : 'Disabled'}</span>
           <button data-edit-id="${p.id}" class="primaryBtn editPlanBtn">Edit</button>
@@ -1047,16 +1047,20 @@ async function loadAdminPlans() {
         </div>`;
       });
 
-      // Use pointerdown instead of click for Android compatibility
+      // Use pointerdown for Android compatibility instead of onclick
       document.querySelectorAll(".editPlanBtn").forEach(btn => {
         btn.addEventListener("pointerdown", (e) => {
           e.preventDefault();
+          e.stopPropagation();
+          if (isModalOpen) return;
           editPlan(Number(e.target.dataset.editId));
         });
       });
       document.querySelectorAll(".togglePlanBtn").forEach(btn => {
         btn.addEventListener("pointerdown", (e) => {
           e.preventDefault();
+          e.stopPropagation();
+          if (isModalOpen) return;
           togglePlan(Number(e.target.dataset.toggleId), e.target.dataset.toggleState === "true");
         });
       });
@@ -1067,68 +1071,125 @@ async function loadAdminPlans() {
   }
 }
 
-async function editPlan(id) {
-  console.log("[EDIT PLAN] Clicked ID:", id);
-  const plan = cachedAdminPlans.find(p => p.id === id);
-  if (!plan) {
-    console.error("[EDIT PLAN] Plan not found in cachedAdminPlans");
-    return showMsg("Plan not found", "error");
+async function addPlan() {
+  const plan = {
+    plan_id: el("newPlanId")?.value?.trim(),
+    network: el("newPlanNetwork")?.value?.trim(),
+    name: el("newPlanName")?.value?.trim(),
+    price: el("newPlanPrice")?.value ? Number(el("newPlanPrice").value) : null,
+    regular_price: el("newPlanRegularPrice")?.value ? Number(el("newPlanRegularPrice").value) : null,
+    top_price: el("newPlanTopPrice")?.value ? Number(el("newPlanTopPrice").value) : null,
+    cost: el("newPlanCost")?.value ? Number(el("newPlanCost").value) : null,
+    validity: el("newPlanValidity")?.value ? Number(el("newPlanValidity").value) : null,
+    restricted:!!el("newPlanRestricted")?.checked,
+    provider: el("newPlanProvider")?.value?.trim(),
+    network_id: el("newPlanNetworkId")?.value ? Number(el("newPlanNetworkId").value) : null,
+    api_plan_id: el("newPlanApiId")?.value?.trim()
+  };
+
+  if (!plan.plan_id ||!plan.network ||!plan.name ||!plan.price ||!plan.cost ||!plan.provider ||!plan.network_id ||!plan.api_plan_id) {
+    return showMsg("Fill all required fields including provider details", "error");
   }
 
+  if (isNaN(plan.price) || isNaN(plan.cost) || isNaN(plan.network_id)) {
+    return showMsg("Price, Cost and Network ID must be valid numbers", "error");
+  }
+
+  showLoader("Adding plan...");
+  try {
+    const res = await fetch(API + "/admin/plans", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+      body: JSON.stringify(plan)
+    });
+    const data = await res.json();
+    hideLoader();
+    showMsg(data.message, res.ok? "success" : "error");
+    if (res.ok) {
+      closeModal('addPlanModal');
+      loadAdminPlans();
+      loadPlans();
+      broadcastTopUserUpdate(currentUser.company);
+    }
+  } catch {
+    hideLoader();
+    showMsg("Server error", "error");
+  }
+}
+
+async function togglePlan(id, is_active) {
+  if (isModalOpen) return; // prevent toggle while modal is open
+  showLoader("Updating...");
+  try {
+    const res = await fetch(`${API}/admin/plans/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+      body: JSON.stringify({ is_active })
+    });
+    const data = await res.json();
+    hideLoader();
+    showMsg(data.message, res.ok? "success" : "error");
+    if (res.ok) {
+      loadAdminPlans();
+      loadPlans();
+      broadcastTopUserUpdate(currentUser.company);
+    }
+  } catch {
+    hideLoader();
+    showMsg("Server error", "error");
+  }
+}
+
+async function editPlan(id) {
+  const plan = cachedAdminPlans.find(p => p.id === id);
+  if (!plan) return showMsg("Plan not found", "error");
+
   editingPlanId = id;
-  console.log("[EDIT PLAN] Set editingPlanId to:", editingPlanId);
+  isModalOpen = true;
 
   const safeSet = (id, val) => {
     const element = document.getElementById(id);
     if (element) {
       if (element.type === "checkbox") element.checked =!!val;
       else element.value = val?? "";
-    } else {
-      console.error("[EDIT PLAN] Missing element:", id);
     }
   };
 
-  safeSet("editPlanId", plan.plan_id);
-  safeSet("editPlanNetwork", plan.network);
   safeSet("editPlanName", plan.name);
   safeSet("editPlanPrice", plan.price);
   safeSet("editPlanRegularPrice", plan.regular_price);
   safeSet("editPlanTopPrice", plan.top_price);
   safeSet("editPlanCost", plan.cost);
   safeSet("editPlanValidity", plan.validity);
+  safeSet("editPlanRestricted", plan.restricted);
   safeSet("editPlanProvider", plan.provider);
   safeSet("editPlanNetworkId", plan.network_id);
-  safeSet("editPlanApiPlanId", plan.api_plan_id);
-  safeSet("editPlanRestricted", plan.restricted);
+  safeSet("editPlanApiId", plan.api_plan_id);
   safeSet("editPlanActive", plan.is_active!== false);
 
   openModal("editPlanModal");
 }
 
-async function updatePlan() {
-  console.log("[UPDATE PLAN] editingPlanId is:", editingPlanId);
-  if (!editingPlanId) {
-    showMsg("No plan selected for editing", "error");
+async function savePlanEdit() {
+  console.log("[SAVE PLAN] editingPlanId:", editingPlanId, "isModalOpen:", isModalOpen);
+  if (!editingPlanId || !isModalOpen) {
+    console.warn("[SAVE PLAN] Aborted - no plan selected or modal closed");
     return;
   }
 
   const updated = {
-    plan_id: el("editPlanId")?.value?.trim(),
-    network: el("editPlanNetwork")?.value?.trim(),
     name: el("editPlanName")?.value?.trim(),
-    price: el("editPlanPrice")?.value? Number(el("editPlanPrice").value) : null,
-    regular_price: el("editPlanRegularPrice")?.value? Number(el("editPlanRegularPrice").value) : null,
-    top_price: el("editPlanTopPrice")?.value? Number(el("editPlanTopPrice").value) : null,
-    cost: el("editPlanCost")?.value? Number(el("editPlanCost").value) : null,
-    validity: el("editPlanValidity")?.value? Number(el("editPlanValidity").value) : null,
+    price: el("editPlanPrice")?.value ? Number(el("editPlanPrice").value) : null,
+    regular_price: el("editPlanRegularPrice")?.value ? Number(el("editPlanRegularPrice").value) : null,
+    top_price: el("editPlanTopPrice")?.value ? Number(el("editPlanTopPrice").value) : null,
+    cost: el("editPlanCost")?.value ? Number(el("editPlanCost").value) : null,
+    validity: el("editPlanValidity")?.value ? Number(el("editPlanValidity").value) : null,
     restricted:!!el("editPlanRestricted")?.checked,
     provider: el("editPlanProvider")?.value?.trim(),
-    network_id: el("editPlanNetworkId")?.value? Number(el("editPlanNetworkId").value) : null,
-    api_plan_id: el("editPlanApiPlanId")?.value?.trim(),
+    network_id: el("editPlanNetworkId")?.value ? Number(el("editPlanNetworkId").value) : null,
+    api_plan_id: el("editPlanApiId")?.value?.trim(),
     is_active:!!el("editPlanActive")?.checked
   };
-
-  console.log("[UPDATE PLAN] Payload:", updated);
 
   if (!updated.name ||!updated.price ||!updated.cost ||!updated.provider ||!updated.network_id ||!updated.api_plan_id) {
     return showMsg("Name, Price, Cost, Provider, Network ID and API Plan ID are required", "error");
@@ -1155,32 +1216,23 @@ async function updatePlan() {
       broadcastTopUserUpdate(currentUser.company);
     }
   } catch(e) {
-    console.error("[UPDATE PLAN] Fetch error:", e);
+    console.error("[SAVE PLAN] Fetch error:", e);
     hideLoader();
     showMsg("Server error", "error");
   }
 }
 
-async function togglePlan(id, is_active) {
-  showLoader("Updating...");
-  try {
-    const res = await fetch(`${API}/admin/plans/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-      body: JSON.stringify({ is_active })
-    });
-    const data = await res.json();
-    hideLoader();
-    showMsg(data.message, res.ok? "success" : "error");
-    if (res.ok) {
-      loadAdminPlans();
-      loadPlans();
-      broadcastTopUserUpdate(currentUser.company);
-    }
-  } catch {
-    hideLoader();
-    showMsg("Server error", "error");
-  }
+// Modal helpers
+function openModal(id) {
+  document.getElementById(id).style.display = "block";
+  document.body.style.overflow = "hidden"; // lock background scroll on Android
+}
+
+function closeModal(id) {
+  document.getElementById(id).style.display = "none";
+  document.body.style.overflow = "";
+  editingPlanId = null;
+  isModalOpen = false;
 }
 
 // Attach save button with pointerdown for Android
@@ -1189,12 +1241,12 @@ document.addEventListener("DOMContentLoaded", () => {
   if (saveBtn) {
     saveBtn.addEventListener("pointerdown", (e) => {
       e.preventDefault();
-      updatePlan();
+      e.stopPropagation();
+      savePlanEdit();
     });
-    console.log("Save plan button listener attached for mobile");
+    console.log("Save plan button listener attached");
   }
 });
-
 /* ================= ADMIN: WITHDRAWALS ================= */
 const NIGERIAN_BANKS = [
   "Access Bank", "Citibank", "Ecobank", "Fidelity Bank", "First Bank", "FCMB",
