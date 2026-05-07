@@ -1103,7 +1103,7 @@ async function editPlan(id) {
   const plan = cachedAdminPlans.find(p => p.id === id);
   if (!plan) return showMsg("Plan not found", "error");
 
-  editingPlanId = id; // critical: set this before opening modal
+  editingPlanId = id;
 
   if (el("editPlanId")) el("editPlanId").value = plan.plan_id || "";
   if (el("editPlanNetwork")) el("editPlanNetwork").value = plan.network || "";
