@@ -862,13 +862,16 @@ async function loadAdminTransactions() {
     }
 
     // CORRECT endpoint for admin wallet deduction log
-    const res = await fetch(`${API}/admin/wallet/transactions?status=${encodeURIComponent(status)}&provider=${encodeURIComponent(provider)}&search=${encodeURIComponent(search)}&t=${Date.now()}`, {
+    const url = `${API}/admin/wallet/transactions?status=${encodeURIComponent(status)}&provider=${encodeURIComponent(provider)}&search=${encodeURIComponent(search)}&t=${Date.now()}`;
+    console.log("[ADMIN TX] Fetching:", url);
+    
+    const res = await fetch(url, {
       headers: { Authorization: "Bearer " + token }
     });
 
     if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.message || `HTTP ${res.status}: ${res.statusText}`);
+      const errData = await res.json().catch(() => ({ message: `HTTP ${res.status}` }));
+      throw new Error(errData.message || `HTTP ${res.status}`);
     }
 
     const data = await res.json();
@@ -876,6 +879,7 @@ async function loadAdminTransactions() {
 
     // Handle both array or {transactions: array} response format
     const transactions = Array.isArray(data) ? data : (data.transactions || data.data || []);
+    console.log("[ADMIN TX] Loaded:", transactions.length, "transactions");
     
     list.innerHTML = "";
     if (!transactions.length) {
@@ -943,7 +947,7 @@ async function forceDeductTransaction(reference, amount) {
     showMsg(data.message, res.ok ? "success" : "error");
     if (res.ok) {
       loadAdminTransactions();
-      loadAdminUsers(); // Refresh user balances
+      loadAdminUsers();
     }
   } catch (e) {
     hideLoader();
@@ -970,7 +974,7 @@ async function reverseTransaction(reference) {
     showMsg(data.message, res.ok ? "success" : "error");
     if (res.ok) {
       loadAdminTransactions();
-      loadAdminUsers(); // Refresh user balances
+      loadAdminUsers();
     }
   } catch (e) {
     hideLoader();
