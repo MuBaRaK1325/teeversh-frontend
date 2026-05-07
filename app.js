@@ -1016,7 +1016,7 @@ async function setUserTier(id, tier) {
   }
 }
 /* ================= ADMIN: PLANS MANAGER ================= */
-
+let editingPlanId = null;
 let isModalOpen = false;
 
 async function loadAdminPlans() {
@@ -1035,16 +1035,16 @@ async function loadAdminPlans() {
         return;
       }
       plans.forEach(p => {
-        const statusColor = p.is_active ? "#00c853" : "#ff4d4d";
-        const restrictBadge = p.restricted ? `<span class="badge badgeWarning">RESTRICTED</span>` : '';
-        const providerBadge = p.provider ? `<span class="badge">${p.provider.toUpperCase()}</span>` : '';
+        const statusColor = p.is_active? "#00c853" : "#ff4d4d";
+        const restrictBadge = p.restricted? `<span class="badge badgeWarning">RESTRICTED</span>` : '';
+        const providerBadge = p.provider? `<span class="badge">${p.provider.toUpperCase()}</span>` : '';
         list.innerHTML += `<div class="planCard">
           <strong>${p.name}</strong> - ${p.network} ${restrictBadge} ${providerBadge}<br>
           Default: ${formatNaira(p.price)} | Regular: ${formatNaira(p.regular_price || p.price)} | Top: ${formatNaira(p.top_price || p.price)} | Cost: ${formatNaira(p.cost)}<br>
           Provider: ${p.provider || 'N/A'} | Net ID: ${p.network_id || 'N/A'} | API ID: ${p.api_plan_id || 'N/A'}<br>
-          <span style="color:${statusColor}">${p.is_active ? 'Active' : 'Disabled'}</span>
+          <span style="color:${statusColor}">${p.is_active? 'Active' : 'Disabled'}</span>
           <button data-edit-id="${p.id}" class="primaryBtn editPlanBtn">Edit</button>
-          <button data-toggle-id="${p.id}" data-toggle-state="${!p.is_active}" class="dangerBtn togglePlanBtn">${p.is_active ? 'Disable' : 'Enable'}</button>
+          <button data-toggle-id="${p.id}" data-toggle-state="${!p.is_active}" class="dangerBtn togglePlanBtn">${p.is_active? 'Disable' : 'Enable'}</button>
         </div>`;
       });
 
@@ -1073,29 +1073,23 @@ async function loadAdminPlans() {
 }
 
 async function addPlan() {
-  if (isModalOpen) return; // prevent double submit on Android
-
   const plan = {
     plan_id: el("newPlanId")?.value?.trim(),
     network: el("newPlanNetwork")?.value?.trim(),
     name: el("newPlanName")?.value?.trim(),
-    price: el("newPlanPrice")?.value ? Number(el("newPlanPrice").value) : null,
-    regular_price: el("newPlanUserPrice")?.value ? Number(el("newPlanUserPrice").value) : null,
-    top_price: el("newPlanTopPrice")?.value ? Number(el("newPlanTopPrice").value) : null,
-    cost: el("newPlanCost")?.value ? Number(el("newPlanCost").value) : null,
+    price: el("newPlanPrice")?.value? Number(el("newPlanPrice").value) : null,
+    regular_price: el("newPlanUserPrice")?.value? Number(el("newPlanUserPrice").value) : null,
+    top_price: el("newPlanTopPrice")?.value? Number(el("newPlanTopPrice").value) : null,
+    cost: el("newPlanCost")?.value? Number(el("newPlanCost").value) : null,
     validity: el("newPlanValidity")?.value?.trim(),
     restricted:!!el("newPlanRestricted")?.checked,
     provider: el("newPlanProvider")?.value?.trim(),
-    network_id: el("newPlanNetworkId")?.value ? Number(el("newPlanNetworkId").value) : null,
+    network_id: el("newPlanNetworkId")?.value? Number(el("newPlanNetworkId").value) : null,
     api_plan_id: el("newPlanApiId")?.value?.trim()
   };
 
   if (!plan.plan_id ||!plan.network ||!plan.name ||!plan.price ||!plan.cost ||!plan.provider ||!plan.network_id ||!plan.api_plan_id) {
     return showMsg("Fill all required fields including provider details", "error");
-  }
-
-  if (isNaN(plan.price) || isNaN(plan.cost) || isNaN(plan.network_id)) {
-    return showMsg("Price, Cost and Network ID must be valid numbers", "error");
   }
 
   showLoader("Adding plan...");
@@ -1114,15 +1108,14 @@ async function addPlan() {
       loadPlans();
       broadcastTopUserUpdate(currentUser.company);
     }
-  } catch(e) {
-    console.error("[ADD PLAN] Fetch error:", e);
+  } catch {
     hideLoader();
     showMsg("Server error", "error");
   }
 }
 
 async function togglePlan(id, is_active) {
-  if (isModalOpen) return; // prevent toggle while modal is open
+  if (isModalOpen) return;
   showLoader("Updating...");
   try {
     const res = await fetch(`${API}/admin/plans/${id}`, {
@@ -1138,8 +1131,7 @@ async function togglePlan(id, is_active) {
       loadPlans();
       broadcastTopUserUpdate(currentUser.company);
     }
-  } catch(e) {
-    console.error("[TOGGLE PLAN] Fetch error:", e);
+  } catch {
     hideLoader();
     showMsg("Server error", "error");
   }
@@ -1201,10 +1193,6 @@ async function savePlanEdit() {
     return showMsg("Name, Price, Cost, Provider, Network ID and API Plan ID are required", "error");
   }
 
-  if (isNaN(updated.price) || isNaN(updated.cost) || isNaN(updated.network_id)) {
-    return showMsg("Price, Cost and Network ID must be valid numbers", "error");
-  }
-
   showLoader("Updating plan...");
   try {
     const res = await fetch(`${API}/admin/plans/${editingPlanId}`, {
@@ -1232,7 +1220,6 @@ async function savePlanEdit() {
 function openModal(id) {
   document.getElementById(id).style.display = "block";
   document.body.style.overflow = "hidden";
-  if (id === "editPlanModal") isModalOpen = true;
 }
 
 function closeModal(id) {
