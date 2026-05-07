@@ -1016,7 +1016,7 @@ async function setUserTier(id, tier) {
   }
 }
 /* ================= ADMIN: PLANS MANAGER ================= */
-
+let editingPlanId = null; // only declare this once at top of app.js
 
 async function loadAdminPlans() {
   try {
@@ -1053,71 +1053,25 @@ async function loadAdminPlans() {
   }
 }
 
-async function addPlan() {
-  const plan = {
-    plan_id: el("planId")?.value?.trim(),
-    network: el("planNetwork")?.value?.trim(),
-    name: el("planName")?.value?.trim(),
-    price: el("planPrice")?.value ? Number(el("planPrice").value) : null,
-    regular_price: el("planRegularPrice")?.value ? Number(el("planRegularPrice").value) : null,
-    top_price: el("planTopPrice")?.value ? Number(el("planTopPrice").value) : null,
-    cost: el("planCost")?.value ? Number(el("planCost").value) : null,
-    validity: el("planValidity")?.value ? Number(el("planValidity").value) : null,
-    restricted: !!el("planRestricted")?.checked,
-    provider: el("planProvider")?.value?.trim(),
-    network_id: el("planNetworkId")?.value ? Number(el("planNetworkId").value) : null,
-    api_plan_id: el("planApiPlanId")?.value?.trim()
-  };
-
-  if (!plan.plan_id || !plan.network || !plan.name || !plan.price || !plan.cost || !plan.provider || !plan.network_id || !plan.api_plan_id) {
-    return showMsg("Fill all required fields including provider details", "error");
-  }
-
-  if (isNaN(plan.price) || isNaN(plan.cost) || isNaN(plan.network_id)) {
-    return showMsg("Price, Cost and Network ID must be valid numbers", "error");
-  }
-
-  showLoader("Adding plan...");
-  try {
-    const res = await fetch(API + "/admin/plans", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-      body: JSON.stringify(plan)
-    });
-    const data = await res.json();
-    hideLoader();
-    showMsg(data.message, res.ok ? "success" : "error");
-    if (res.ok) {
-      closeModal('addPlanModal');
-      loadAdminPlans();
-      loadPlans();
-      broadcastTopUserUpdate(currentUser.company);
-    }
-  } catch {
-    hideLoader();
-    showMsg("Server error", "error");
-  }
-}
-
 async function editPlan(id) {
   const plan = cachedAdminPlans.find(p => p.id === id);
   if (!plan) return showMsg("Plan not found", "error");
 
   editingPlanId = id;
 
-  if (el("editPlanId")) el("editPlanId").value = plan.plan_id || "";
-  if (el("editPlanNetwork")) el("editPlanNetwork").value = plan.network || "";
-  if (el("editPlanName")) el("editPlanName").value = plan.name || "";
-  if (el("editPlanPrice")) el("editPlanPrice").value = plan.price || "";
-  if (el("editPlanRegularPrice")) el("editPlanRegularPrice").value = plan.regular_price ?? "";
-  if (el("editPlanTopPrice")) el("editPlanTopPrice").value = plan.top_price ?? "";
-  if (el("editPlanCost")) el("editPlanCost").value = plan.cost || "";
-  if (el("editPlanValidity")) el("editPlanValidity").value = plan.validity || "";
-  if (el("editPlanRestricted")) el("editPlanRestricted").checked = !!plan.restricted;
-  if (el("editPlanProvider")) el("editPlanProvider").value = plan.provider || "";
-  if (el("editPlanNetworkId")) el("editPlanNetworkId").value = plan.network_id || "";
-  if (el("editPlanApiPlanId")) el("editPlanApiPlanId").value = plan.api_plan_id || "";
-  if (el("editPlanActive")) el("editPlanActive").checked = plan.is_active !== false;
+  el("editPlanId").value = plan.plan_id || "";
+  el("editPlanNetwork").value = plan.network || "";
+  el("editPlanName").value = plan.name || "";
+  el("editPlanPrice").value = plan.price || "";
+  el("editPlanRegularPrice").value = plan.regular_price ?? "";
+  el("editPlanTopPrice").value = plan.top_price ?? "";
+  el("editPlanCost").value = plan.cost || "";
+  el("editPlanValidity").value = plan.validity || "";
+  el("editPlanRestricted").checked = !!plan.restricted;
+  el("editPlanProvider").value = plan.provider || "";
+  el("editPlanNetworkId").value = plan.network_id || "";
+  el("editPlanApiPlanId").value = plan.api_plan_id || "";
+  el("editPlanActive").checked = plan.is_active !== false;
 
   openModal("editPlanModal");
 }
