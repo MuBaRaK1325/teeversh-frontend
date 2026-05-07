@@ -1047,15 +1047,18 @@ async function loadAdminPlans() {
         </div>`;
       });
 
-      // Attach event listeners for mobile compatibility
+      // Use pointerdown instead of click for Android compatibility
       document.querySelectorAll(".editPlanBtn").forEach(btn => {
-        btn.addEventListener("click", (e) => editPlan(Number(e.target.dataset.editId)));
+        btn.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          editPlan(Number(e.target.dataset.editId));
+        });
       });
       document.querySelectorAll(".togglePlanBtn").forEach(btn => {
-        btn.addEventListener("click", (e) => togglePlan(
-          Number(e.target.dataset.toggleId),
-          e.target.dataset.toggleState === "true"
-        ));
+        btn.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          togglePlan(Number(e.target.dataset.toggleId), e.target.dataset.toggleState === "true");
+        });
       });
     }
   } catch(e) {
@@ -1180,12 +1183,15 @@ async function togglePlan(id, is_active) {
   }
 }
 
-// Attach save button listener after DOM loads - works on mobile
+// Attach save button with pointerdown for Android
 document.addEventListener("DOMContentLoaded", () => {
   const saveBtn = document.getElementById("savePlanBtn");
   if (saveBtn) {
-    saveBtn.addEventListener("click", updatePlan);
-    console.log("[INIT] Save plan button listener attached");
+    saveBtn.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      updatePlan();
+    });
+    console.log("Save plan button listener attached for mobile");
   }
 });
 
