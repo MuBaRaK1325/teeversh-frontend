@@ -1034,17 +1034,28 @@ async function loadAdminPlans() {
         return;
       }
       plans.forEach(p => {
-        const statusColor = p.is_active ? "#00c853" : "#ff4d4d";
-        const restrictBadge = p.restricted ? `<span class="badge badgeWarning">RESTRICTED</span>` : '';
-        const providerBadge = p.provider ? `<span class="badge">${p.provider.toUpperCase()}</span>` : '';
+        const statusColor = p.is_active? "#00c853" : "#ff4d4d";
+        const restrictBadge = p.restricted? `<span class="badge badgeWarning">RESTRICTED</span>` : '';
+        const providerBadge = p.provider? `<span class="badge">${p.provider.toUpperCase()}</span>` : '';
         list.innerHTML += `<div class="planCard">
           <strong>${p.name}</strong> - ${p.network} ${restrictBadge} ${providerBadge}<br>
-          Default: ${formatNaira(p.price)} | Regular: ${formatNaira(p.regular_price ?? p.price)} | Top: ${formatNaira(p.top_price ?? p.price)} | Cost: ${formatNaira(p.cost)}<br>
+          Default: ${formatNaira(p.price)} | Regular: ${formatNaira(p.regular_price?? p.price)} | Top: ${formatNaira(p.top_price?? p.price)} | Cost: ${formatNaira(p.cost)}<br>
           Provider: ${p.provider || 'N/A'} | Net ID: ${p.network_id || 'N/A'} | API ID: ${p.api_plan_id || 'N/A'}<br>
-          <span style="color:${statusColor}">${p.is_active ? 'Active' : 'Disabled'}</span>
-          <button onclick="editPlan(${p.id})" class="primaryBtn">Edit</button>
-          <button onclick="togglePlan(${p.id}, ${!p.is_active})" class="dangerBtn">${p.is_active ? 'Disable' : 'Enable'}</button>
+          <span style="color:${statusColor}">${p.is_active? 'Active' : 'Disabled'}</span>
+          <button data-edit-id="${p.id}" class="primaryBtn editPlanBtn">Edit</button>
+          <button data-toggle-id="${p.id}" data-toggle-state="${!p.is_active}" class="dangerBtn togglePlanBtn">${p.is_active? 'Disable' : 'Enable'}</button>
         </div>`;
+      });
+
+      // Attach event listeners for mobile compatibility
+      document.querySelectorAll(".editPlanBtn").forEach(btn => {
+        btn.addEventListener("click", (e) => editPlan(Number(e.target.dataset.editId)));
+      });
+      document.querySelectorAll(".togglePlanBtn").forEach(btn => {
+        btn.addEventListener("click", (e) => togglePlan(
+          Number(e.target.dataset.toggleId),
+          e.target.dataset.toggleState === "true"
+        ));
       });
     }
   } catch(e) {
@@ -1060,15 +1071,15 @@ async function editPlan(id) {
     console.error("[EDIT PLAN] Plan not found in cachedAdminPlans");
     return showMsg("Plan not found", "error");
   }
-  
+
   editingPlanId = id;
   console.log("[EDIT PLAN] Set editingPlanId to:", editingPlanId);
 
   const safeSet = (id, val) => {
     const element = document.getElementById(id);
     if (element) {
-      if (element.type === "checkbox") element.checked = !!val;
-      else element.value = val ?? "";
+      if (element.type === "checkbox") element.checked =!!val;
+      else element.value = val?? "";
     } else {
       console.error("[EDIT PLAN] Missing element:", id);
     }
@@ -1086,7 +1097,7 @@ async function editPlan(id) {
   safeSet("editPlanNetworkId", plan.network_id);
   safeSet("editPlanApiPlanId", plan.api_plan_id);
   safeSet("editPlanRestricted", plan.restricted);
-  safeSet("editPlanActive", plan.is_active !== false);
+  safeSet("editPlanActive", plan.is_active!== false);
 
   openModal("editPlanModal");
 }
@@ -1102,21 +1113,21 @@ async function updatePlan() {
     plan_id: el("editPlanId")?.value?.trim(),
     network: el("editPlanNetwork")?.value?.trim(),
     name: el("editPlanName")?.value?.trim(),
-    price: el("editPlanPrice")?.value ? Number(el("editPlanPrice").value) : null,
-    regular_price: el("editPlanRegularPrice")?.value ? Number(el("editPlanRegularPrice").value) : null,
-    top_price: el("editPlanTopPrice")?.value ? Number(el("editPlanTopPrice").value) : null,
-    cost: el("editPlanCost")?.value ? Number(el("editPlanCost").value) : null,
-    validity: el("editPlanValidity")?.value ? Number(el("editPlanValidity").value) : null,
-    restricted: !!el("editPlanRestricted")?.checked,
+    price: el("editPlanPrice")?.value? Number(el("editPlanPrice").value) : null,
+    regular_price: el("editPlanRegularPrice")?.value? Number(el("editPlanRegularPrice").value) : null,
+    top_price: el("editPlanTopPrice")?.value? Number(el("editPlanTopPrice").value) : null,
+    cost: el("editPlanCost")?.value? Number(el("editPlanCost").value) : null,
+    validity: el("editPlanValidity")?.value? Number(el("editPlanValidity").value) : null,
+    restricted:!!el("editPlanRestricted")?.checked,
     provider: el("editPlanProvider")?.value?.trim(),
-    network_id: el("editPlanNetworkId")?.value ? Number(el("editPlanNetworkId").value) : null,
+    network_id: el("editPlanNetworkId")?.value? Number(el("editPlanNetworkId").value) : null,
     api_plan_id: el("editPlanApiPlanId")?.value?.trim(),
-    is_active: !!el("editPlanActive")?.checked
+    is_active:!!el("editPlanActive")?.checked
   };
 
   console.log("[UPDATE PLAN] Payload:", updated);
 
-  if (!updated.name || !updated.price || !updated.cost || !updated.provider || !updated.network_id || !updated.api_plan_id) {
+  if (!updated.name ||!updated.price ||!updated.cost ||!updated.provider ||!updated.network_id ||!updated.api_plan_id) {
     return showMsg("Name, Price, Cost, Provider, Network ID and API Plan ID are required", "error");
   }
 
@@ -1134,7 +1145,7 @@ async function updatePlan() {
     const data = await res.json();
     hideLoader();
     closeModal("editPlanModal");
-    showMsg(data.message, res.ok ? "success" : "error");
+    showMsg(data.message, res.ok? "success" : "error");
     if (res.ok) {
       loadAdminPlans();
       loadPlans();
@@ -1157,7 +1168,7 @@ async function togglePlan(id, is_active) {
     });
     const data = await res.json();
     hideLoader();
-    showMsg(data.message, res.ok ? "success" : "error");
+    showMsg(data.message, res.ok? "success" : "error");
     if (res.ok) {
       loadAdminPlans();
       loadPlans();
@@ -1168,6 +1179,15 @@ async function togglePlan(id, is_active) {
     showMsg("Server error", "error");
   }
 }
+
+// Attach save button listener after DOM loads - works on mobile
+document.addEventListener("DOMContentLoaded", () => {
+  const saveBtn = document.getElementById("savePlanBtn");
+  if (saveBtn) {
+    saveBtn.addEventListener("click", updatePlan);
+    console.log("[INIT] Save plan button listener attached");
+  }
+});
 
 /* ================= ADMIN: WITHDRAWALS ================= */
 const NIGERIAN_BANKS = [
