@@ -1103,7 +1103,7 @@ async function editPlan(id) {
   const plan = cachedAdminPlans.find(p => p.id === id);
   if (!plan) return showMsg("Plan not found", "error");
 
-  editingPlanId = id; // set the ID before opening modal
+  editingPlanId = id; // critical: set this before opening modal
 
   if (el("editPlanId")) el("editPlanId").value = plan.plan_id || "";
   if (el("editPlanNetwork")) el("editPlanNetwork").value = plan.network || "";
@@ -1419,7 +1419,6 @@ async function submitPin() {
 /* ================= ADMIN DATA LOADER ================= */
 function loadAdminData() {
   loadProfitDashboard();
-  loadTopUsers();
   loadWithdrawals();
   loadAdminPlans();
   loadAdminUsers();
