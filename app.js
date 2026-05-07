@@ -1016,7 +1016,7 @@ async function setUserTier(id, tier) {
   }
 }
 /* ================= ADMIN: PLANS MANAGER ================= */
-let editingPlanId = null; // must be at top of app.js only
+
 
 async function loadAdminPlans() {
   try {
