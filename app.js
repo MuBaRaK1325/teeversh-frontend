@@ -1017,6 +1017,7 @@ async function setUserTier(id, tier) {
 }
 
 /* ================= ADMIN: PLANS MANAGER ================= */
+// Declare these only once at the top of your admin section
 let cachedAdminPlans = [];
 let editingPlanId = null;
 
