@@ -208,28 +208,46 @@ border-radius:50%;
 object-fit:cover;
 }
 
-/* PLAN */
-.planItem{
-background:var(--card);
-backdrop-filter:blur(10px);
-border:1px solid var(--glass-border);
-padding:12px;
-border-radius:10px;
-margin-top:10px;
-cursor:pointer;
-position:relative;
-transition:0.2s;
+/* PLAN TABS */
+.planTabs { 
+  display: flex; 
+  gap: 8px; 
+  margin-bottom: 14px; 
+  overflow-x: auto; 
+  padding-bottom: 4px;
 }
-.planItem:active{background:rgba(255, 255, 255, 0.2);}
+.planTabs::-webkit-scrollbar { display: none; } /* hide scroll on mobile */
 
-.topUserBadge{
-position:absolute;
-top:8px;
-right:8px;
-background:var(--success);
-padding:2px 6px;
-border-radius:4px;
-font-size:10px;
+.planTab { 
+  padding: 8px 16px; 
+  border: 1px solid var(--glass-border); 
+  border-radius: 20px; 
+  background: rgba(255,255,255,0.05); 
+  color: var(--text);
+  cursor: pointer; 
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: 0.2s;
+  backdrop-filter: blur(10px);
+}
+.planTab.active { 
+  background: var(--primary, #007bff); 
+  color: #fff; 
+  border-color: var(--primary, #007bff); 
+}
+.planTab:active { transform: scale(0.95); }
+
+.regularUserBadge {
+  position:absolute;
+  top:8px;
+  right:8px;
+  background:#ffa000;
+  padding:2px 6px;
+  border-radius:4px;
+  font-size:10px;
+  color:#000;
+  font-weight:600;
 }
 
 /* TRANSACTION */

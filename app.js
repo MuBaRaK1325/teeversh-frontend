@@ -1,7 +1,9 @@
 const API = "https://mayconnect-backend-1.onrender.com"; // One backend for all companies
 
-let cachedPlans = [];
+let cachedPlans = {}; // now an object: {SME: [], SME2: [], GIFTING: []}
 let cachedAdminPlans = [];
+let planTypes = ['SME', 'SME2', 'GIFTING'];
+let activePlanType = 'SME';
 let currentUser = null;
 let ws = null;
 
@@ -336,19 +338,21 @@ function txCard(t) {
   return div;
 }
 
-/* ================= PLANS ================= */
+/* ================= LOAD PLANS WITH TABS ================= */
 async function loadPlans() {
   try {
     const res = await fetch(API + "/api/plans", {
       headers: { Authorization: "Bearer " + getToken() }
     });
     if (!res.ok) throw new Error("Failed to fetch plans - " + res.status);
-    const contentType = res.headers.get("content-type");
-    if (!contentType ||!contentType.includes("application/json")) {
-      throw new Error("Server returned non-JSON response");
-    }
-    const data = await res.json();
-    cachedPlans = Array.isArray(data)? data : [];
+    const response = await res.json();
+
+    // New format from backend: {success: true, data: {SME:[], SME2:[], GIFTING:[]}, planTypes: []}
+    cachedPlans = response.data || {};
+    planTypes = response.planTypes || ['SME', 'SME2', 'GIFTING'];
+    activePlanType = planTypes[0] || 'SME';
+
+    renderPlanTabs(); // draw tabs first
     renderPlans();
   } catch (e) {
     console.log("PLANS ERROR", e);
@@ -357,18 +361,33 @@ async function loadPlans() {
   }
 }
 
-function selectNetwork(network, element) {
-  selectedNetwork = (network || "").toLowerCase();
-  selectedPlan = null;
-  document.querySelectorAll(".networkItem").forEach(n => n.classList.remove("active"));
-  if (element) element.classList.add("active");
+function selectPlanType(type) {
+  activePlanType = type;
+  document.querySelectorAll(".planTab").forEach(t => t.classList.remove("active"));
+  document.querySelector(`.planTab[data-type="${type}"]`)?.classList.add("active");
   renderPlans();
 }
 
-function selectAirtimeNetwork(network, element) {
-  airtimeNetwork = network;
-  document.querySelectorAll(".airtimeNet").forEach(n => n.classList.remove("active"));
-  if (element) element.classList.add("active");
+// Render the SME | SME2 | GIFTING tabs
+function renderPlanTabs() {
+  let tabContainer = el("planTabs");
+  if (!tabContainer) { // auto-create if you forgot to add it to HTML
+    const list = el("planList");
+    tabContainer = document.createElement("div");
+    tabContainer.id = "planTabs";
+    tabContainer.className = "planTabs";
+    list.parentNode.insertBefore(tabContainer, list);
+  }
+
+  tabContainer.innerHTML = "";
+  planTypes.forEach(type => {
+    const btn = document.createElement("button");
+    btn.className = "planTab" + (type === activePlanType? " active" : "");
+    btn.setAttribute("data-type", type);
+    btn.innerText = type;
+    btn.onclick = () => selectPlanType(type);
+    tabContainer.appendChild(btn);
+  });
 }
 
 // Get correct price based on user tier
@@ -382,7 +401,6 @@ function getPlanPrice(plan) {
 function renderPlans() {
   const list = el("planList");
   if (!list) return;
-
   list.innerHTML = "";
 
   if (!selectedNetwork) {
@@ -390,15 +408,16 @@ function renderPlans() {
     return;
   }
 
-  const filtered = cachedPlans.filter(p => (p.network || "").toLowerCase() === selectedNetwork && p.is_active!== false);
+  // Get plans for active tab + selected network
+  const plansForType = cachedPlans[activePlanType] || [];
+  const filtered = plansForType.filter(p => (p.network || "").toLowerCase() === selectedNetwork && p.is_active!== false);
 
   if (!filtered.length) {
-    list.innerHTML = "<p>No plans available for this network</p>";
+    list.innerHTML = `<p>No ${activePlanType} plans available for this network</p>`;
     return;
   }
 
   const tier = currentUser?.user_tier || 'default';
-  console.log("Rendering plans for tier:", tier);
 
   filtered.forEach(p => {
     const div = document.createElement("div");
@@ -413,7 +432,7 @@ function renderPlans() {
       badge = `<span class="regularUserBadge" style="position:absolute;top:8px;right:8px;background:#ffa000;padding:2px 6px;border-radius:4px;font-size:10px;">REGULAR</span>`;
     }
 
-    const validityText = p.validity ? `${p.validity} Days` : "";
+    const validityText = p.validity? `${p.validity} Days` : "";
 
     div.innerHTML = `
       <strong>${p.name}</strong> ${badge}<br>
