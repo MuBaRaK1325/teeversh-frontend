@@ -361,6 +361,20 @@ async function loadPlans() {
   }
 }
 
+function selectNetwork(network, element) {
+  selectedNetwork = (network || "").toLowerCase();
+  selectedPlan = null;
+  document.querySelectorAll(".networkItem").forEach(n => n.classList.remove("active"));
+  if (element) element.classList.add("active");
+
+  // show tabs after network is selected
+  const tabContainer = el("planTabs");
+  if (tabContainer) tabContainer.classList.add("show");
+
+  renderPlanTabs();
+  renderPlans();
+}
+
 function selectPlanType(type) {
   activePlanType = type;
   document.querySelectorAll(".planTab").forEach(t => t.classList.remove("active"));
@@ -429,7 +443,7 @@ function renderPlans() {
     if (tier === 'top') {
       badge = `<span class="topUserBadge">TOP</span>`;
     } else if (tier === 'regular' && p.regular_price) {
-      badge = `<span class="regularUserBadge" style="position:absolute;top:8px;right:8px;background:#ffa000;padding:2px 6px;border-radius:4px;font-size:10px;">REGULAR</span>`;
+      badge = `<span class="regularUserBadge">REGULAR</span>`;
     }
 
     const validityText = p.validity? `${p.validity} Days` : "";

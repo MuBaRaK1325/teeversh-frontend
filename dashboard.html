@@ -173,41 +173,64 @@ margin-bottom:15px;
 
 /* NETWORK */
 .networkGrid{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:12px;
-  margin-top:15px;
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:12px;
+margin-top:15px;
 }
 
 .networkItem{
-  background:var(--card);
-  backdrop-filter:blur(10px);
-  border:1px solid var(--glass-border);
-  padding:12px;
-  border-radius:50%;
-  text-align:center;
-  cursor:pointer;
-  border:3px solid transparent;
-  aspect-ratio:1;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  transition:0.2s;
+background:var(--card);
+backdrop-filter:blur(10px);
+border:1px solid var(--glass-border);
+padding:12px;
+border-radius:50%;
+text-align:center;
+cursor:pointer;
+border:3px solid transparent;
+aspect-ratio:1;
+display:flex;
+align-items:center;
+justify-content:center;
+transition:0.2s;
 }
 
 .networkItem.active{
-  border:3px solid var(--primary);
-  transform:scale(1.05);
-  box-shadow:0 0 20px rgba(147, 51, 234, 0.4);
+border:3px solid var(--primary);
+transform:scale(1.05);
+box-shadow:0 0 20px rgba(147, 51, 234, 0.4);
 }
 
 .networkItem img{
-  width:45px;
-  height:45px;
-  border-radius:50%;
-  object-fit:cover;
+width:45px;
+height:45px;
+border-radius:50%;
+object-fit:cover;
 }
 
+/* PLAN */
+.planItem{
+background:var(--card);
+backdrop-filter:blur(10px);
+border:1px solid var(--glass-border);
+padding:12px;
+border-radius:10px;
+margin-top:10px;
+cursor:pointer;
+position:relative;
+transition:0.2s;
+}
+.planItem:active{background:rgba(255, 255, 255, 0.2);}
+
+.topUserBadge{
+position:absolute;
+top:8px;
+right:8px;
+background:var(--success);
+padding:2px 6px;
+border-radius:4px;
+font-size:10px;
+}
 /* PLAN TABS */
 .planTabs { 
   display: flex; 
@@ -215,10 +238,8 @@ margin-bottom:15px;
   margin-bottom: 14px; 
   overflow-x: auto; 
   padding-bottom: 4px;
-  display: none; /* HIDE UNTIL NETWORK IS SELECTED */
 }
-.planTabs.show { display: flex; } /* SHOW WHEN NETWORK SELECTED */
-.planTabs::-webkit-scrollbar { display: none; }
+.planTabs::-webkit-scrollbar { display: none; } /* hide scroll on mobile */
 
 .planTab { 
   padding: 8px 16px; 
@@ -240,30 +261,6 @@ margin-bottom:15px;
 }
 .planTab:active { transform: scale(0.95); }
 
-/* PLAN */
-.planItem{
-  background:var(--card);
-  backdrop-filter:blur(10px);
-  border:1px solid var(--glass-border);
-  padding:12px;
-  border-radius:10px;
-  margin-top:10px;
-  cursor:pointer;
-  position:relative;
-  transition:0.2s;
-}
-.planItem:active{background:rgba(255, 255, 255, 0.2);}
-
-.topUserBadge{
-  position:absolute;
-  top:8px;
-  right:8px;
-  background:var(--success);
-  padding:2px 6px;
-  border-radius:4px;
-  font-size:10px;
-}
-
 .regularUserBadge {
   position:absolute;
   top:8px;
@@ -275,6 +272,7 @@ margin-bottom:15px;
   color:#000;
   font-weight:600;
 }
+
 
 /* TRANSACTION */
 .transactionCard{
@@ -589,7 +587,7 @@ box-shadow:0 0 40px rgba(147,51,234,0.3);
     <option value="cheapdatahub">CheapDataHub</option>
     <option value="subpadi">SubPadi</option>
    <option value="arrahuz">Arrahuz</option>
-   <option value="danmalama">DANMALAMA</option>
+   <option value="alihsandatasub">ALIHSANDATASUB</option>
   </select>
   <input id="newPlanNetworkId" placeholder="Network ID: 1=MTN, 2=Airtel, 3=Glo, 4=9mobile" />
   <input id="newPlanApiId" placeholder="API Plan ID from provider dashboard" />
@@ -625,7 +623,7 @@ box-shadow:0 0 40px rgba(147,51,234,0.3);
     <option value="cheapdatahub">CheapDataHub</option>
     <option value="subpadi">SubPadi</option>
      <option value="arrahuz">Arrahuz</option>
-     <option value="danmalama">DANMALAMA</option>
+     <option value="alihsandatasub">ALIHSANDATASUB</option>
   </select>
   <input id="editPlanNetworkId" placeholder="Network ID" />
   <input id="editPlanApiId" placeholder="API Plan ID" />
