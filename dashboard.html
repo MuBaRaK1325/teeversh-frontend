@@ -208,6 +208,29 @@ border-radius:50%;
 object-fit:cover;
 }
 
+/* PLAN */
+.planItem{
+background:var(--card);
+backdrop-filter:blur(10px);
+border:1px solid var(--glass-border);
+padding:12px;
+border-radius:10px;
+margin-top:10px;
+cursor:pointer;
+position:relative;
+transition:0.2s;
+}
+.planItem:active{background:rgba(255, 255, 255, 0.2);}
+
+.topUserBadge{
+position:absolute;
+top:8px;
+right:8px;
+background:var(--success);
+padding:2px 6px;
+border-radius:4px;
+font-size:10px;
+}
 /* PLAN TABS */
 .planTabs { 
   display: flex; 
@@ -232,9 +255,9 @@ object-fit:cover;
   backdrop-filter: blur(10px);
 }
 .planTab.active { 
-  background: var(--primary, #007bff); 
+  background: var(--primary, #a200ff); 
   color: #fff; 
-  border-color: var(--primary, #007bff); 
+  border-color: var(--primary, #ea00ff); 
 }
 .planTab:active { transform: scale(0.95); }
 
