@@ -173,64 +173,41 @@ margin-bottom:15px;
 
 /* NETWORK */
 .networkGrid{
-display:grid;
-grid-template-columns:repeat(3,1fr);
-gap:12px;
-margin-top:15px;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+  margin-top:15px;
 }
 
 .networkItem{
-background:var(--card);
-backdrop-filter:blur(10px);
-border:1px solid var(--glass-border);
-padding:12px;
-border-radius:50%;
-text-align:center;
-cursor:pointer;
-border:3px solid transparent;
-aspect-ratio:1;
-display:flex;
-align-items:center;
-justify-content:center;
-transition:0.2s;
+  background:var(--card);
+  backdrop-filter:blur(10px);
+  border:1px solid var(--glass-border);
+  padding:12px;
+  border-radius:50%;
+  text-align:center;
+  cursor:pointer;
+  border:3px solid transparent;
+  aspect-ratio:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:0.2s;
 }
 
 .networkItem.active{
-border:3px solid var(--primary);
-transform:scale(1.05);
-box-shadow:0 0 20px rgba(147, 51, 234, 0.4);
+  border:3px solid var(--primary);
+  transform:scale(1.05);
+  box-shadow:0 0 20px rgba(147, 51, 234, 0.4);
 }
 
 .networkItem img{
-width:45px;
-height:45px;
-border-radius:50%;
-object-fit:cover;
+  width:45px;
+  height:45px;
+  border-radius:50%;
+  object-fit:cover;
 }
 
-/* PLAN */
-.planItem{
-background:var(--card);
-backdrop-filter:blur(10px);
-border:1px solid var(--glass-border);
-padding:12px;
-border-radius:10px;
-margin-top:10px;
-cursor:pointer;
-position:relative;
-transition:0.2s;
-}
-.planItem:active{background:rgba(255, 255, 255, 0.2);}
-
-.topUserBadge{
-position:absolute;
-top:8px;
-right:8px;
-background:var(--success);
-padding:2px 6px;
-border-radius:4px;
-font-size:10px;
-}
 /* PLAN TABS */
 .planTabs { 
   display: flex; 
@@ -238,8 +215,10 @@ font-size:10px;
   margin-bottom: 14px; 
   overflow-x: auto; 
   padding-bottom: 4px;
+  display: none; /* HIDE UNTIL NETWORK IS SELECTED */
 }
-.planTabs::-webkit-scrollbar { display: none; } /* hide scroll on mobile */
+.planTabs.show { display: flex; } /* SHOW WHEN NETWORK SELECTED */
+.planTabs::-webkit-scrollbar { display: none; }
 
 .planTab { 
   padding: 8px 16px; 
@@ -260,6 +239,30 @@ font-size:10px;
   border-color: var(--primary, #ea00ff); 
 }
 .planTab:active { transform: scale(0.95); }
+
+/* PLAN */
+.planItem{
+  background:var(--card);
+  backdrop-filter:blur(10px);
+  border:1px solid var(--glass-border);
+  padding:12px;
+  border-radius:10px;
+  margin-top:10px;
+  cursor:pointer;
+  position:relative;
+  transition:0.2s;
+}
+.planItem:active{background:rgba(255, 255, 255, 0.2);}
+
+.topUserBadge{
+  position:absolute;
+  top:8px;
+  right:8px;
+  background:var(--success);
+  padding:2px 6px;
+  border-radius:4px;
+  font-size:10px;
+}
 
 .regularUserBadge {
   position:absolute;
@@ -984,16 +987,19 @@ box-shadow:0 0 40px rgba(147,51,234,0.3);
 
 <!-- DATA -->
 <section id="data" class="section">
-<button onclick="showSection('home')" class="backBtn">⬅ Back</button>
-<h3>Select Network</h3>
-<div class="networkGrid">
-<div class="networkItem" onclick="selectNetwork('mtn', this)"><img src="images/mtn.png" alt="MTN"></div>
-<div class="networkItem" onclick="selectNetwork('glo', this)"><img src="images/glo.png" alt="GLO"></div>
-<div class="networkItem" onclick="selectNetwork('airtel', this)"><img src="images/airtel.png" alt="AIRTEL"></div>
-</div>
+  <button onclick="showSection('home')" class="backBtn">⬅ Back</button>
+  <h3>Select Network</h3>
+  
+  <div class="networkGrid">
+    <div class="networkItem" onclick="selectNetwork('mtn', this)"><img src="images/mtn.png" alt="MTN"></div>
+    <div class="networkItem" onclick="selectNetwork('glo', this)"><img src="images/glo.png" alt="GLO"></div>
+    <div class="networkItem" onclick="selectNetwork('airtel', this)"><img src="images/airtel.png" alt="AIRTEL"></div>
+  </div>
 
-<input id="dataPhone" type="tel" placeholder="Phone Number">
-<div id="planList"></div>
+  <input id="dataPhone" type="tel" placeholder="Phone Number">
+
+  <div id="planTabs" class="planTabs"></div> <!-- THIS IS NEW - TABS GO HERE -->
+  <div id="planList"></div>
 </section>
 
 <!-- AIRTIME -->
