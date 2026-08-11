@@ -1,4 +1,28 @@
+# Dependencies
 node_modules/
 package-lock.json
+
+# Build output
+dist/
+build/
+
+# Android / Capacitor
+android/
+.gradle/
+local.properties
+*.apk
+*.aab
+
+# Environment
 .env
+
+# System
+.DS_Store
+.idea/
+.vscode/
 resize.py
+capacitor.config.ts
+build-app.js
+icons
+resources
+package.json

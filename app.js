@@ -1,9 +1,85 @@
-const API = "https://mayconnect-backend-1.onrender.com"; // One backend for all companies
+const API = "https://mayconnect-backend-1.onrender.com";
 
-let cachedPlans = {}; // now an object: {SME: [], SME2: [], GIFTING: []}
+let isApp = false;
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    console.log("window.Capacitor =", window.Capacitor);
+
+    console.log(
+        "isNativePlatform =",
+        window.Capacitor?.isNativePlatform?.()
+    );
+
+    console.log(
+        "Plugins =",
+        window.Capacitor?.Plugins
+    );
+
+    console.log(
+        "Plugin keys =",
+        Object.keys(window.Capacitor?.Plugins || {})
+    );
+
+    // Correct plugin
+    console.log(
+        "NativeBiometric =",
+        window.Capacitor?.Plugins?.NativeBiometric
+    );
+
+    // Check saved login details
+    console.log(
+        "Saved Username =",
+        localStorage.getItem("username")
+    );
+
+    console.log(
+        "Saved Password =",
+        localStorage.getItem("biometric_password")
+    );
+
+    // Show everything in LocalStorage
+    console.log("===== LOCAL STORAGE =====");
+
+    if (localStorage.length === 0) {
+
+        console.log("LocalStorage is EMPTY");
+
+    } else {
+
+        for (let i = 0; i < localStorage.length; i++) {
+
+            const key = localStorage.key(i);
+
+            console.log(
+                key + " =",
+                localStorage.getItem(key)
+            );
+
+        }
+
+    }
+
+    console.log("=========================");
+
+    isApp = !!window.Capacitor?.isNativePlatform?.();
+
+    console.log("isApp =", isApp);
+
+});
+
+// Block admin APIs if running in app
+if(isApp) {
+  if(typeof axios !== 'undefined') {
+    axios.defaults.headers.common['X-App-Version'] = '1.0.0';
+  }
+}
+
+
+let cachedPlans = {}; // now an object: {SME: [], SME2: [], GIFTING: [], CORPORATE_GIFTING: []}
 let cachedAdminPlans = [];
-let planTypes = ['SME', 'SME2', 'GIFTING'];
-let activePlanType = 'SME';
+let planTypes = ['SME', 'SME2', 'GIFTING', 'CORPORATE_GIFTING']; // ADDED BOTH
+let activePlanType = 'SME'; // default tab
 let currentUser = null;
 let ws = null;
 
@@ -14,6 +90,8 @@ let actionType = null;
 let editingPlanId = null;
 let selectedPlanId = null;
 let selectedPhone = null;
+let cachedRegOptions = null;
+let biometricReady = false;
 
 /* ================= HELPERS ================= */
 function getToken() { return localStorage.getItem("token"); }
@@ -102,10 +180,11 @@ function checkAuth() {
 async function loadDashboard() {
   if (!checkAuth()) return;
 
-   initKycListeners(); // ADD THIS LINE RIGHT HERE
-
+  showLoader("Loading dashboard..."); // <-- Unlocks APK if it fails
 
   try {
+    initKycListeners(); 
+
     const res = await fetch(API + "/api/me", { headers: { Authorization: "Bearer " + getToken() } });
     if (!res.ok) throw new Error("Failed to fetch user - " + res.status);
     const contentType = res.headers.get("content-type");
@@ -115,29 +194,34 @@ async function loadDashboard() {
     currentUser = await res.json();
     window.CURRENT_USER_ID = currentUser.id;
     console.log("Current user tier:", currentUser.user_tier);
+
+    if (el("usernameDisplay")) el("usernameDisplay").innerText = "Hello " + currentUser.username;
+    if (el("companyBadge")) el("companyBadge").innerText = currentUser.company.toUpperCase();
+
+  const isApp = window.Capacitor && window.Capacitor.isNativePlatform();
+
+if (currentUser && currentUser.is_admin === true && !isApp) {
+  // Only show admin on WEB, hide on APP
+  document.querySelectorAll(".adminOnly").forEach(e => e.style.display = "block");
+  if (el("adminWalletBalance")) el("adminWalletBalance").innerText = formatNaira(currentUser.admin_wallet);
+  if (el("adminWalletBalance2")) el("adminWalletBalance2").innerText = formatNaira(currentUser.admin_wallet);
+}
+
+    initNavigation();
+    await loadAccount();
+    await loadPlans();
+    fetchTransactions();
+    if (currentUser.is_admin) loadAdminData();
+    checkBiometricStatus();
+
+    setTimeout(connectWebSocket, 1000);
+
   } catch (e) {
     console.error("Load user error:", e);
-    logout();
-    return;
+    showMsg("Failed to load dashboard. Check internet or login again.", "error"); // <-- Don’t logout, show error
+  } finally {
+    hideLoader(); // <-- This always runs. No more frozen LOADING
   }
-
-  if (el("usernameDisplay")) el("usernameDisplay").innerText = "Hello " + currentUser.username;
-  if (el("companyBadge")) el("companyBadge").innerText = currentUser.company.toUpperCase();
-
-  if (currentUser && currentUser.is_admin === true) {
-    document.querySelectorAll(".adminOnly").forEach(e => e.style.display = "block");
-    if (el("adminWalletBalance")) el("adminWalletBalance").innerText = formatNaira(currentUser.admin_wallet);
-    if (el("adminWalletBalance2")) el("adminWalletBalance2").innerText = formatNaira(currentUser.admin_wallet);
-  }
-
-  initNavigation();
-  await loadAccount();
-  await loadPlans();
-  fetchTransactions();
-  if (currentUser.is_admin) loadAdminData();
-  checkBiometricStatus();
-
-  setTimeout(connectWebSocket, 1000);
 }
 
 /* ================= NAV ================= */
@@ -349,7 +433,7 @@ async function loadPlans() {
 
     // New format from backend: {success: true, data: {SME:[], SME2:[], GIFTING:[]}, planTypes: []}
     cachedPlans = response.data || {};
-    planTypes = response.planTypes || ['SME', 'SME2', 'GIFTING'];
+    planTypes = response.planTypes || ['SME', 'SME2', 'GIFTING', 'CORPORATE_GIFTING'];
     activePlanType = planTypes[0] || 'SME';
 
     renderPlanTabs(); // draw tabs first
@@ -382,10 +466,10 @@ function selectPlanType(type) {
   renderPlans();
 }
 
-// Render the SME | SME2 | GIFTING tabs
+// Render the SME | SME2 | GIFTING | CORPORATE GIFTING tabs
 function renderPlanTabs() {
   let tabContainer = el("planTabs");
-  if (!tabContainer) { // auto-create if you forgot to add it to HTML
+  if (!tabContainer) {
     const list = el("planList");
     tabContainer = document.createElement("div");
     tabContainer.id = "planTabs";
@@ -393,12 +477,19 @@ function renderPlanTabs() {
     list.parentNode.insertBefore(tabContainer, list);
   }
 
+  const tabLabels = {
+    SME: "SME",
+    SME2: "SME2",
+    GIFTING: "GIFTING",
+    CORPORATE_GIFTING: "CORPORATE GIFTING" // nice label
+  };
+
   tabContainer.innerHTML = "";
   planTypes.forEach(type => {
     const btn = document.createElement("button");
     btn.className = "planTab" + (type === activePlanType? " active" : "");
     btn.setAttribute("data-type", type);
-    btn.innerText = type;
+    btn.innerText = tabLabels[type] || type; // use nice label
     btn.onclick = () => selectPlanType(type);
     tabContainer.appendChild(btn);
   });
@@ -480,334 +571,314 @@ function selectAirtimeNetwork(network, element) {
 
 }
 
-/* ================= BIOMETRIC STATUS - TEEVERSH DATA PLUG - FIXED 100% ================= */
-const APP_NAME = 'TEEVERSH DATA PLUG';
-const APP_LOGO = '/images/TEEVERSH.png';
-let cachedRegOptions = null;
-let biometricReady = false;
+/* ================= BIOMETRIC ================= */
 
-function el(id) { return document.getElementById(id); }
-function getToken() { return localStorage.getItem('token'); }
+const APP_NAME = "TEEVERSH DATA PLUG";
+const APP_LOGO = "/images/TEEVERSH.png";
 
-function showDebug(msg, isError = false) {
-  const statusEl = el("biometricStatus");
-  if (statusEl) {
-    statusEl.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-        <img src="${APP_LOGO}" style="width:24px;height:24px;border-radius:4px;object-fit:contain;" onerror="this.style.display='none'">
-        <strong style="font-size:14px;color:#a855f7;">${APP_NAME}</strong>
-      </div>
-      <div style="color:${isError? '#ff4d4d' : '#8b5cf6'};font-size:12px;line-height:1.4;white-space:pre-line;">${msg}</div>
-    `;
-  }
-  console.log('[Biometric]', msg);
+const NativeBiometric =
+window.Capacitor?.Plugins?.NativeBiometric;
+
+function el(id){
+return document.getElementById(id);
 }
 
-function bufferDecode(value) {
-  if (value === null || value === undefined) throw new Error('Empty value');
-  if (value instanceof Uint8Array) return value;
-  if (value instanceof ArrayBuffer) return new Uint8Array(value);
-  if (Array.isArray(value)) return new Uint8Array(value);
-  if (typeof value === 'object') {
-    const keys = Object.keys(value);
-    if (keys.length > 0 &&!isNaN(keys[0])) {
-      const arr = new Uint8Array(keys.length);
-      for (let i = 0; i < keys.length; i++) arr[i] = value[i];
-      return arr;
-    }
-  }
-  if (typeof value === 'string') {
-    let base64 = value.replace(/-/g, '+').replace(/_/g, '/');
-    while (base64.length % 4) base64 += '=';
-    return Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-  }
-  throw new Error('Bad type: ' + typeof value);
+function getToken(){
+return localStorage.getItem("token");
 }
 
-function bufferEncode(value) {
-  return btoa(String.fromCharCode(...new Uint8Array(value)))
-.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+function isNativeApp(){
+return !!window.Capacitor && !!NativeBiometric;
 }
+
+function showDebug(msg,error=false){
+
+const box=el("biometricStatus");
+
+if(!box) return;
+
+box.innerHTML=`
+
+<div style="color:${error?"#ff4444":"#14b8b6"};    
+            font-size:13px;    
+            white-space:pre-line;">    
+    ${msg}    
+</div>`;  }
+
+/* ==========================================
+CHECK STATUS
+========================================== */
 
 async function checkBiometricStatus() {
-  const enableBtn = el("enableBiometricBtn");
-  const statusEl = el("biometricStatus");
-  if (!statusEl ||!enableBtn) return;
 
-  if (!window.isSecureContext) {
-    showDebug("HTTPS required for biometric", true);
-    enableBtn.style.display = "none";
-    return false;
-  }
+const btn = el("enableBiometricBtn");  
 
-  if (!window.PublicKeyCredential) {
-    showDebug("Browser not supported. Use Chrome or Edge", true);
-    enableBtn.style.display = "none";
-    return false;
-  }
+if (!btn) return;  
 
-  enableBtn.disabled = true;
-  enableBtn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;object-fit:contain;vertical-align:middle;">Checking...`;
-  enableBtn.style.display = "flex";
-  enableBtn.style.alignItems = "center";
-  enableBtn.style.justifyContent = "center";
-  enableBtn.style.fontWeight = "600";
-  enableBtn.style.background = '#8b5cf6';
-  showDebug("Checking biometric support...");
+btn.style.display = "none";  
 
-  try {
-    const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-    if (!available) {
-      showDebug("No fingerprint or face ID enrolled on device", true);
-      enableBtn.style.display = "none";
-      return false;
-    }
+if (!isNativeApp()) {  
+    return;  
+}  
 
-    const token = getToken();
-    if (!token) {
-      showDebug("Login to enable biometric");
-      enableBtn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;object-fit:contain;">Login with Fingerprint`;
-      enableBtn.onclick = loginWithBiometric;
-      enableBtn.disabled = false;
-      enableBtn.style.display = "flex";
-      enableBtn.style.background = '#8b5cf6';
-      return false;
-    }
+try {  
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const available = await NativeBiometric.isAvailable();  
 
-    const res = await fetch(API + '/api/auth/webauthn/check-enabled', {
-      method: 'GET',
-      headers: {
-        'Authorization': 'Bearer ' + token,
-        'Accept': 'application/json'
-      },
-      signal: controller.signal
-    });
+    if (!available.isAvailable) {  
 
-    clearTimeout(timeoutId);
-    if (!res.ok) throw new Error(`Server error ${res.status}`);
+        showDebug(  
+            "Fingerprint is not available on this device.",  
+            true  
+        );  
 
-    const data = await res.json();
-    enableBtn.disabled = false;
+        return;  
 
-    if (data.enabled === true) {
-      enableBtn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;object-fit:contain;">Login with Fingerprint`;
-      enableBtn.onclick = loginWithBiometric;
-      enableBtn.style.background = '#8b5cf6';
-      enableBtn.style.display = "flex";
-      showDebug('Passkey enabled. Tap to verify your identity');
-    } else {
-      enableBtn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;object-fit:contain;">Enable Fingerprint/Face ID`;
-      enableBtn.onclick = enableBiometric;
-      enableBtn.style.background = '#8b5cf6';
-      enableBtn.style.display = "flex";
-      showDebug('Secure your account with biometric authentication');
-    }
-    return data.enabled || false;
+    }  
 
-  } catch (e) {
-    console.error("Biometric status check failed:", e.name, e.message);
-    if (e.name === 'AbortError') {
-      showDebug("Check timed out. Try again", true);
-    } else if (e.message.includes('Failed to fetch')) {
-      showDebug("Network error. Check connection", true);
-    } else {
-      showDebug("Biometric unavailable on this device", true);
-    }
-    enableBtn.style.display = "none";
-    return false;
-  }
+    const username = localStorage.getItem("username");  
+
+    if (!username) {  
+
+        btn.style.display = "flex";  
+        btn.innerHTML = "Enable Fingerprint";  
+        btn.onclick = enableBiometric;  
+
+        showDebug(  
+            "Please login first."  
+        );  
+
+        return;  
+
+    }  
+
+    const result = await NativeBiometric.isCredentialsSaved({  
+
+        server: "teeversh-dataplug-" + username  
+
+    });  
+
+    const saved = result.isSaved;  
+
+    btn.style.display = "flex";  
+
+    if (saved) {  
+
+        btn.innerHTML = "Login with Fingerprint";  
+        btn.onclick = loginWithBiometric;  
+
+        showDebug(  
+            "Fingerprint login is enabled."  
+        );  
+
+    } else {  
+
+        btn.innerHTML = "Enable Fingerprint";  
+        btn.onclick = enableBiometric;  
+
+        showDebug(  
+            "Tap the button below to enable fingerprint login."  
+        );  
+
+    }  
+
+} catch (err) {  
+
+    console.error(err);  
+
+    showDebug(  
+        err.message || "Unable to check fingerprint status.",  
+        true  
+    );  
+
 }
 
-function enableBiometric() {
-  const btn = el("enableBiometricBtn");
-  if (!btn) return;
-
-  if (!biometricReady) {
-    btn.disabled = true;
-    btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;object-fit:contain;">Preparing...`;
-    showDebug('Step 1: Fetching /register-start...');
-
-    fetch(API + '/api/auth/webauthn/register-start', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + getToken() }
-    })
-.then(r => r.json())
-.then(data => {
-      if (data.error) throw new Error(data.error);
-      data.rp = data.rp || {};
-      data.rp.id = window.location.hostname;
-      cachedRegOptions = data;
-      biometricReady = true;
-      btn.disabled = false;
-      btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;object-fit:contain;">Touch Sensor Now`;
-      btn.style.background = '#8b5cf6';
-      showDebug('Step 4: Ready! Tap again');
-    })
-.catch(e => {
-      showDebug('ERROR Step 2: ' + e.message, true);
-      btn.disabled = false;
-      btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;object-fit:contain;">Enable Fingerprint/Face ID`;
-      btn.style.background = '#8b5cf6';
-      biometricReady = false;
-    });
-    return;
-  }
-
-  if (biometricReady && cachedRegOptions) {
-    btn.disabled = true;
-    btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;object-fit:contain;">Touch sensor...`;
-
-    try {
-      const data = cachedRegOptions;
-      const publicKey = {
-        challenge: bufferDecode(data.challenge),
-        rp: { name: APP_NAME, id: window.location.hostname },
-        user: {
-          id: bufferDecode(data.user.id),
-          name: data.user.name,
-          displayName: data.user.displayName || data.user.name
-        },
-        pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
-        timeout: 60000,
-        authenticatorSelection: {
-          authenticatorAttachment: 'platform',
-          userVerification: 'discouraged',
-          requireResidentKey: false
-        },
-        attestation: 'none'
-      };
-
-      showDebug('Step 5: Calling create...\nRP: ' + publicKey.rp.id);
-
-      let timeoutId = setTimeout(() => {
-        showDebug('TIMEOUT: Popup bai fito ba', true);
-        btn.disabled = false;
-        btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;object-fit:contain;">Enable Fingerprint/Face ID`;
-        btn.style.background = '#8b5cf6';
-        biometricReady = false;
-      }, 5000);
-
-      navigator.credentials.create({ publicKey })
- .then(cred => {
-        clearTimeout(timeoutId);
-        if (!cred) throw new Error('User cancelled');
-        showDebug('Step 6: Success! Credential ID: ' + cred.id.substring(0,20) + '...');
-        btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;object-fit:contain;">Saving...`;
-        showDebug('Step 7: Sending to /register-finish...');
-
-        const credential = {
-          id: cred.id,
-          rawId: bufferEncode(cred.rawId),
-          response: {
-            attestationObject: bufferEncode(cred.response.attestationObject),
-            clientDataJSON: bufferEncode(cred.response.clientDataJSON)
-          },
-          type: cred.type
-        };
-
-        return fetch(API + '/api/auth/webauthn/register-finish', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + getToken()
-          },
-          body: JSON.stringify(credential)
-        });
-      })
- .then(r => r.json())
- .then(result => {
-        if (result.verified === true) {
-          showDebug('SUCCESS! Biometric enabled ✓');
-          btn.style.display = 'none';
-          biometricReady = false;
-          cachedRegOptions = null;
-          setTimeout(() => checkBiometricStatus(), 1500);
-        } else {
-          throw new Error(result.error || result.message || 'Backend verification failed');
-        }
-      })
- .catch(err => {
-        clearTimeout(timeoutId);
-        showDebug('ERROR: ' + err.message, true);
-        btn.disabled = false;
-        btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;object-fit:contain;">Enable Fingerprint/Face ID`;
-        btn.style.background = '#8b5cf6';
-        biometricReady = false;
-        cachedRegOptions = null;
-      });
-
-    } catch (e) {
-      showDebug('ERROR: ' + e.message, true);
-      btn.disabled = false;
-      biometricReady = false;
-    }
-  }
 }
 
-function loginWithBiometric() {
-  const btn = el("enableBiometricBtn");
-  if (!btn) return;
+/* ==========================================
+ENABLE BIOMETRIC
+========================================== */
 
-  btn.disabled = true;
-  btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;object-fit:contain;">Touch sensor...`;
+async function enableBiometric() {
 
-  fetch(API + '/api/auth/webauthn/login-start', { method: 'POST' })
-.then(r => r.json())
-.then(options => {
-    const publicKey = {
-      challenge: bufferDecode(options.challenge),
-      allowCredentials: options.allowCredentials || [],
-      timeout: 60000,
-      userVerification: 'discouraged',
-      rpId: window.location.hostname
-    };
-    return navigator.credentials.get({ publicKey });
-  })
-.then(cred => {
-    return fetch(API + '/api/auth/webauthn/login-finish', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: cred.id,
-        rawId: bufferEncode(cred.rawId),
-        response: {
-          authenticatorData: bufferEncode(cred.response.authenticatorData),
-          clientDataJSON: bufferEncode(cred.response.clientDataJSON),
-          signature: bufferEncode(cred.response.signature)
-        },
-        type: cred.type
-      })
-    });
-  })
-.then(r => r.json())
-.then(result => {
-    if (result.token) {
-      localStorage.setItem('token', result.token);
-      showDebug('Login Success! ✓');
-      setTimeout(() => location.reload(), 1000);
-    } else {
-      throw new Error(result.error || 'Login failed');
-    }
-  })
-.catch(err => {
-    showDebug('Login ERROR: ' + err.message, true);
-    btn.disabled = false;
-    btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;object-fit:contain;">Login with Fingerprint`;
-  });
+const btn = el("enableBiometricBtn");  
+
+if (!btn) return;  
+
+try {  
+
+    btn.disabled = true;  
+    btn.innerHTML = "Touch Fingerprint...";
+
+const username = localStorage.getItem("username");
+const password = localStorage.getItem("biometric_password");
+
+console.log("USERNAME =", username);
+console.log("PASSWORD =", password);
+console.log("ALL LOCAL STORAGE =", JSON.stringify(localStorage));
+
+if (!username)
+throw new Error("Please login first.");
+
+if (!password)
+throw new Error("Please login with username and password first.");
+await NativeBiometric.verifyIdentity({
+
+title: APP_NAME,  
+        subtitle: "Enable Fingerprint",  
+        description: "Authenticate",  
+        reason: "Enable biometric login",  
+        negativeButtonText: "Cancel"  
+
+    });  
+
+    await NativeBiometric.setCredentials({  
+
+        username,  
+        password,  
+        server: "teeversh-dataplug-" + username  
+
+    });  
+
+    localStorage.removeItem("biometric_password");  
+
+    localStorage.setItem(  
+        "biometric_enabled",  
+        "true"  
+    );  
+
+    showMsg(  
+        "Fingerprint Enabled Successfully",  
+        "success"  
+    );  
+
+    checkBiometricStatus();  
+
+} catch (err) {  
+
+    console.error(err);  
+
+    btn.disabled = false;  
+    btn.innerHTML = "Enable Fingerprint";  
+
+    showDebug(  
+        err.message || "Fingerprint setup failed.",  
+        true  
+    );  
+
 }
 
-function initBiometricProfile() {
-  checkBiometricStatus();
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initBiometricProfile);
-} else {
-  initBiometricProfile();
+/* ==========================================
+LOGIN WITH BIOMETRIC (ANDROID)
+========================================== */
+
+async function loginWithBiometric() {
+
+const btn = el("enableBiometricBtn");  
+
+if (!btn) return;  
+
+try {  
+
+    btn.disabled = true;  
+    btn.innerHTML = "Touch Fingerprint...";  
+
+    const username = localStorage.getItem("username");  
+
+    if (!username)  
+        throw new Error("Please login normally first.");  
+
+    const server = "teeversh-dataplug-" + username;  
+
+    const result = await NativeBiometric.isCredentialsSaved({  
+        server  
+    });  
+
+    if (!result.isSaved)  
+        throw new Error("Fingerprint has not been enabled.");  
+
+    await NativeBiometric.verifyIdentity({  
+        title: APP_NAME,  
+        subtitle: "Fingerprint",  
+        description: "Authenticate",  
+        reason: "Login with fingerprint"  
+    });  
+
+    const credentials = await NativeBiometric.getCredentials({  
+        server  
+    });  
+
+    const res = await fetch(API + "/api/login", {  
+
+        method: "POST",  
+
+        headers: {  
+            "Content-Type": "application/json"  
+        },  
+
+        body: JSON.stringify({  
+
+            username: credentials.username,  
+            password: credentials.password  
+
+        })  
+
+    });  
+
+    const data = await res.json();  
+
+    if (!res.ok)  
+        throw new Error(data.message || "Login failed");
+
+localStorage.setItem("token", data.token);
+localStorage.setItem("username", data.user.username);
+localStorage.setItem("userId", data.user.id);
+localStorage.setItem("email", data.user.email || "");
+
+window.location.href = "dashboard.html";  
+
+} catch (err) {  
+
+    console.error(err);  
+
+    btn.disabled = false;  
+    btn.innerHTML = "Login with Fingerprint";  
+
+    showDebug(  
+        err.message || "Fingerprint login failed.",  
+        true  
+    );  
+
 }
+
+}
+
+/* ==========================================
+INITIALISE
+========================================== */
+
+function initBiometric(){
+
+checkBiometricStatus();
+
+}
+
+if(document.readyState==="loading"){
+
+document.addEventListener(
+"DOMContentLoaded",
+initBiometric
+);
+
+}else{
+
+initBiometric();
+
+}
+
+/* ================= END BIOMETRIC ================= */
 /* ================= PURCHASE MODAL ================= */
 async function openPurchaseModal(planId, planName, planPrice) {
   selectedPlanId = planId;
@@ -1775,10 +1846,33 @@ function connectWebSocket() {
 
 /* ================= LOGOUT ================= */
 function logout() {
-  if (ws) ws.close();
-  localStorage.clear();
-  window.location.href = "login.html";
+    if (typeof ws !== "undefined" && ws) {
+        ws.close();
+    }
+
+    // Remove only session data
+    localStorage.removeItem("token");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("email");
+    localStorage.removeItem("biometric_password");
+
+    // Keep:
+    // username
+    // biometric_enabled
+
+    window.location.href = "login.html";
 }
+// Disable all admin functions in app
+if(isApp) {
+  window.loadAdminTransactions = () => console.log("Admin disabled in app");
+  window.loadAdminUsers = () => console.log("Admin disabled in app");
+  window.loadAdminPlans = () => console.log("Admin disabled in app");
+  window.addPlan = () => {};
+  window.editPlan = () => {};
+  window.reverseTransaction = () => {};
+  window.forceDeductTransaction = () => {};
+}
+
 
 /* ================= START ================= */
 document.addEventListener("DOMContentLoaded", loadDashboard);
