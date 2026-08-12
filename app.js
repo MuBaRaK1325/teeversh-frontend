@@ -880,129 +880,178 @@ initBiometric();
 
 /* ================= END BIOMETRIC ================= */
 /* ================= PURCHASE MODAL ================= */
+
 async function openPurchaseModal(planId, planName, planPrice) {
-  selectedPlanId = planId;
-  selectedPhone = el('dataPhone')?.value;
 
-  if (!selectedPhone) return showMsg('Enter phone number first', 'error');
+    selectedPlanId = planId;
+    selectedPhone = el("dataPhone")?.value;
 
-  actionType = "DATA";
-  const pinInput = el('pinInput');
-  const pinTitle = el('pinModalTitle');
-  const pinDetails = el('pinModalDetails');
-  const bioBtn = el('biometricPurchaseBtn');
+    if (!selectedPhone)
+        return showMsg("Enter phone number first", "error");
 
-  if (pinInput) pinInput.value = '';
-  if (pinTitle) pinTitle.innerText = 'Confirm Purchase';
-  if (pinDetails) pinDetails.innerHTML = `<strong>${planName}</strong><br>${formatNaira(planPrice)}<br>To: ${selectedPhone}`;
+    actionType = "DATA";
 
-  try {
-    const res = await fetch(API + '/api/auth/webauthn/check-enabled', {
-      headers: { 'Authorization': 'Bearer ' + getToken() }
-    });
-    const data = await res.json();
-    if (bioBtn) bioBtn.style.display = data.enabled ? 'flex' : 'none';
-  } catch (e) {
-    console.log('Biometric check failed:', e);
-    if (bioBtn) bioBtn.style.display = 'none';
-  }
+    const pinInput = el("pinInput");
+    const pinTitle = el("pinModalTitle");
+    const pinDetails = el("pinModalDetails");
+    const bioBtn = el("biometricPurchaseBtn");
 
-  openModal('pinModal');
-  setTimeout(() => el('pinInput')?.focus(), 100);
+    if (pinInput) pinInput.value = "";
+
+    if (pinTitle)
+        pinTitle.innerText = "Confirm Purchase";
+
+    if (pinDetails)
+        pinDetails.innerHTML =
+            `<strong>${planName}</strong><br>
+             ${formatNaira(planPrice)}<br>
+             To: ${selectedPhone}`;
+
+    if (
+        window.Capacitor?.isNativePlatform?.() &&
+        window.Capacitor?.Plugins?.NativeBiometric
+    ) {
+        if (bioBtn) bioBtn.style.display = "flex";
+    } else {
+        if (bioBtn) bioBtn.style.display = "none";
+    }
+
+    openModal("pinModal");
+
+    setTimeout(() => {
+        pinInput?.focus();
+    }, 100);
 }
+
+
+/* ================= AIRTIME ================= */
 
 function openAirtimePin() {
-  const phone = el("airtimePhone").value;
-  const amount = el("airtimeAmount").value;
-  if (!phone ||!amount ||!airtimeNetwork) return showMsg("Fill all fields", "error");
 
-  selectedPhone = phone;
-  actionType = "AIRTIME";
-  const pinInput = el('pinInput');
-  const pinTitle = el('pinModalTitle');
-  const pinDetails = el('pinModalDetails');
+    const phone = el("airtimePhone").value;
+    const amount = el("airtimeAmount").value;
 
-  if (pinInput) pinInput.value = '';
-  if (pinTitle) pinTitle.innerText = 'Confirm Airtime';
-  if (pinDetails) pinDetails.innerHTML = `<strong>${airtimeNetwork.toUpperCase()} Airtime</strong><br>${formatNaira(amount)}<br>To: ${phone}`;
+    if (!phone || !amount || !airtimeNetwork)
+        return showMsg("Fill all fields", "error");
 
-  fetch(API + '/api/auth/webauthn/check-enabled', {
-    headers: { 'Authorization': 'Bearer ' + getToken() }
-  }).then(r => r.json()).then(data => {
-    const bioBtn = el('biometricPurchaseBtn');
-    if (bioBtn) bioBtn.style.display = data.enabled ? 'flex' : 'none';
-  }).catch(() => {});
+    selectedPhone = phone;
+    actionType = "AIRTIME";
 
-  openModal('pinModal');
-  setTimeout(() => el('pinInput')?.focus(), 100);
+    const pinInput = el("pinInput");
+    const pinTitle = el("pinModalTitle");
+    const pinDetails = el("pinModalDetails");
+    const bioBtn = el("biometricPurchaseBtn");
+
+    if (pinInput) pinInput.value = "";
+
+    if (pinTitle)
+        pinTitle.innerText = "Confirm Airtime";
+
+    if (pinDetails)
+        pinDetails.innerHTML =
+            `<strong>${airtimeNetwork.toUpperCase()} Airtime</strong><br>
+             ${formatNaira(amount)}<br>
+             To: ${phone}`;
+
+    if (
+        window.Capacitor?.isNativePlatform?.() &&
+        window.Capacitor?.Plugins?.NativeBiometric
+    ) {
+        if (bioBtn) bioBtn.style.display = "flex";
+    } else {
+        if (bioBtn) bioBtn.style.display = "none";
+    }
+
+    openModal("pinModal");
+
+    setTimeout(() => {
+        pinInput?.focus();
+    }, 100);
 }
+
+
+/* ================= CONFIRM PIN ================= */
 
 function confirmPurchase() {
-  const pin = el('pinInput')?.value;
-  if (!pin) return showMsg('Enter PIN', 'error');
-  closeModal('pinModal');
 
-  if (actionType === "DATA") buyData(pin);
-  if (actionType === "AIRTIME") buyAirtime(pin);
+    const pin = el("pinInput")?.value;
+
+    if (!pin)
+        return showMsg("Enter PIN", "error");
+
+    closeModal("pinModal");
+
+    if (actionType === "DATA")
+        buyData(pin);
+
+    if (actionType === "AIRTIME")
+        buyAirtime(pin);
+
 }
 
+
+/* ================= BIOMETRIC PURCHASE ================= */
+
 async function purchaseWithBiometric() {
-  if (!selectedPhone) return showMsg('Enter phone number first', 'error');
 
-  try {
-    closeModal('pinModal');
-    showLoader('Verify fingerprint...');
+    try {
 
-    const start = await fetch(API + '/api/auth/webauthn/verify-purchase', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + getToken() }
-    }).then(r => r.json());
+        const NativeBiometric =
+            window.Capacitor?.Plugins?.NativeBiometric;
 
-    hideLoader();
+        if (
+            !window.Capacitor?.isNativePlatform?.() ||
+            !NativeBiometric
+        ) {
+            return showMsg(
+                "Fingerprint is only available in the Android app.",
+                "error"
+            );
+        }
 
-    if (!start || start.error) throw new Error(start.error || 'Failed to start verification');
+        closeModal("pinModal");
 
-    start.challenge = bufferDecode(start.challenge);
-    start.allowCredentials = (start.allowCredentials || []).map(cred => ({
-      ...cred,
-      id: bufferDecode(cred.id)
-    }));
+        showLoader("Verify Fingerprint...");
 
-    const assertion = await navigator.credentials.get({ publicKey: start });
+        await NativeBiometric.verifyIdentity({
 
-    const credential = {
-      id: assertion.id,
-      rawId: bufferEncode(assertion.rawId),
-      response: {
-        authenticatorData: bufferEncode(assertion.response.authenticatorData),
-        clientDataJSON: bufferEncode(assertion.response.clientDataJSON),
-        signature: bufferEncode(assertion.response.signature),
-        userHandle: assertion.response.userHandle ? bufferEncode(assertion.response.userHandle) : null
-      },
-      type: assertion.type
-    };
+            title: "TEEVERSH DATA PLUG",
 
-    showLoader('Verifying...');
-    const verify = await fetch(API + '/api/auth/webauthn/verify-purchase-finish', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
-      body: JSON.stringify(credential)
-    }).then(r => r.json());
+            subtitle: "Fingerprint Verification",
 
-    hideLoader();
-    if (!verify.verified) return showMsg('Fingerprint verification failed', 'error');
+            description: "Authenticate Purchase",
 
-    if (actionType === "DATA") buyData('biometric_verified');
-    if (actionType === "AIRTIME") buyAirtime('biometric_verified');
+            reason: "Confirm Purchase",
 
-  } catch (e) {
-    hideLoader();
-    if (e.name === 'NotAllowedError') {
-      showMsg('Fingerprint cancelled', 'error');
-    } else {
-      showMsg('Error: ' + e.message, 'error');
+            negativeButtonText: "Cancel"
+
+        });
+
+        hideLoader();
+
+        if (actionType === "DATA") {
+
+            buyData("biometric_verified");
+
+        } else if (actionType === "AIRTIME") {
+
+            buyAirtime("biometric_verified");
+
+        }
+
+    } catch (err) {
+
+        hideLoader();
+
+        console.error(err);
+
+        showMsg(
+            err.message || "Fingerprint verification failed.",
+            "error"
+        );
+
     }
-  }
+
 }
 
 /* ================= BUY DATA - WITH TEEVERSH RECEIPT ================= */
