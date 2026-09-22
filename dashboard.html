@@ -422,6 +422,163 @@ margin-top:15px;
 flex:1;
 }
 
+/* ================= ADMIN WALLET MANAGER ================= */
+
+.walletBalanceBox{
+  margin-top:12px;
+  padding:12px;
+  border-radius:10px;
+  background:rgba(0,200,83,0.08);
+  border:1px solid rgba(0,200,83,0.25);
+
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.walletBalanceBox span{
+  opacity:0.7;
+  font-size:13px;
+}
+
+.walletBalanceBox strong{
+  font-size:17px;
+}
+
+.walletActionRow{
+  display:flex;
+  gap:8px;
+  margin-top:10px;
+}
+
+.walletCreditBtn,
+.walletDebitBtn{
+  flex:1;
+  border:none;
+  padding:10px;
+  border-radius:8px;
+  font-weight:600;
+  cursor:pointer;
+  margin-top:0;
+}
+
+.walletCreditBtn{
+  background:var(--success);
+  color:#fff;
+}
+
+.walletCreditBtn:hover{
+  background:#00b84a;
+}
+
+.walletDebitBtn{
+  background:var(--danger);
+  color:#fff;
+}
+
+.walletDebitBtn:hover{
+  background:#e63c3c;
+}
+
+/* Wallet adjustment modal */
+
+.walletAdjustBox{
+  max-width:430px;
+}
+
+.walletAdjustUserInfo{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+
+  margin:15px 0;
+  padding:12px;
+
+  background:rgba(255,255,255,0.06);
+  border:1px solid var(--glass-border);
+  border-radius:10px;
+}
+
+.walletAdjustUserInfo div{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:15px;
+}
+
+.walletAdjustUserInfo span{
+  opacity:0.65;
+  font-size:13px;
+}
+
+.walletAdjustUserInfo strong{
+  font-size:14px;
+}
+
+.walletAdjustBox label{
+  display:block;
+  margin-top:12px;
+  margin-bottom:6px;
+  text-align:left;
+  font-weight:600;
+}
+
+.walletAdjustBox input,
+.walletAdjustBox textarea{
+  width:100%;
+  box-sizing:border-box;
+  padding:11px;
+
+  border:1px solid var(--glass-border);
+  border-radius:8px;
+
+  background:rgba(255,255,255,0.08);
+  color:white;
+
+  outline:none;
+  font-family:inherit;
+}
+
+.walletAdjustBox textarea{
+  resize:vertical;
+  min-height:80px;
+}
+
+.walletAdjustBox input:focus,
+.walletAdjustBox textarea:focus{
+  border-color:var(--primary);
+  background:rgba(255,255,255,0.12);
+}
+
+.walletAdjustButtons{
+  display:flex;
+  gap:10px;
+  margin-top:18px;
+}
+
+.walletAdjustButtons button{
+  flex:1;
+  margin-top:0;
+}
+
+.walletConfirmCreditBtn,
+.walletConfirmDebitBtn{
+  border:none;
+  padding:10px 14px;
+  border-radius:8px;
+  font-weight:600;
+  cursor:pointer;
+  color:#fff;
+}
+
+.walletConfirmCreditBtn{
+  background:var(--success);
+}
+
+.walletConfirmDebitBtn{
+  background:var(--danger);
+}
+
 /* ADMIN */
 .adminOnly{
 display:none;
@@ -1365,6 +1522,65 @@ details pre {
 <button onclick="submitPin()">Update</button>
 <button onclick="closeModal('pinModalBox')">Cancel</button>
 </div>
+</div>
+
+<!-- ADMIN: WALLET ADJUSTMENT MODAL -->
+<div id="walletAdjustModal" class="modal">
+  <div class="modalBox walletAdjustBox">
+
+    <h3 id="walletAdjustTitle">💰 Top Up Wallet</h3>
+
+    <div class="walletAdjustUserInfo">
+
+      <div>
+        <span>User</span>
+        <strong id="walletAdjustUser">-</strong>
+      </div>
+
+      <div>
+        <span>Current Balance</span>
+        <strong id="walletAdjustCurrentBalance">₦0.00</strong>
+      </div>
+
+    </div>
+
+    <label for="walletAdjustAmount">Amount</label>
+
+    <input
+      id="walletAdjustAmount"
+      type="number"
+      min="1"
+      step="0.01"
+      placeholder="Enter amount"
+      inputmode="decimal"
+    >
+
+    <label for="walletAdjustReason">Reason</label>
+
+    <textarea
+      id="walletAdjustReason"
+      rows="3"
+      placeholder="Why are you adjusting this wallet?"
+    ></textarea>
+
+    <div class="walletAdjustButtons">
+
+      <button
+        id="walletAdjustConfirmBtn"
+        onclick="submitWalletAdjustment()"
+        class="walletConfirmCreditBtn">
+        Confirm Top Up
+      </button>
+
+      <button
+        onclick="closeWalletAdjustModal()"
+        class="dangerBtn">
+        Cancel
+      </button>
+
+    </div>
+
+  </div>
 </div>
 
 

@@ -96,6 +96,15 @@ let biometricReady = false;
 /* ================= HELPERS ================= */
 function getToken() { return localStorage.getItem("token"); }
 function el(id) { return document.getElementById(id); }
+
+function escapeHtmlAttribute(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
 function formatNaira(num) { return "₦" + Number(num || 0).toLocaleString(); }
 function formatDate(date) { return new Date(date).toLocaleDateString('en-GB'); }
 function openModal(id) { const m = el(id); if (m) m.style.display = "flex"; }
@@ -1568,59 +1577,424 @@ async function checkTransactionStatus(reference) {
 }
 
 /* ================= ADMIN: USERS MANAGER ================= */
+
 async function loadAdminUsers() {
   const search = el("userSearch")?.value || "";
+
   try {
-    const res = await fetch(`${API}/admin/users?search=${encodeURIComponent(search)}`, {
-      headers: { Authorization: "Bearer " + getToken() }
-    });
-    if (!res.ok) throw new Error("Failed to load users");
+    const res = await fetch(
+      `${API}/admin/users?search=${encodeURIComponent(search)}`,
+      {
+        headers: {
+          Authorization: "Bearer " + getToken()
+        }
+      }
+    );
+
+    if (!res.ok) {
+      throw new Error("Failed to load users");
+    }
+
     const users = await res.json();
     const list = el("adminUsersList");
-    if (list) {
-      list.innerHTML = "";
-      if (!users.length) {
-        list.innerHTML = `<p style="text-align:center;opacity:0.6">No users found</p>`;
-        return;
-      }
-      users.forEach(u => {
-        const tierColor = u.user_tier === 'top'? '#00c853' : u.user_tier === 'regular'? '#ffa000' : '#888';
-        const tierBadge = `<span style="color:${tierColor};font-weight:bold">${u.user_tier.toUpperCase()}</span>`;
-        list.innerHTML += `<div class="userCard">
-          <strong>${u.username}</strong> - ${u.email} ${tierBadge}<br>
-          Wallet: ${formatNaira(u.wallet_balance)} | Phone: ${u.phone || 'N/A'}<br>
-          <select onchange="setUserTier(${u.id}, this.value)" class="tierSelect">
-            <option value="default" ${u.user_tier === 'default'? 'selected' : ''}>Default</option>
-            <option value="regular" ${u.user_tier === 'regular'? 'selected' : ''}>Regular</option>
-            <option value="top" ${u.user_tier === 'top'? 'selected' : ''}>Top</option>
-          </select>
-        </div>`;
-      });
+
+    if (!list) return;
+
+    list.innerHTML = "";
+
+    if (!users.length) {
+      list.innerHTML =
+        `<p style="text-align:center;opacity:0.6">No users found</p>`;
+      return;
     }
-  } catch(e) {
+
+    users.forEach(u => {
+
+      const tierColor =
+        u.user_tier === "top"
+          ? "#00c853"
+          : u.user_tier === "regular"
+            ? "#ffa000"
+            : "#888";
+
+      const tierBadge = `
+        <span
+          class="userTierBadge"
+          style="color:${tierColor};font-weight:bold"
+        >
+          ${String(u.user_tier || "default").toUpperCase()}
+        </span>
+      `;
+
+      const walletBalance = Number(u.wallet_balance || 0);
+
+      list.innerHTML += `
+        <div class="userCard">
+
+          <div class="userCardHeader">
+            <div>
+              <strong>${u.username}</strong>
+              ${tierBadge}
+            </div>
+          </div>
+
+          <div class="userInfo">
+            <div>📧 ${u.email || "N/A"}</div>
+            <div>📱 ${u.phone || "N/A"}</div>
+          </div>
+
+          <div class="walletBalanceBox">
+            <span>Wallet Balance</span>
+            <strong>${formatNaira(walletBalance)}</strong>
+          </div>
+
+          <div class="walletActionRow">
+
+            <button
+              type="button"
+              onclick="openWalletAdjustModal(
+                ${u.id},
+                '${escapeHtmlAttribute(u.username)}',
+                'credit',
+                ${walletBalance}
+              )"
+              class="walletCreditBtn"
+            >
+              + Top Up
+            </button>
+
+            <button
+              type="button"
+              onclick="openWalletAdjustModal(
+                ${u.id},
+                '${escapeHtmlAttribute(u.username)}',
+                'debit',
+                ${walletBalance}
+              )"
+              class="walletDebitBtn"
+            >
+              − Deduct
+            </button>
+
+          </div>
+
+          <div class="tierManagerRow">
+
+            <label>User Tier:</label>
+
+            <select
+              onchange="setUserTier(${u.id}, this.value)"
+              class="tierSelect"
+            >
+
+              <option
+                value="default"
+                ${u.user_tier === "default" ? "selected" : ""}
+              >
+                Default
+              </option>
+
+              <option
+                value="regular"
+                ${u.user_tier === "regular" ? "selected" : ""}
+              >
+                Regular
+              </option>
+
+              <option
+                value="top"
+                ${u.user_tier === "top" ? "selected" : ""}
+              >
+                Top
+              </option>
+
+            </select>
+
+          </div>
+
+        </div>
+      `;
+    });
+
+  } catch (e) {
     console.error("Load users error:", e);
     showMsg("Failed to load users", "error");
   }
 }
 
+
+/* ================= ADMIN: WALLET ADJUSTMENT ================= */
+
+let walletAdjustUserId = null;
+let walletAdjustAction = null;
+let walletAdjustUsername = "";
+let walletAdjustCurrentBalance = 0;
+
+
+function openWalletAdjustModal(
+  userId,
+  username,
+  action,
+  currentBalance
+) {
+
+  walletAdjustUserId = userId;
+  walletAdjustAction = action;
+  walletAdjustUsername = username;
+  walletAdjustCurrentBalance = Number(currentBalance || 0);
+
+  const title = el("walletAdjustTitle");
+  const user = el("walletAdjustUser");
+  const balance = el("walletAdjustCurrentBalance");
+  const amount = el("walletAdjustAmount");
+  const reason = el("walletAdjustReason");
+  const confirmBtn = el("walletAdjustConfirmBtn");
+
+  if (title) {
+    title.textContent =
+      action === "credit"
+        ? "💰 Top Up Wallet"
+        : "💸 Deduct Wallet";
+  }
+
+  if (user) {
+    user.textContent = username;
+  }
+
+  if (balance) {
+    balance.textContent =
+      formatNaira(walletAdjustCurrentBalance);
+  }
+
+  if (amount) {
+    amount.value = "";
+  }
+
+  if (reason) {
+    reason.value = "";
+  }
+
+  if (confirmBtn) {
+
+    confirmBtn.textContent =
+      action === "credit"
+        ? "Confirm Top Up"
+        : "Confirm Deduction";
+
+    confirmBtn.className =
+      action === "credit"
+        ? "walletConfirmCreditBtn"
+        : "walletConfirmDebitBtn";
+  }
+
+  openModal("walletAdjustModal");
+
+  setTimeout(() => {
+    amount?.focus();
+  }, 100);
+}
+
+
+function closeWalletAdjustModal() {
+
+  walletAdjustUserId = null;
+  walletAdjustAction = null;
+  walletAdjustUsername = "";
+  walletAdjustCurrentBalance = 0;
+
+  if (el("walletAdjustAmount")) {
+    el("walletAdjustAmount").value = "";
+  }
+
+  if (el("walletAdjustReason")) {
+    el("walletAdjustReason").value = "";
+  }
+
+  closeModal("walletAdjustModal");
+}
+
+
+async function submitWalletAdjustment() {
+
+  if (!walletAdjustUserId || !walletAdjustAction) {
+    showMsg("Invalid wallet operation", "error");
+    return;
+  }
+
+  const amount = Number(
+    el("walletAdjustAmount")?.value
+  );
+
+  const reason =
+    el("walletAdjustReason")?.value?.trim() || "";
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    showMsg(
+      "Enter a valid amount greater than ₦0",
+      "error"
+    );
+    return;
+  }
+
+  if (!reason) {
+    showMsg(
+      "Please enter a reason",
+      "error"
+    );
+    return;
+  }
+
+  if (amount > 100000000) {
+    showMsg(
+      "Amount is too large",
+      "error"
+    );
+    return;
+  }
+
+  const actionText =
+    walletAdjustAction === "credit"
+      ? "top up"
+      : "deduct";
+
+  const confirmed = confirm(
+    `Confirm wallet ${actionText}?\n\n` +
+    `User: ${walletAdjustUsername}\n` +
+    `Amount: ${formatNaira(amount)}\n` +
+    `Current Balance: ${formatNaira(walletAdjustCurrentBalance)}\n\n` +
+    `Reason: ${reason}`
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  showLoader(
+    walletAdjustAction === "credit"
+      ? "Topping up wallet..."
+      : "Deducting wallet..."
+  );
+
+  try {
+
+    const res = await fetch(
+      `${API}/admin/wallet/adjust`,
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + getToken()
+        },
+
+        body: JSON.stringify({
+          user_id: walletAdjustUserId,
+          action: walletAdjustAction,
+          amount,
+          reason
+        })
+      }
+    );
+
+    const data = await res.json();
+
+    hideLoader();
+
+    showMsg(
+      data.message ||
+      (
+        res.ok
+          ? "Wallet updated successfully"
+          : "Wallet update failed"
+      ),
+      res.ok ? "success" : "error"
+    );
+
+    if (!res.ok) {
+      return;
+    }
+
+    closeWalletAdjustModal();
+
+    await loadAdminUsers();
+
+  } catch (err) {
+
+    hideLoader();
+
+    console.error(
+      "Wallet adjustment error:",
+      err
+    );
+
+    showMsg(
+      "Server error while updating wallet",
+      "error"
+    );
+  }
+}
+
+
+/* ================= ADMIN: USER TIER ================= */
+
 async function setUserTier(id, tier) {
   showLoader("Updating tier...");
+
   try {
-    const res = await fetch(`${API}/admin/users/set-tier`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-      body: JSON.stringify({ user_id: id, tier })
-    });
+
+    const res = await fetch(
+      `${API}/admin/users/set-tier`,
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + getToken()
+        },
+
+        body: JSON.stringify({
+          user_id: id,
+          tier
+        })
+      }
+    );
+
     const data = await res.json();
+
     hideLoader();
-    showMsg(data.message || "Tier updated", res.ok? "success" : "error");
+
+    showMsg(
+      data.message || "Tier updated",
+      res.ok ? "success" : "error"
+    );
+
     if (res.ok) {
-      loadAdminUsers(); // Refresh users list
-      broadcastTopUserUpdate(currentUser.company);
+
+      await loadAdminUsers();
+
+      if (
+        typeof broadcastTopUserUpdate === "function" &&
+        currentUser?.company
+      ) {
+        broadcastTopUserUpdate(
+          currentUser.company
+        );
+      }
     }
-  } catch {
+
+  } catch (e) {
+
     hideLoader();
-    showMsg("Server error", "error");
+
+    console.error(
+      "Set user tier error:",
+      e
+    );
+
+    showMsg(
+      "Server error",
+      "error"
+    );
   }
 }
 /* ================= ADMIN: PLANS MANAGER ================= */
